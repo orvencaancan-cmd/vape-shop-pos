@@ -48,7 +48,7 @@ export default async function AppLayout({
               </button>
             </form>
           </div>
-          {profile.shop.logoUrl ? (
+          {profile.shop.logoUrl && profile.shop.bannerStyle === "logo" ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={profile.shop.logoUrl}
@@ -56,7 +56,7 @@ export default async function AppLayout({
               className="h-full max-w-[80%] object-contain py-4"
             />
           ) : (
-            <span className="truncate font-serif text-2xl font-normal text-primary">
+            <span className="truncate font-serif text-2xl font-normal tracking-tight text-ink sm:text-3xl">
               {profile.shop.name}
             </span>
           )}

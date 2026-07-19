@@ -49,6 +49,35 @@ export async function uploadLogoAction(
   return {};
 }
 
+const bannerStyleSchema = z.object({
+  bannerStyle: z.enum(["logo", "typeset"]),
+});
+
+export async function updateBannerStyleAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = bannerStyleSchema.safeParse({ bannerStyle: formData.get("bannerStyle") });
+  if (!parsed.success) {
+    return { error: "Invalid banner style" };
+  }
+
+  const supabase = await createClient();
+  const { data: profile } = await supabase.from("profiles").select("shop_id, role").single();
+  if (!profile || profile.role !== "owner") {
+    return { error: "Only the shop owner can update branding" };
+  }
+
+  const { error } = await supabase
+    .from("shops")
+    .update({ banner_style: parsed.data.bannerStyle })
+    .eq("id", profile.shop_id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/", "layout");
+  return {};
+}
+
 const colorSchema = z.object({
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Pick a valid color"),
 });

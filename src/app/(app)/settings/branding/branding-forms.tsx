@@ -1,7 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { uploadLogoAction, updateColorAction, type ActionState } from "./actions";
+import { useActionState, useRef, useState } from "react";
+import {
+  uploadLogoAction,
+  updateColorAction,
+  updateBannerStyleAction,
+  type ActionState,
+} from "./actions";
 import { Button } from "@/components/ui/button";
 
 const initialState: ActionState = {};
@@ -58,6 +63,50 @@ export function LogoForm({ currentLogoUrl }: { currentLogoUrl: string | null }) 
         <p className="text-sm text-error">{clientError ?? state.error}</p>
       )}
     </div>
+  );
+}
+
+export function BannerStyleForm({
+  currentStyle,
+  hasLogo,
+}: {
+  currentStyle: "logo" | "typeset";
+  hasLogo: boolean;
+}) {
+  const [state, formAction, pending] = useActionState(updateBannerStyleAction, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  return (
+    <form ref={formRef} action={formAction} className="flex flex-col gap-2">
+      <label className="flex items-center gap-2 text-sm text-ink">
+        <input
+          type="radio"
+          name="bannerStyle"
+          value="logo"
+          defaultChecked={currentStyle === "logo"}
+          disabled={!hasLogo || pending}
+          onChange={() => formRef.current?.requestSubmit()}
+        />
+        Show my uploaded logo
+      </label>
+      <label className="flex items-center gap-2 text-sm text-ink">
+        <input
+          type="radio"
+          name="bannerStyle"
+          value="typeset"
+          defaultChecked={currentStyle === "typeset"}
+          disabled={pending}
+          onChange={() => formRef.current?.requestSubmit()}
+        />
+        Show my shop name, typeset by the app
+      </label>
+      <p className="text-xs text-muted">
+        {hasLogo
+          ? "If your logo is square or tall, it can look cramped in the wide banner — the typeset option always fits cleanly."
+          : "Upload a logo above to enable this option."}
+      </p>
+      {state.error && <p className="text-sm text-error">{state.error}</p>}
+    </form>
   );
 }
 
