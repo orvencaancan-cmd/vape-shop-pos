@@ -19,6 +19,14 @@ export function NewProductForm() {
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
+        <span className="font-medium text-slate-700">Brand (optional)</span>
+        <input
+          name="brand"
+          placeholder="e.g. Naked 100"
+          className="rounded-md border border-slate-300 px-3 py-2"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700">Category</span>
         <select name="category" className="rounded-md border border-slate-300 px-3 py-2">
           <option value="ejuice">E-juice</option>

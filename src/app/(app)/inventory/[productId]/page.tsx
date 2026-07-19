@@ -19,7 +19,7 @@ export default async function ProductPage({
   const supabase = await createClient();
   const { data: product } = await supabase
     .from("products")
-    .select("id, name, category, description")
+    .select("id, name, brand, category, description")
     .eq("id", productId)
     .maybeSingle();
   if (!product) notFound();
@@ -44,6 +44,7 @@ export default async function ProductPage({
           <ProductEditForm
             productId={product.id}
             name={product.name}
+            brand={product.brand}
             category={product.category}
             description={product.description}
           />

@@ -66,6 +66,7 @@ export async function receiveStockAction(
 
 const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
+  brand: z.string().optional(),
   category: z.enum(["ejuice", "accessory"]),
   description: z.string().optional(),
 });
@@ -76,6 +77,7 @@ export async function createProductAction(
 ): Promise<ActionState> {
   const parsed = productSchema.safeParse({
     name: formData.get("name"),
+    brand: formData.get("brand") ?? "",
     category: formData.get("category"),
     description: formData.get("description") ?? "",
   });
@@ -91,7 +93,13 @@ export async function createProductAction(
 
   const { data: product, error } = await supabase
     .from("products")
-    .insert({ shop_id: profile!.shop_id, ...parsed.data })
+    .insert({
+      shop_id: profile!.shop_id,
+      name: parsed.data.name,
+      brand: parsed.data.brand || null,
+      category: parsed.data.category,
+      description: parsed.data.description,
+    })
     .select("id")
     .single();
   if (error) return { error: error.message };
@@ -106,6 +114,7 @@ export async function updateProductAction(
 ): Promise<ActionState> {
   const parsed = productSchema.safeParse({
     name: formData.get("name"),
+    brand: formData.get("brand") ?? "",
     category: formData.get("category"),
     description: formData.get("description") ?? "",
   });
@@ -116,7 +125,12 @@ export async function updateProductAction(
   const supabase = await createClient();
   const { error } = await supabase
     .from("products")
-    .update(parsed.data)
+    .update({
+      name: parsed.data.name,
+      brand: parsed.data.brand || null,
+      category: parsed.data.category,
+      description: parsed.data.description,
+    })
     .eq("id", productId);
   if (error) return { error: error.message };
 

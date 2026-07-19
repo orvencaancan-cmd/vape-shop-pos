@@ -8,11 +8,13 @@ const initialState: ActionState = {};
 export function ProductEditForm({
   productId,
   name,
+  brand,
   category,
   description,
 }: {
   productId: string;
   name: string;
+  brand: string | null;
   category: "ejuice" | "accessory";
   description: string | null;
 }) {
@@ -20,13 +22,22 @@ export function ProductEditForm({
   const [state, formAction, pending] = useActionState(boundAction, initialState);
 
   return (
-    <form action={formAction} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+    <form action={formAction} className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
       <label className="flex flex-1 flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700">Name</span>
         <input
           name="name"
           defaultValue={name}
           required
+          className="rounded-md border border-slate-300 px-3 py-2"
+        />
+      </label>
+      <label className="flex flex-1 flex-col gap-1 text-sm">
+        <span className="font-medium text-slate-700">Brand</span>
+        <input
+          name="brand"
+          defaultValue={brand ?? ""}
+          placeholder="e.g. Naked 100"
           className="rounded-md border border-slate-300 px-3 py-2"
         />
       </label>
