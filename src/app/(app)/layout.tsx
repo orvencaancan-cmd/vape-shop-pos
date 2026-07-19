@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { signOutAction } from "@/lib/auth/actions";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AgentOneLogo } from "@/components/agentone-logo";
 
 export default async function AppLayout({
   children,
@@ -35,6 +36,7 @@ export default async function AppLayout({
     >
       <header className="border-b border-hairline bg-canvas">
         <div className="relative flex h-32 items-center justify-center border-b border-hairline bg-canvas-soft px-4 sm:h-48">
+          <AgentOneLogo className="absolute left-4 top-3 text-sm sm:text-base" />
           <div className="absolute right-4 top-3 flex shrink-0 items-center gap-3">
             <ThemeToggle />
             <form action={signOutAction}>
