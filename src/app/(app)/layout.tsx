@@ -56,7 +56,7 @@ export default async function AppLayout({
               className="h-full max-w-[80%] object-contain py-4"
             />
           ) : (
-            <span className="truncate font-serif text-2xl font-normal tracking-tight text-ink sm:text-3xl">
+            <span className="max-w-[90%] truncate text-center font-serif text-5xl font-normal leading-none tracking-wide text-ink sm:text-8xl">
               {profile.shop.name}
             </span>
           )}
