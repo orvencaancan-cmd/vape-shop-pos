@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { signOutAction } from "@/lib/auth/actions";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function AppLayout({
   children,
@@ -10,8 +11,6 @@ export default async function AppLayout({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
-
-  const brandColor = profile.shop.primaryColor || "#0f172a";
 
   const navItems = [
     { href: "/sell", label: "Sell", show: true },
@@ -27,10 +26,14 @@ export default async function AppLayout({
 
   return (
     <div
-      className="min-h-screen bg-slate-50"
-      style={{ "--brand": brandColor } as React.CSSProperties}
+      className="min-h-screen bg-canvas"
+      style={
+        profile.shop.primaryColor
+          ? ({ "--color-primary": profile.shop.primaryColor } as React.CSSProperties)
+          : undefined
+      }
     >
-      <header className="border-b border-slate-200 bg-white">
+      <header className="border-b border-hairline bg-canvas">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
           <div className="flex min-w-0 items-center gap-2">
             {profile.shop.logoUrl && (
@@ -41,32 +44,35 @@ export default async function AppLayout({
                 className="h-7 w-7 shrink-0 rounded object-contain"
               />
             )}
-            <span
-              className="truncate font-semibold"
-              style={{ color: "var(--brand)" }}
-            >
+            <span className="truncate font-serif text-lg font-normal text-primary">
               {profile.shop.name}
             </span>
           </div>
-          <form action={signOutAction} className="shrink-0">
-            <button type="submit" className="text-sm text-slate-500 hover:text-slate-900">
-              Log out
-            </button>
-          </form>
+          <div className="flex shrink-0 items-center gap-3">
+            <ThemeToggle />
+            <form action={signOutAction}>
+              <button
+                type="submit"
+                className="text-sm text-muted transition-colors hover:text-ink"
+              >
+                Log out
+              </button>
+            </form>
+          </div>
         </div>
         <nav className="mx-auto flex max-w-5xl gap-4 overflow-x-auto px-4 pb-3 text-sm">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="shrink-0 text-slate-600 hover:text-slate-900"
+              className="shrink-0 text-body transition-colors hover:text-ink"
             >
               {item.label}
             </Link>
           ))}
         </nav>
       </header>
-      <div>{children}</div>
+      <div className="animate-fade-in-up">{children}</div>
     </div>
   );
 }

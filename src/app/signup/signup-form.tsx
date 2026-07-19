@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { signUpAction, type SignUpState } from "./actions";
+import { Input, Label } from "@/components/ui/field";
+import { Button } from "@/components/ui/button";
 
 const initialState: SignUpState = {};
 
@@ -11,7 +13,7 @@ export function SignUpForm() {
 
   if (state.success) {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+      <div className="animate-fade-in-up rounded-lg border border-hairline bg-success/10 p-4 text-sm text-success">
         Check your email to confirm your account — once confirmed, you&apos;ll
         set up your shop and start your 14-day free trial.
       </div>
@@ -23,25 +25,26 @@ export function SignUpForm() {
       <Field label="Shop name" name="shopName" placeholder="Cloud Nine Vapes" />
       <Field label="Your name" name="displayName" placeholder="Jamie Rivera" />
       <Field label="Email" name="email" type="email" placeholder="you@example.com" />
-      <Field label="Password" name="password" type="password" placeholder="At least 8 characters" />
+      <Field
+        label="Password"
+        name="password"
+        type="password"
+        placeholder="At least 8 characters"
+      />
 
       {state.error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-error" role="alert">
           {state.error}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-      >
+      <Button type="submit" disabled={pending} className="w-full">
         {pending ? "Creating account…" : "Start free trial"}
-      </button>
+      </Button>
 
-      <p className="text-center text-sm text-slate-500">
+      <p className="text-center text-sm text-muted">
         Already have an account?{" "}
-        <Link href="/login" className="underline">
+        <Link href="/login" className="text-primary underline underline-offset-2">
           Log in
         </Link>
       </p>
@@ -61,15 +64,9 @@ function Field({
   placeholder?: string;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-sm">
-      <span className="font-medium text-slate-700">{label}</span>
-      <input
-        name={name}
-        type={type}
-        placeholder={placeholder}
-        required
-        className="rounded-md border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-500"
-      />
+    <label className="flex flex-col gap-1.5">
+      <Label>{label}</Label>
+      <Input name={name} type={type} placeholder={placeholder} required />
     </label>
   );
 }

@@ -7,6 +7,8 @@ import {
   deleteVariantAction,
   type ActionState,
 } from "../actions";
+import { Input, Label } from "@/components/ui/field";
+import { Button } from "@/components/ui/button";
 
 const initialState: ActionState = {};
 
@@ -43,7 +45,7 @@ export function VariantForm({
   const isCartridge = productSubcategory?.trim().toLowerCase() === "cartridge";
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-slate-200 p-3">
+    <div className="flex flex-col gap-2 rounded-md border border-hairline bg-canvas-soft p-3">
       <form action={formAction} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {productCategory === "ejuice" ? (
           <>
@@ -99,13 +101,9 @@ export function VariantForm({
           defaultValue={values?.lowStockThreshold ?? 5}
         />
         <div className="flex items-end">
-          <button
-            type="submit"
-            disabled={pending}
-            className="w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
-          >
+          <Button type="submit" disabled={pending} className="w-full">
             {pending ? "Saving…" : variantId ? "Save" : "Add variant"}
-          </button>
+          </Button>
         </div>
       </form>
       {productCategory === "accessory" && (
@@ -122,10 +120,10 @@ export function VariantForm({
           <option value="0.8" />
         </datalist>
       )}
-      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state.error && <p className="text-sm text-error">{state.error}</p>}
       {deleteAction && (
         <form action={deleteAction}>
-          <button type="submit" className="text-xs text-red-600 underline">
+          <button type="submit" className="text-xs text-error underline">
             Delete variant
           </button>
         </form>
@@ -150,16 +148,9 @@ function Field({
   list?: string;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-xs">
-      <span className="font-medium text-slate-600">{label}</span>
-      <input
-        name={name}
-        type={type}
-        step={step}
-        list={list}
-        defaultValue={defaultValue}
-        className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-      />
+    <label className="flex flex-col gap-1">
+      <Label className="text-[11px]">{label}</Label>
+      <Input name={name} type={type} step={step} list={list} defaultValue={defaultValue} className="text-sm" />
     </label>
   );
 }

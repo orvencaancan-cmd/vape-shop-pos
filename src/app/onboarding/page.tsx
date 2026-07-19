@@ -19,18 +19,18 @@ export default async function OnboardingPage() {
   const shopName = (user.user_metadata?.pending_shop_name as string) || "your shop";
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4 text-center">
-      <h1 className="text-2xl font-semibold text-slate-900">
+    <main className="animate-fade-in-up mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4 text-center">
+      <h1 className="font-serif text-3xl font-normal text-ink">
         Set up {shopName}
       </h1>
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-body">
         Next you&apos;ll add a payment method to start your 14-day free
         trial — you won&apos;t be charged until it ends.
       </p>
       <form action={completeOnboarding}>
         <button
           type="submit"
-          className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
         >
           Continue to billing
         </button>

@@ -33,29 +33,31 @@ export default async function DashboardPage() {
   );
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8">
-      <h1 className="text-2xl font-semibold text-slate-900">{profile.shop.name} — Dashboard</h1>
-      <p className="mt-1 text-sm text-slate-500">
+    <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
+      <h1 className="font-serif text-2xl font-normal text-ink">
+        {profile.shop.name} — Dashboard
+      </h1>
+      <p className="mt-1 text-sm text-muted">
         Subscription: {profile.shop.subscriptionStatus}
       </p>
 
       <section className="mt-8">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-slate-500">Low stock</h2>
-          <Link href="/reports" className="text-xs text-slate-400 underline">
+          <h2 className="text-sm font-medium text-muted">Low stock</h2>
+          <Link href="/reports" className="text-xs text-primary underline underline-offset-2">
             Full reports
           </Link>
         </div>
         {lowStock.length === 0 ? (
-          <p className="mt-2 text-sm text-slate-400">Nothing is low on stock.</p>
+          <p className="mt-2 text-sm text-muted">Nothing is low on stock.</p>
         ) : (
           <ul className="mt-2 flex flex-col gap-1 text-sm">
             {lowStock.slice(0, 8).map((v) => (
               <li key={v.id} className="flex justify-between">
-                <span className="text-slate-800">
+                <span className="text-ink">
                   {v.productName} — {v.label}
                 </span>
-                <span className="text-red-600">{v.stockQty} left</span>
+                <span className="text-error">{v.stockQty} left</span>
               </li>
             ))}
           </ul>
@@ -63,17 +65,17 @@ export default async function DashboardPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="text-sm font-medium text-slate-500">Recent sales</h2>
+        <h2 className="text-sm font-medium text-muted">Recent sales</h2>
         {(recentSales?.length ?? 0) === 0 ? (
-          <p className="mt-2 text-sm text-slate-400">No sales yet.</p>
+          <p className="mt-2 text-sm text-muted">No sales yet.</p>
         ) : (
           <ul className="mt-2 flex flex-col gap-1 text-sm">
             {recentSales!.map((s) => (
               <li key={s.id} className="flex justify-between">
-                <span className="text-slate-500">
+                <span className="text-muted">
                   {new Date(s.created_at).toLocaleString()}
                 </span>
-                <span className="text-slate-800">{formatCurrency(Number(s.total))}</span>
+                <span className="text-ink">{formatCurrency(Number(s.total))}</span>
               </li>
             ))}
           </ul>

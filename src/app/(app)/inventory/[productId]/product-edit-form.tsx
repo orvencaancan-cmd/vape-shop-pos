@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { updateProductAction, type ActionState } from "../actions";
+import { Input, Select, Label } from "@/components/ui/field";
+import { Button } from "@/components/ui/button";
 
 const initialState: ActionState = {};
 
@@ -26,45 +28,33 @@ export function ProductEditForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-      <label className="flex flex-1 flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-700">Name</span>
-        <input
-          name="name"
-          defaultValue={name}
-          required
-          className="rounded-md border border-slate-300 px-3 py-2"
-        />
+      <label className="flex flex-1 flex-col gap-1.5">
+        <Label>Name</Label>
+        <Input name="name" defaultValue={name} required />
       </label>
-      <label className="flex flex-1 flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-700">Brand</span>
-        <input
-          name="brand"
-          defaultValue={brand ?? ""}
-          placeholder="e.g. Naked 100"
-          className="rounded-md border border-slate-300 px-3 py-2"
-        />
+      <label className="flex flex-1 flex-col gap-1.5">
+        <Label>Brand</Label>
+        <Input name="brand" defaultValue={brand ?? ""} placeholder="e.g. Naked 100" />
       </label>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-700">Category</span>
-        <select
+      <label className="flex flex-col gap-1.5">
+        <Label>Category</Label>
+        <Select
           name="category"
           value={liveCategory}
           onChange={(e) => setLiveCategory(e.target.value as "ejuice" | "accessory")}
-          className="rounded-md border border-slate-300 px-3 py-2"
         >
           <option value="ejuice">E-juice</option>
           <option value="accessory">Accessory</option>
-        </select>
+        </Select>
       </label>
       {liveCategory === "accessory" && (
-        <label className="flex flex-1 flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">Subcategory</span>
-          <input
+        <label className="flex flex-1 flex-col gap-1.5">
+          <Label>Subcategory</Label>
+          <Input
             name="subcategory"
             defaultValue={subcategory ?? ""}
             list="subcategory-suggestions"
             placeholder="e.g. Cartridge"
-            className="rounded-md border border-slate-300 px-3 py-2"
           />
           <datalist id="subcategory-suggestions">
             <option value="Cartridge" />
@@ -73,22 +63,14 @@ export function ProductEditForm({
           </datalist>
         </label>
       )}
-      <label className="flex flex-1 flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-700">Description</span>
-        <input
-          name="description"
-          defaultValue={description ?? ""}
-          className="rounded-md border border-slate-300 px-3 py-2"
-        />
+      <label className="flex flex-1 flex-col gap-1.5">
+        <Label>Description</Label>
+        <Input name="description" defaultValue={description ?? ""} />
       </label>
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? "Saving…" : "Save"}
-      </button>
-      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+      </Button>
+      {state.error && <p className="text-sm text-error">{state.error}</p>}
     </form>
   );
 }

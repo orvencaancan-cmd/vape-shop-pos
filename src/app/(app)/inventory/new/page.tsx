@@ -8,9 +8,9 @@ export default async function NewProductPage() {
   if (profile.role !== "owner") redirect("/inventory");
 
   return (
-    <main className="mx-auto max-w-md px-4 py-8">
-      <h1 className="text-2xl font-semibold text-slate-900">Add product</h1>
-      <p className="mt-1 text-sm text-slate-500">
+    <main className="animate-fade-in-up mx-auto max-w-md px-4 py-8">
+      <h1 className="font-serif text-2xl font-normal text-ink">Add product</h1>
+      <p className="mt-1 text-sm text-muted">
         After creating it, you&apos;ll add its flavors/sizes/nicotine levels
         (or accessory variant) on the next screen.
       </p>

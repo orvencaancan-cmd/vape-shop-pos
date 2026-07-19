@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { uploadLogoAction, updateColorAction, type ActionState } from "./actions";
+import { Button } from "@/components/ui/button";
 
 const initialState: ActionState = {};
 
@@ -15,20 +16,16 @@ export function LogoForm({ currentLogoUrl }: { currentLogoUrl: string | null }) 
         <img
           src={currentLogoUrl}
           alt="Current logo"
-          className="h-16 w-16 rounded-md border border-slate-200 object-contain"
+          className="h-16 w-16 rounded-md border border-hairline object-contain"
         />
       )}
       <form action={formAction} className="flex items-center gap-2">
-        <input name="logo" type="file" accept="image/*" required className="text-sm" />
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
-        >
+        <input name="logo" type="file" accept="image/*" required className="text-sm text-ink" />
+        <Button type="submit" size="sm" disabled={pending}>
           {pending ? "Uploading…" : "Upload"}
-        </button>
+        </Button>
       </form>
-      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state.error && <p className="text-sm text-error">{state.error}</p>}
     </div>
   );
 }
@@ -42,16 +39,12 @@ export function ColorForm({ currentColor }: { currentColor: string }) {
         name="primaryColor"
         type="color"
         defaultValue={currentColor}
-        className="h-9 w-14 rounded border border-slate-300"
+        className="h-9 w-14 rounded border border-hairline bg-canvas"
       />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
-      >
+      <Button type="submit" size="sm" disabled={pending}>
         {pending ? "Saving…" : "Save color"}
-      </button>
-      {state.error && <span className="text-sm text-red-600">{state.error}</span>}
+      </Button>
+      {state.error && <span className="text-sm text-error">{state.error}</span>}
     </form>
   );
 }

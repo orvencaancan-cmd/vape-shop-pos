@@ -92,75 +92,76 @@ export function SellScreen({ variants }: { variants: Variant[] }) {
             placeholder="Search products…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="flex-1 rounded-md border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
           />
           {(["all", "ejuice", "accessory"] as const).map((c) => (
             <button
               key={c}
               onClick={() => setCategory(c)}
-              className={`rounded-md px-3 py-2 text-sm ${
-                category === c ? "text-white" : "bg-slate-100 text-slate-600"
+              className={`rounded-md px-3 py-2 text-sm transition-colors ${
+                category === c
+                  ? "bg-primary text-on-primary"
+                  : "bg-canvas-strong text-body hover:text-ink"
               }`}
-              style={category === c ? { backgroundColor: "var(--brand)" } : undefined}
             >
               {c === "all" ? "All" : c === "ejuice" ? "E-juice" : "Accessories"}
             </button>
           ))}
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="stagger mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
           {filtered.map((v) => (
             <button
               key={v.id}
               onClick={() => addToCart(v.id)}
               disabled={v.stockQty <= 0}
-              className="flex flex-col items-start rounded-md border border-slate-200 p-3 text-left disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex flex-col items-start rounded-md border border-hairline bg-canvas-soft p-3 text-left transition-shadow hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <span className="text-sm font-medium text-slate-900">{v.productName}</span>
-              <span className="text-xs text-slate-500">{v.label}</span>
-              <span className="mt-1 text-sm font-semibold text-slate-900">
+              <span className="text-sm font-medium text-ink">{v.productName}</span>
+              <span className="text-xs text-muted">{v.label}</span>
+              <span className="mt-1 text-sm font-semibold text-ink">
                 {formatCurrency(v.price)}
               </span>
-              <span className="text-xs text-slate-400">{v.stockQty} in stock</span>
+              <span className="text-xs text-muted">{v.stockQty} in stock</span>
             </button>
           ))}
           {filtered.length === 0 && (
-            <p className="col-span-full text-sm text-slate-400">No products match.</p>
+            <p className="col-span-full text-sm text-muted">No products match.</p>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col rounded-md border border-slate-200 p-4">
-        <h2 className="text-sm font-medium text-slate-500">Cart</h2>
+      <div className="flex flex-col rounded-lg border border-hairline bg-canvas-soft p-4">
+        <h2 className="text-sm font-medium text-muted">Cart</h2>
         <div className="mt-3 flex flex-1 flex-col gap-3">
-          {cart.length === 0 && <p className="text-sm text-slate-400">No items yet.</p>}
+          {cart.length === 0 && <p className="text-sm text-muted">No items yet.</p>}
           {cart.map((l) => {
             const v = variantsById.get(l.variantId);
             if (!v) return null;
             return (
               <div key={l.variantId} className="flex items-center justify-between text-sm">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-slate-800">{v.productName}</p>
-                  <p className="truncate text-xs text-slate-400">{v.label}</p>
+                  <p className="truncate font-medium text-ink">{v.productName}</p>
+                  <p className="truncate text-xs text-muted">{v.label}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => changeQuantity(l.variantId, -1)}
-                    className="h-6 w-6 rounded bg-slate-100 text-slate-600"
+                    className="h-6 w-6 rounded bg-canvas-strong text-body transition-colors hover:text-ink"
                   >
                     −
                   </button>
-                  <span>{l.quantity}</span>
+                  <span className="text-ink">{l.quantity}</span>
                   <button
                     onClick={() => changeQuantity(l.variantId, 1)}
                     disabled={l.quantity >= v.stockQty}
-                    className="h-6 w-6 rounded bg-slate-100 text-slate-600 disabled:opacity-40"
+                    className="h-6 w-6 rounded bg-canvas-strong text-body transition-colors hover:text-ink disabled:opacity-40"
                   >
                     +
                   </button>
                   <button
                     onClick={() => removeLine(l.variantId)}
-                    className="ml-1 text-xs text-red-600"
+                    className="ml-1 text-xs text-error"
                   >
                     ✕
                   </button>
@@ -170,23 +171,22 @@ export function SellScreen({ variants }: { variants: Variant[] }) {
           })}
         </div>
 
-        <div className="mt-4 border-t border-slate-200 pt-3">
-          <div className="flex items-center justify-between text-sm font-medium text-slate-900">
+        <div className="mt-4 border-t border-hairline pt-3">
+          <div className="flex items-center justify-between text-sm font-medium text-ink">
             <span>Total</span>
             <span>{formatCurrency(total)}</span>
           </div>
           <button
             onClick={completeSale}
             disabled={cart.length === 0 || pending}
-            className="mt-3 w-full rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-            style={{ backgroundColor: "var(--brand)" }}
+            className="mt-3 w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active disabled:opacity-50"
           >
             {pending ? "Processing…" : "Complete sale"}
           </button>
           {message && (
             <p
               className={`mt-2 text-sm ${
-                message.type === "error" ? "text-red-600" : "text-green-700"
+                message.type === "error" ? "text-error" : "text-success"
               }`}
             >
               {message.text}

@@ -34,12 +34,12 @@ export function ReceiveStockForm({
         min={1}
         placeholder="Qty"
         required
-        className="w-16 rounded border border-slate-300 px-2 py-1"
+        className="w-16 rounded border border-hairline bg-canvas px-2 py-1 text-ink placeholder:text-muted"
       />
       <select
         name="supplierId"
         defaultValue=""
-        className="rounded border border-slate-300 px-2 py-1"
+        className="rounded border border-hairline bg-canvas px-2 py-1 text-ink"
       >
         <option value="">Supplier…</option>
         {suppliers.map((s) => (
@@ -52,7 +52,7 @@ export function ReceiveStockForm({
         name="newSupplierName"
         type="text"
         placeholder="or new supplier name"
-        className="w-32 rounded border border-slate-300 px-2 py-1"
+        className="w-32 rounded border border-hairline bg-canvas px-2 py-1 text-ink placeholder:text-muted"
       />
       <input
         name="unitCost"
@@ -60,16 +60,16 @@ export function ReceiveStockForm({
         min={0}
         step="0.01"
         placeholder="Unit cost"
-        className="w-20 rounded border border-slate-300 px-2 py-1"
+        className="w-20 rounded border border-hairline bg-canvas px-2 py-1 text-ink placeholder:text-muted"
       />
       <button
         type="submit"
         disabled={pending}
-        className="rounded bg-slate-900 px-3 py-1 font-medium text-white disabled:opacity-60"
+        className="rounded bg-primary px-3 py-1 font-medium text-on-primary transition-colors hover:bg-primary-active disabled:opacity-60"
       >
         {pending ? "Saving…" : "Receive"}
       </button>
-      {state.error && <span className="text-red-600">{state.error}</span>}
+      {state.error && <span className="text-error">{state.error}</span>}
     </form>
   );
 }

@@ -59,13 +59,13 @@ export default async function InventoryPage() {
     .filter((v): v is InventoryVariant => v !== null);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
+    <main className="animate-fade-in-up mx-auto max-w-5xl px-4 py-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">Inventory</h1>
+        <h1 className="font-serif text-2xl font-normal text-ink">Inventory</h1>
         {profile.role === "owner" && (
           <Link
             href="/inventory/new"
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
           >
             Add product
           </Link>
@@ -73,10 +73,10 @@ export default async function InventoryPage() {
       </div>
 
       {items.length === 0 ? (
-        <p className="mt-6 text-sm text-slate-400">
+        <p className="mt-6 text-sm text-muted">
           No products yet.{" "}
           {profile.role === "owner" && (
-            <Link href="/inventory/new" className="underline">
+            <Link href="/inventory/new" className="text-primary underline underline-offset-2">
               Add your first one
             </Link>
           )}

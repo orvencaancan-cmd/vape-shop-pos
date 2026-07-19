@@ -24,10 +24,10 @@ export default async function StaffPage() {
   const emailById = new Map(userList?.users.map((u) => [u.id, u.email ?? ""]));
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8">
-      <h1 className="text-2xl font-semibold text-slate-900">Staff</h1>
+    <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
+      <h1 className="font-serif text-2xl font-normal text-ink">Staff</h1>
 
-      <div className="mt-6 flex flex-col gap-3">
+      <div className="stagger mt-6 flex flex-col gap-3">
         {(members ?? []).map((m) => (
           <MemberRow
             key={m.id}
@@ -41,7 +41,7 @@ export default async function StaffPage() {
         ))}
       </div>
 
-      <h2 className="mt-8 text-sm font-medium text-slate-500">Invite staff</h2>
+      <h2 className="mt-8 text-sm font-medium text-muted">Invite staff</h2>
       <div className="mt-2">
         <InviteForm />
       </div>

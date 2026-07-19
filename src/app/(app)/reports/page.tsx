@@ -75,8 +75,8 @@ export default async function ReportsPage({
   const supplierActivity = computeSupplierActivity(receiptRows);
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="text-2xl font-semibold text-slate-900">Reports</h1>
+    <main className="animate-fade-in-up mx-auto max-w-4xl px-4 py-8">
+      <h1 className="font-serif text-2xl font-normal text-ink">Reports</h1>
 
       <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
         <RangeLink range="today" current={preset} label="Today" />
@@ -84,10 +84,20 @@ export default async function ReportsPage({
         <RangeLink range="30d" current={preset} label="Last 30 days" />
         <form className="flex items-center gap-1" action="/reports">
           <input type="hidden" name="range" value="custom" />
-          <input type="date" name="from" className="rounded border border-slate-300 px-2 py-1 text-xs" />
-          <span className="text-slate-400">to</span>
-          <input type="date" name="to" className="rounded border border-slate-300 px-2 py-1 text-xs" />
-          <button className="rounded bg-slate-900 px-2 py-1 text-xs text-white">Go</button>
+          <input
+            type="date"
+            name="from"
+            className="rounded border border-hairline bg-canvas px-2 py-1 text-xs text-ink"
+          />
+          <span className="text-muted">to</span>
+          <input
+            type="date"
+            name="to"
+            className="rounded border border-hairline bg-canvas px-2 py-1 text-xs text-ink"
+          />
+          <button className="rounded bg-primary px-2 py-1 text-xs text-on-primary hover:bg-primary-active">
+            Go
+          </button>
         </form>
       </div>
 
@@ -122,7 +132,7 @@ export default async function ReportsPage({
         />
         {byNicotine.length > 0 && (
           <>
-            <p className="mt-3 text-xs font-medium uppercase text-slate-400">
+            <p className="mt-3 text-xs font-medium uppercase text-muted">
               E-juice by nicotine strength
             </p>
             <Table rows={byNicotine.map((n) => [n.mg, "", formatCurrency(n.revenue)])} />
@@ -193,7 +203,7 @@ function RangeLink({
   return (
     <Link
       href={`/reports?range=${range}`}
-      className={`rounded-md px-3 py-1.5 ${active ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}
+      className={`rounded-md px-3 py-1.5 transition-colors ${active ? "bg-primary text-on-primary" : "bg-canvas-strong text-body hover:text-ink"}`}
     >
       {label}
     </Link>
@@ -203,7 +213,7 @@ function RangeLink({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mt-8">
-      <h2 className="text-sm font-medium text-slate-500">{title}</h2>
+      <h2 className="text-sm font-medium text-muted">{title}</h2>
       <div className="mt-2 flex flex-wrap gap-4">{children}</div>
     </section>
   );
@@ -211,15 +221,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-slate-200 px-4 py-3">
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="text-lg font-semibold text-slate-900">{value}</p>
+    <div className="rounded-lg border border-hairline bg-canvas-soft px-4 py-3">
+      <p className="text-xs text-muted">{label}</p>
+      <p className="text-lg font-semibold text-ink">{value}</p>
     </div>
   );
 }
 
 function Empty({ text = "No data for this period." }: { text?: string }) {
-  return <p className="text-sm text-slate-400">{text}</p>;
+  return <p className="text-sm text-muted">{text}</p>;
 }
 
 function Table({ rows }: { rows: [string, string, string][] }) {
@@ -228,10 +238,10 @@ function Table({ rows }: { rows: [string, string, string][] }) {
       <table className="w-full text-sm">
         <tbody>
           {rows.map((r, i) => (
-            <tr key={i} className="border-b border-slate-100 last:border-0">
-              <td className="py-1.5 pr-3 text-slate-800">{r[0]}</td>
-              <td className="py-1.5 pr-3 text-slate-500">{r[1]}</td>
-              <td className="py-1.5 text-right text-slate-800">{r[2]}</td>
+            <tr key={i} className="border-b border-hairline last:border-0">
+              <td className="py-1.5 pr-3 text-ink">{r[0]}</td>
+              <td className="py-1.5 pr-3 text-muted">{r[1]}</td>
+              <td className="py-1.5 text-right text-ink">{r[2]}</td>
             </tr>
           ))}
         </tbody>

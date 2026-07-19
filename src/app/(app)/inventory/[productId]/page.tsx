@@ -37,11 +37,11 @@ export default async function ProductPage({
   const boundArchive = archiveProductAction.bind(null, productId);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="text-2xl font-semibold text-slate-900">{product.name}</h1>
+    <main className="animate-fade-in-up mx-auto max-w-3xl px-4 py-8">
+      <h1 className="font-serif text-2xl font-normal text-ink">{product.name}</h1>
 
       <section className="mt-6">
-        <h2 className="text-sm font-medium text-slate-500">Product details</h2>
+        <h2 className="text-sm font-medium text-muted">Product details</h2>
         <div className="mt-2">
           <ProductEditForm
             productId={product.id}
@@ -53,14 +53,14 @@ export default async function ProductPage({
           />
         </div>
         <form action={boundArchive} className="mt-3">
-          <button type="submit" className="text-xs text-red-600 underline">
+          <button type="submit" className="text-xs text-error underline">
             Archive product
           </button>
         </form>
       </section>
 
       <section className="mt-8">
-        <h2 className="text-sm font-medium text-slate-500">Variants</h2>
+        <h2 className="text-sm font-medium text-muted">Variants</h2>
         <div className="mt-2 flex flex-col gap-3">
           {(variants ?? []).map((v) => (
             <div key={v.id} className="flex flex-col gap-2">
@@ -81,7 +81,7 @@ export default async function ProductPage({
                   lowStockThreshold: v.low_stock_threshold,
                 }}
               />
-              <div className="flex items-center gap-2 pl-3 text-xs text-slate-500">
+              <div className="flex items-center gap-2 pl-3 text-xs text-muted">
                 <span className="shrink-0">{v.stock_qty} in stock —</span>
                 <ReceiveStockForm variantId={v.id} suppliers={suppliers ?? []} />
               </div>
@@ -89,10 +89,10 @@ export default async function ProductPage({
           ))}
         </div>
 
-        <h3 className="mt-6 text-xs font-medium uppercase text-slate-400">
+        <h3 className="mt-6 text-xs font-medium uppercase text-muted">
           Add a new variant
         </h3>
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="mt-1 text-xs text-muted">
           New variants start at 0 in stock — after saving, use the &quot;Receive
           stock&quot; row that appears next to it above to log your starting quantity.
         </p>

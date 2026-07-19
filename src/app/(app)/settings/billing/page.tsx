@@ -23,16 +23,16 @@ export default async function BillingPage() {
     .single();
 
   return (
-    <main className="mx-auto max-w-md px-4 py-8">
-      <h1 className="text-2xl font-semibold text-slate-900">Billing</h1>
+    <main className="animate-fade-in-up mx-auto max-w-md px-4 py-8">
+      <h1 className="font-serif text-2xl font-normal text-ink">Billing</h1>
 
-      <div className="mt-6 rounded-md border border-slate-200 p-4">
-        <p className="text-sm text-slate-500">Subscription status</p>
-        <p className="text-lg font-semibold text-slate-900">
+      <div className="mt-6 rounded-lg border border-hairline bg-canvas-soft p-4">
+        <p className="text-sm text-muted">Subscription status</p>
+        <p className="text-lg font-semibold text-ink">
           {STATUS_LABEL[shop?.subscription_status ?? ""] ?? shop?.subscription_status}
         </p>
         {shop?.subscription_status === "trialing" && shop.trial_ends_at && (
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-muted">
             Trial ends {new Date(shop.trial_ends_at).toLocaleDateString()}
           </p>
         )}
@@ -42,13 +42,13 @@ export default async function BillingPage() {
         <form action={openBillingPortalAction} className="mt-4">
           <button
             type="submit"
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
           >
             Manage billing
           </button>
         </form>
       ) : (
-        <p className="mt-4 text-sm text-slate-400">
+        <p className="mt-4 text-sm text-muted">
           No billing account on file yet — this shows up once your subscription
           checkout is complete.
         </p>

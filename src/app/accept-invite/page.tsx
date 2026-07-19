@@ -10,10 +10,10 @@ export default async function AcceptInvitePage() {
   if (!user) redirect("/login");
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4">
+    <main className="animate-fade-in-up mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4">
       <div className="text-center">
-        <h1 className="text-2xl font-semibold text-slate-900">Welcome aboard</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="font-serif text-3xl font-normal text-ink">Welcome aboard</h1>
+        <p className="mt-1 text-sm text-muted">
           Set a password so you can log in next time.
         </p>
       </div>

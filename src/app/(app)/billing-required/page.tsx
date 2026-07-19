@@ -6,11 +6,11 @@ export default async function BillingRequiredPage() {
   if (!profile) redirect("/login");
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 px-4 text-center">
-      <h1 className="text-2xl font-semibold text-slate-900">
+    <main className="animate-fade-in-up mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 px-4 text-center">
+      <h1 className="font-serif text-2xl font-normal text-ink">
         Update your billing
       </h1>
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-muted">
         {profile.shop.name}&apos;s subscription is {profile.shop.subscriptionStatus}.
         Update your payment method to keep using the app.
       </p>

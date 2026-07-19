@@ -25,12 +25,12 @@ export function MemberRow({
   const boundRemove = removeStaffAction.bind(null, profileId);
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-md border border-slate-200 p-3">
+    <div className="flex flex-wrap items-center gap-3 rounded-md border border-hairline bg-canvas-soft p-3">
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-slate-800">
-          {displayName || email} {isCurrentUser && <span className="text-slate-400">(you)</span>}
+        <p className="text-sm font-medium text-ink">
+          {displayName || email} {isCurrentUser && <span className="text-muted">(you)</span>}
         </p>
-        <p className="text-xs text-slate-400">{email}</p>
+        <p className="text-xs text-muted">{email}</p>
       </div>
 
       <form action={formAction} className="flex items-center gap-2">
@@ -39,7 +39,7 @@ export function MemberRow({
           name="role"
           defaultValue={role}
           disabled={!canDemoteOrRemove && role === "owner"}
-          className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+          className="rounded-md border border-hairline bg-canvas px-2 py-1 text-sm text-ink disabled:opacity-50"
         >
           <option value="staff">Staff</option>
           <option value="owner">Owner</option>
@@ -47,7 +47,7 @@ export function MemberRow({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700 disabled:opacity-50"
+          className="rounded-md bg-canvas-strong px-2 py-1 text-xs text-body transition-colors hover:text-ink disabled:opacity-50"
         >
           {pending ? "Saving…" : "Save"}
         </button>
@@ -57,15 +57,15 @@ export function MemberRow({
         <button
           type="submit"
           disabled={!canDemoteOrRemove && role === "owner"}
-          className="text-xs text-red-600 underline disabled:cursor-not-allowed disabled:text-slate-300"
+          className="text-xs text-error underline disabled:cursor-not-allowed disabled:text-muted"
         >
           Remove
         </button>
       </form>
 
-      {state.error && <p className="w-full text-xs text-red-600">{state.error}</p>}
+      {state.error && <p className="w-full text-xs text-error">{state.error}</p>}
       {!canDemoteOrRemove && role === "owner" && (
-        <p className="w-full text-xs text-slate-400">
+        <p className="w-full text-xs text-muted">
           Can&apos;t change or remove the shop&apos;s last owner.
         </p>
       )}

@@ -8,20 +8,20 @@ export default async function BrandingPage() {
   if (profile.role !== "owner") redirect("/inventory");
 
   return (
-    <main className="mx-auto max-w-md px-4 py-8">
-      <h1 className="text-2xl font-semibold text-slate-900">Branding</h1>
+    <main className="animate-fade-in-up mx-auto max-w-md px-4 py-8">
+      <h1 className="font-serif text-2xl font-normal text-ink">Branding</h1>
 
       <section className="mt-6">
-        <h2 className="text-sm font-medium text-slate-500">Logo</h2>
+        <h2 className="text-sm font-medium text-muted">Logo</h2>
         <div className="mt-2">
           <LogoForm currentLogoUrl={profile.shop.logoUrl} />
         </div>
       </section>
 
       <section className="mt-8">
-        <h2 className="text-sm font-medium text-slate-500">Primary color</h2>
+        <h2 className="text-sm font-medium text-muted">Primary color</h2>
         <div className="mt-2">
-          <ColorForm currentColor={profile.shop.primaryColor ?? "#0f172a"} />
+          <ColorForm currentColor={profile.shop.primaryColor ?? "#b8863a"} />
         </div>
       </section>
     </main>

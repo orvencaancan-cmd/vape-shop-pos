@@ -40,9 +40,9 @@ export default async function SellPage() {
     .filter((v): v is NonNullable<typeof v> => v !== null);
 
   return (
-    <main>
+    <main className="animate-fade-in-up">
       <div className="mx-auto max-w-5xl px-4 pt-6">
-        <h1 className="text-2xl font-semibold text-slate-900">{profile.shop.name} — Sell</h1>
+        <h1 className="font-serif text-2xl font-normal text-ink">{profile.shop.name} — Sell</h1>
       </div>
       <SellScreen variants={items} />
     </main>

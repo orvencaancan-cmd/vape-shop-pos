@@ -42,10 +42,10 @@ export default async function AdminPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="text-2xl font-semibold text-slate-900">Platform admin</h1>
+    <main className="animate-fade-in-up mx-auto max-w-3xl px-4 py-8">
+      <h1 className="font-serif text-2xl font-normal text-ink">Platform admin</h1>
 
-      <div className="mt-6 flex flex-wrap gap-4">
+      <div className="stagger mt-6 flex flex-wrap gap-4">
         <Stat label="Total shops" value={String(shops?.length ?? 0)} />
         <Stat label="Trialing" value={String(counts.trialing)} />
         <Stat label="Active" value={String(counts.active)} />
@@ -54,11 +54,11 @@ export default async function AdminPage() {
         <Stat label="MRR (from active)" value={mrrLabel} />
       </div>
 
-      <h2 className="mt-8 text-sm font-medium text-slate-500">All shops</h2>
+      <h2 className="mt-8 text-sm font-medium text-muted">All shops</h2>
       <div className="mt-2 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
+            <tr className="border-b border-hairline text-left text-xs text-muted">
               <th className="py-1.5 pr-3">Shop</th>
               <th className="py-1.5 pr-3">Status</th>
               <th className="py-1.5 pr-3">Trial ends</th>
@@ -67,15 +67,15 @@ export default async function AdminPage() {
           </thead>
           <tbody>
             {(shops ?? []).map((s) => (
-              <tr key={s.id} className="border-b border-slate-100">
-                <td className="py-1.5 pr-3 text-slate-800">{s.name}</td>
-                <td className="py-1.5 pr-3 text-slate-600">
+              <tr key={s.id} className="border-b border-hairline">
+                <td className="py-1.5 pr-3 text-ink">{s.name}</td>
+                <td className="py-1.5 pr-3 text-body">
                   {STATUS_LABEL[s.subscription_status] ?? s.subscription_status}
                 </td>
-                <td className="py-1.5 pr-3 text-slate-400">
+                <td className="py-1.5 pr-3 text-muted">
                   {s.trial_ends_at ? new Date(s.trial_ends_at).toLocaleDateString() : "—"}
                 </td>
-                <td className="py-1.5 text-slate-400">
+                <td className="py-1.5 text-muted">
                   {new Date(s.created_at).toLocaleDateString()}
                 </td>
               </tr>
@@ -89,9 +89,9 @@ export default async function AdminPage() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-slate-200 px-4 py-3">
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="text-lg font-semibold text-slate-900">{value}</p>
+    <div className="rounded-lg border border-hairline bg-canvas-soft px-4 py-3">
+      <p className="text-xs text-muted">{label}</p>
+      <p className="text-lg font-semibold text-ink">{value}</p>
     </div>
   );
 }

@@ -1,19 +1,103 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-canvas: #faf8f4;
+  --color-canvas-soft: #f2ede4;
+  --color-canvas-strong: #e9e1d3;
+  --color-ink: #1b1a17;
+  --color-body: #4a463e;
+  --color-muted: #8a8478;
+  --color-hairline: #e3ddd0;
+
+  --color-primary: #b8863a;
+  --color-primary-active: color-mix(in srgb, var(--color-primary) 82%, black);
+  --color-on-primary: #ffffff;
+
+  --color-success: #4d9a5c;
+  --color-warning: #b8862e;
+  --color-error: #c0503f;
+}
+
+.dark {
+  --color-canvas: #171614;
+  --color-canvas-soft: #201f1c;
+  --color-canvas-strong: #2a2824;
+  --color-ink: #f5f2ec;
+  --color-body: #c9c3b8;
+  --color-muted: #8f897d;
+  --color-hairline: #322f2a;
+
+  --color-primary: #d1a452;
+  --color-primary-active: color-mix(in srgb, var(--color-primary) 82%, white);
+  --color-on-primary: #171614;
+
+  --color-success: #6fbb7d;
+  --color-warning: #d1a452;
+  --color-error: #e0796a;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-canvas: var(--color-canvas);
+  --color-canvas-soft: var(--color-canvas-soft);
+  --color-canvas-strong: var(--color-canvas-strong);
+  --color-ink: var(--color-ink);
+  --color-body: var(--color-body);
+  --color-muted: var(--color-muted);
+  --color-hairline: var(--color-hairline);
+  --color-primary: var(--color-primary);
+  --color-primary-active: var(--color-primary-active);
+  --color-on-primary: var(--color-on-primary);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-error: var(--color-error);
+
   --font-sans: var(--font-geist-sans);
+  --font-serif: var(--font-fraunces);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+* {
+  border-color: var(--color-hairline);
+}
+
+/* Motion — kept deliberately light: entrance + hover feedback, no heavy library. */
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out both;
+}
+
+.stagger > * {
+  animation: fade-in-up 0.4s ease-out both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(6) { animation-delay: 200ms; }
+.stagger > *:nth-child(n+7) { animation-delay: 240ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .stagger > * {
+    animation: none;
+  }
 }
