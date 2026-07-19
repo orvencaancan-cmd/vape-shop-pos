@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { computeLowStock, type VariantRow } from "@/lib/reports/compute";
+import { formatCurrency } from "@/lib/currency";
 
 export default async function DashboardPage() {
   const profile = await getCurrentProfile();
@@ -72,7 +73,7 @@ export default async function DashboardPage() {
                 <span className="text-slate-500">
                   {new Date(s.created_at).toLocaleString()}
                 </span>
-                <span className="text-slate-800">${Number(s.total).toFixed(2)}</span>
+                <span className="text-slate-800">{formatCurrency(Number(s.total))}</span>
               </li>
             ))}
           </ul>

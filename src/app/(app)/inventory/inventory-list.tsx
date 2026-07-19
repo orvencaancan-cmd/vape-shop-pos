@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ReceiveStockForm } from "./receive-stock-form";
+import { formatCurrency } from "@/lib/currency";
 
 export type InventoryVariant = {
   id: string;
@@ -177,7 +178,7 @@ export function InventoryList({
                           {v.stockQty} in stock
                         </span>
                         <span className="text-xs text-slate-400">
-                          ${v.price.toFixed(2)}
+                          {formatCurrency(v.price)}
                         </span>
                         <span className="text-xs text-slate-400">
                           {v.latestSupplier ?? "no supplier logged"}

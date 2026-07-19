@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { recordSaleAction } from "./actions";
+import { formatCurrency } from "@/lib/currency";
 
 type Variant = {
   id: string;
@@ -76,7 +77,7 @@ export function SellScreen({ variants }: { variants: Variant[] }) {
       if (result.error) {
         setMessage({ type: "error", text: result.error });
       } else {
-        setMessage({ type: "success", text: `Sale recorded — $${total.toFixed(2)}` });
+        setMessage({ type: "success", text: `Sale recorded — ${formatCurrency(total)}` });
         setCart([]);
       }
     });
@@ -118,7 +119,7 @@ export function SellScreen({ variants }: { variants: Variant[] }) {
               <span className="text-sm font-medium text-slate-900">{v.productName}</span>
               <span className="text-xs text-slate-500">{v.label}</span>
               <span className="mt-1 text-sm font-semibold text-slate-900">
-                ${v.price.toFixed(2)}
+                {formatCurrency(v.price)}
               </span>
               <span className="text-xs text-slate-400">{v.stockQty} in stock</span>
             </button>
@@ -172,7 +173,7 @@ export function SellScreen({ variants }: { variants: Variant[] }) {
         <div className="mt-4 border-t border-slate-200 pt-3">
           <div className="flex items-center justify-between text-sm font-medium text-slate-900">
             <span>Total</span>
-            <span>${total.toFixed(2)}</span>
+            <span>{formatCurrency(total)}</span>
           </div>
           <button
             onClick={completeSale}

@@ -16,6 +16,7 @@ import {
   type VariantRow,
   type ReceiptRow,
 } from "@/lib/reports/compute";
+import { formatCurrency } from "@/lib/currency";
 
 export default async function ReportsPage({
   searchParams,
@@ -92,13 +93,13 @@ export default async function ReportsPage({
 
       <Section title="Sales summary">
         <Stat label="Sales" value={salesSummary.count.toString()} />
-        <Stat label="Revenue" value={`$${salesSummary.revenue.toFixed(2)}`} />
+        <Stat label="Revenue" value={formatCurrency(salesSummary.revenue)} />
       </Section>
 
       <Section title="Revenue & profit">
-        <Stat label="Revenue" value={`$${revenueProfit.revenue.toFixed(2)}`} />
-        <Stat label="Cost of goods" value={`$${revenueProfit.cost.toFixed(2)}`} />
-        <Stat label="Profit" value={`$${revenueProfit.profit.toFixed(2)}`} />
+        <Stat label="Revenue" value={formatCurrency(revenueProfit.revenue)} />
+        <Stat label="Cost of goods" value={formatCurrency(revenueProfit.cost)} />
+        <Stat label="Profit" value={formatCurrency(revenueProfit.profit)} />
       </Section>
 
       <Section title="Best sellers">
@@ -109,7 +110,7 @@ export default async function ReportsPage({
             rows={bestSellers.map((b) => [
               `${b.productName} — ${b.label}`,
               `${b.quantity} sold`,
-              `$${b.revenue.toFixed(2)}`,
+              formatCurrency(b.revenue),
             ])}
           />
         )}
@@ -117,14 +118,14 @@ export default async function ReportsPage({
 
       <Section title="Sales by category">
         <Table
-          rows={byCategory.map((c) => [c.category, "", `$${c.revenue.toFixed(2)}`])}
+          rows={byCategory.map((c) => [c.category, "", formatCurrency(c.revenue)])}
         />
         {byNicotine.length > 0 && (
           <>
             <p className="mt-3 text-xs font-medium uppercase text-slate-400">
               E-juice by nicotine strength
             </p>
-            <Table rows={byNicotine.map((n) => [n.mg, "", `$${n.revenue.toFixed(2)}`])} />
+            <Table rows={byNicotine.map((n) => [n.mg, "", formatCurrency(n.revenue)])} />
           </>
         )}
       </Section>
@@ -158,8 +159,8 @@ export default async function ReportsPage({
       </Section>
 
       <Section title="Inventory value">
-        <Stat label="Total" value={`$${inventoryValue.total.toFixed(2)}`} />
-        <Table rows={inventoryValue.byCategory.map((c) => [c.category, "", `$${c.value.toFixed(2)}`])} />
+        <Stat label="Total" value={formatCurrency(inventoryValue.total)} />
+        <Table rows={inventoryValue.byCategory.map((c) => [c.category, "", formatCurrency(c.value)])} />
       </Section>
 
       <Section title="Supplier activity">
@@ -170,7 +171,7 @@ export default async function ReportsPage({
             rows={supplierActivity.map((s) => [
               s.name,
               `${s.quantity} received`,
-              `$${s.cost.toFixed(2)}`,
+              formatCurrency(s.cost),
             ])}
           />
         )}
