@@ -15,6 +15,7 @@ type VariantValues = {
   nicotineMg?: number | null;
   size?: string | null;
   forDevice?: string | null;
+  ohms?: number | null;
   sku?: string | null;
   cost?: number;
   price?: number;
@@ -24,11 +25,13 @@ type VariantValues = {
 export function VariantForm({
   productId,
   productCategory,
+  productSubcategory,
   variantId,
   values,
 }: {
   productId: string;
   productCategory: "ejuice" | "accessory";
+  productSubcategory?: string | null;
   variantId?: string;
   values?: VariantValues;
 }) {
@@ -37,6 +40,7 @@ export function VariantForm({
     : createVariantAction.bind(null, productId);
   const [state, formAction, pending] = useActionState(boundAction, initialState);
   const deleteAction = variantId ? deleteVariantAction.bind(null, variantId, productId) : undefined;
+  const isCartridge = productSubcategory?.trim().toLowerCase() === "cartridge";
 
   return (
     <div className="flex flex-col gap-2 rounded-md border border-slate-200 p-3">
@@ -54,12 +58,24 @@ export function VariantForm({
             <Field label="Size" name="size" defaultValue={values?.size ?? ""} />
           </>
         ) : (
-          <Field
-            label="For device"
-            name="forDevice"
-            defaultValue={values?.forDevice ?? ""}
-            list="device-suggestions"
-          />
+          <>
+            <Field
+              label="For device"
+              name="forDevice"
+              defaultValue={values?.forDevice ?? ""}
+              list="device-suggestions"
+            />
+            {isCartridge && (
+              <Field
+                label="Ohms"
+                name="ohms"
+                type="number"
+                step="0.1"
+                defaultValue={values?.ohms ?? ""}
+                list="ohms-suggestions"
+              />
+            )}
+          </>
         )}
         <Field label="SKU" name="sku" defaultValue={values?.sku ?? ""} />
         <Field
@@ -97,6 +113,13 @@ export function VariantForm({
           <option value="Oneo" />
           <option value="Xlim" />
           <option value="Nexlim" />
+        </datalist>
+      )}
+      {isCartridge && (
+        <datalist id="ohms-suggestions">
+          <option value="0.4" />
+          <option value="0.6" />
+          <option value="0.8" />
         </datalist>
       )}
       {state.error && <p className="text-sm text-red-600">{state.error}</p>}

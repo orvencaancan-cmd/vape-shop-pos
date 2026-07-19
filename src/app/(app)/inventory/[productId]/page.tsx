@@ -27,7 +27,7 @@ export default async function ProductPage({
   const { data: variants } = await supabase
     .from("variants")
     .select(
-      "id, flavor, nicotine_mg, size, for_device, sku, cost, price, stock_qty, low_stock_threshold",
+      "id, flavor, nicotine_mg, size, for_device, ohms, sku, cost, price, stock_qty, low_stock_threshold",
     )
     .eq("product_id", productId)
     .order("created_at");
@@ -67,12 +67,14 @@ export default async function ProductPage({
               <VariantForm
                 productId={product.id}
                 productCategory={product.category}
+                productSubcategory={product.subcategory}
                 variantId={v.id}
                 values={{
                   flavor: v.flavor,
                   nicotineMg: v.nicotine_mg,
                   size: v.size,
                   forDevice: v.for_device,
+                  ohms: v.ohms,
                   sku: v.sku,
                   cost: v.cost,
                   price: v.price,
@@ -95,7 +97,11 @@ export default async function ProductPage({
           stock&quot; row that appears next to it above to log your starting quantity.
         </p>
         <div className="mt-2">
-          <VariantForm productId={product.id} productCategory={product.category} />
+          <VariantForm
+            productId={product.id}
+            productCategory={product.category}
+            productSubcategory={product.subcategory}
+          />
         </div>
       </section>
     </main>

@@ -11,7 +11,7 @@ export default async function SellPage() {
   const { data: variants } = await supabase
     .from("variants")
     .select(
-      "id, flavor, nicotine_mg, size, for_device, price, stock_qty, products(name, category, archived)",
+      "id, flavor, nicotine_mg, size, for_device, ohms, price, stock_qty, products(name, category, archived)",
     )
     .order("created_at");
 
@@ -29,6 +29,7 @@ export default async function SellPage() {
             v.nicotine_mg != null ? `${v.nicotine_mg}mg` : null,
             v.size,
             v.for_device ? `For ${v.for_device}` : null,
+            v.ohms != null ? `${v.ohms}Ω` : null,
           ]
             .filter(Boolean)
             .join(" · ") || "Default",

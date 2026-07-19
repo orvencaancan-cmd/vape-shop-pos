@@ -16,6 +16,7 @@ export type InventoryVariant = {
   nicotineMg: number | null;
   size: string | null;
   forDevice: string | null;
+  ohms: number | null;
   price: number;
   stockQty: number;
   lowStockThreshold: number;
@@ -39,6 +40,7 @@ export function InventoryList({
   const [flavor, setFlavor] = useState(ALL);
   const [nicotine, setNicotine] = useState(ALL);
   const [device, setDevice] = useState(ALL);
+  const [ohms, setOhms] = useState(ALL);
 
   const brands = useMemo(
     () => [...new Set(variants.map((v) => v.brand).filter(Boolean))].sort() as string[],
@@ -59,6 +61,13 @@ export function InventoryList({
     () => [...new Set(variants.map((v) => v.forDevice).filter(Boolean))].sort() as string[],
     [variants],
   );
+  const ohmsLevels = useMemo(
+    () =>
+      [...new Set(variants.map((v) => v.ohms).filter((n) => n != null))].sort(
+        (a, b) => (a as number) - (b as number),
+      ) as number[],
+    [variants],
+  );
 
   const filtered = variants.filter((v) => {
     if (category !== "all" && v.category !== category) return false;
@@ -66,6 +75,7 @@ export function InventoryList({
     if (flavor !== ALL && v.flavor !== flavor) return false;
     if (nicotine !== ALL && String(v.nicotineMg) !== nicotine) return false;
     if (device !== ALL && v.forDevice !== device) return false;
+    if (ohms !== ALL && String(v.ohms) !== ohms) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
       const haystack = `${v.productName} ${v.brand ?? ""} ${v.flavor ?? ""} ${v.subcategory ?? ""} ${v.forDevice ?? ""}`.toLowerCase();
@@ -150,6 +160,20 @@ export function InventoryList({
             ))}
           </select>
         )}
+        {ohmsLevels.length > 0 && (
+          <select
+            value={ohms}
+            onChange={(e) => setOhms(e.target.value)}
+            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          >
+            <option value={ALL}>All ohms</option>
+            {ohmsLevels.map((o) => (
+              <option key={o} value={String(o)}>
+                {o}Ω
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div className="mt-6 flex flex-col gap-8">
@@ -185,6 +209,7 @@ export function InventoryList({
                       v.nicotineMg != null ? `${v.nicotineMg}mg` : null,
                       v.size,
                       v.forDevice ? `For ${v.forDevice}` : null,
+                      v.ohms != null ? `${v.ohms}Ω` : null,
                     ]
                       .filter(Boolean)
                       .join(" · ") || "Default";

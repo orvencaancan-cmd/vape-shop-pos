@@ -14,7 +14,7 @@ export default async function InventoryPage() {
     supabase
       .from("variants")
       .select(
-        "id, product_id, flavor, nicotine_mg, size, for_device, price, stock_qty, low_stock_threshold, products(name, brand, category, subcategory, archived)",
+        "id, product_id, flavor, nicotine_mg, size, for_device, ohms, price, stock_qty, low_stock_threshold, products(name, brand, category, subcategory, archived)",
       ),
     supabase.from("suppliers").select("id, name").order("name"),
     supabase
@@ -49,6 +49,7 @@ export default async function InventoryPage() {
         nicotineMg: v.nicotine_mg as number | null,
         size: v.size as string | null,
         forDevice: v.for_device as string | null,
+        ohms: v.ohms != null ? Number(v.ohms) : null,
         price: Number(v.price),
         stockQty: v.stock_qty as number,
         lowStockThreshold: v.low_stock_threshold as number,
