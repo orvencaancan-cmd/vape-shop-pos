@@ -162,6 +162,22 @@ export function computeInventoryValue(variants: VariantRow[]) {
   return { total, byCategory: [...byCategory.entries()].map(([category, value]) => ({ category, value })) };
 }
 
+export function computeDailySeries(sales: { total: number; created_at: string }[], days: number) {
+  const buckets = new Map<string, number>();
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i));
+    buckets.set(d.toISOString().slice(0, 10), 0);
+  }
+  for (const s of sales) {
+    const key = s.created_at.slice(0, 10);
+    if (buckets.has(key)) {
+      buckets.set(key, (buckets.get(key) ?? 0) + Number(s.total));
+    }
+  }
+  return [...buckets.entries()].map(([date, revenue]) => ({ date, revenue }));
+}
+
 export function computeSupplierActivity(receipts: ReceiptRow[]) {
   const bySupplier = new Map<string, { name: string; quantity: number; cost: number }>();
   for (const r of receipts) {

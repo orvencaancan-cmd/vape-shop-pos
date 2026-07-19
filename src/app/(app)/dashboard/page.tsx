@@ -2,17 +2,28 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
-import { computeLowStock, type VariantRow } from "@/lib/reports/compute";
+import { computeLowStock, computeDailySeries, type VariantRow } from "@/lib/reports/compute";
 import { formatCurrency } from "@/lib/currency";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { buttonClasses } from "@/components/ui/button";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ chart?: string }>;
+}) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
   if (profile.role !== "owner") redirect("/sell");
 
-  const supabase = await createClient();
+  const params = await searchParams;
+  const chartDays = params.chart === "30d" ? 30 : 7;
 
-  const [{ data: variants }, { data: recentSales }] = await Promise.all([
+  const supabase = await createClient();
+  const chartWindowStart = new Date(new Date().getTime() - 30 * 86400000).toISOString();
+
+  const [{ data: variants }, { data: recentSales }, { data: chartSales }] = await Promise.all([
     supabase
       .from("variants")
       .select(
@@ -23,6 +34,10 @@ export default async function DashboardPage() {
       .select("id, total, created_at")
       .order("created_at", { ascending: false })
       .limit(10),
+    supabase
+      .from("sales")
+      .select("total, created_at")
+      .gte("created_at", chartWindowStart),
   ]);
 
   const lowStock = computeLowStock(
@@ -31,6 +46,16 @@ export default async function DashboardPage() {
       products: Array.isArray(v.products) ? v.products[0] ?? null : v.products,
     })) as VariantRow[],
   );
+
+  const series = computeDailySeries(chartSales ?? [], chartDays);
+  const todayRevenue = series[series.length - 1]?.revenue ?? 0;
+  const weekRevenue = computeDailySeries(chartSales ?? [], 7).reduce(
+    (sum, d) => sum + d.revenue,
+    0,
+  );
+  const todayCount = (chartSales ?? []).filter(
+    (s) => s.created_at.slice(0, 10) === series[series.length - 1]?.date,
+  ).length;
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
@@ -41,30 +66,79 @@ export default async function DashboardPage() {
         Subscription: {profile.shop.subscriptionStatus}
       </p>
 
-      <section className="mt-8">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-muted">Low stock</h2>
-          <Link href="/reports" className="text-xs text-primary underline underline-offset-2">
-            Full reports
-          </Link>
-        </div>
-        {lowStock.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">Nothing is low on stock.</p>
-        ) : (
-          <ul className="mt-2 flex flex-col gap-1 text-sm">
+      {lowStock.length > 0 && (
+        <Card
+          padding="sm"
+          className="mt-6 border-warning/40 bg-warning/10"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-warning">⚠</span>
+              <h2 className="text-sm font-medium text-warning">
+                {lowStock.length} item{lowStock.length === 1 ? "" : "s"} low on stock
+              </h2>
+            </div>
+            <Link href="/reports" className="text-xs text-warning underline underline-offset-2">
+              Full reports
+            </Link>
+          </div>
+          <ul className="mt-3 flex flex-col gap-1 text-sm">
             {lowStock.slice(0, 8).map((v) => (
               <li key={v.id} className="flex justify-between">
                 <span className="text-ink">
                   {v.productName} — {v.label}
                 </span>
-                <span className="text-error">{v.stockQty} left</span>
+                <Badge variant="warning">{v.stockQty} left</Badge>
               </li>
             ))}
           </ul>
-        )}
-      </section>
+        </Card>
+      )}
 
-      <section className="mt-8">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Card padding="sm">
+          <p className="text-xs text-muted">Today</p>
+          <p className="mt-1 text-lg font-semibold text-ink">{formatCurrency(todayRevenue)}</p>
+          <p className="text-xs text-muted">{todayCount} sale{todayCount === 1 ? "" : "s"}</p>
+        </Card>
+        <Card padding="sm">
+          <p className="text-xs text-muted">Last 7 days</p>
+          <p className="mt-1 text-lg font-semibold text-ink">{formatCurrency(weekRevenue)}</p>
+        </Card>
+        <Card padding="sm" className="col-span-2 flex flex-col justify-center gap-2 sm:col-span-1">
+          <Link href="/sell" className={buttonClasses("primary", "sm")}>
+            New sale
+          </Link>
+          <Link href="/inventory" className={buttonClasses("secondary", "sm")}>
+            Manage inventory
+          </Link>
+        </Card>
+      </div>
+
+      <Card padding="sm" className="mt-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-muted">Sales</h2>
+          <div className="flex gap-2 text-xs">
+            <Link
+              href="/dashboard?chart=7d"
+              className={chartDays === 7 ? "text-primary underline underline-offset-2" : "text-muted hover:text-ink"}
+            >
+              7 days
+            </Link>
+            <Link
+              href="/dashboard?chart=30d"
+              className={chartDays === 30 ? "text-primary underline underline-offset-2" : "text-muted hover:text-ink"}
+            >
+              30 days
+            </Link>
+          </div>
+        </div>
+        <div className="mt-4">
+          <SalesChart data={series} />
+        </div>
+      </Card>
+
+      <Card padding="sm" className="mt-6">
         <h2 className="text-sm font-medium text-muted">Recent sales</h2>
         {(recentSales?.length ?? 0) === 0 ? (
           <p className="mt-2 text-sm text-muted">No sales yet.</p>
@@ -80,7 +154,39 @@ export default async function DashboardPage() {
             ))}
           </ul>
         )}
-      </section>
+      </Card>
     </main>
+  );
+}
+
+function SalesChart({ data }: { data: { date: string; revenue: number }[] }) {
+  const max = Math.max(...data.map((d) => d.revenue), 1);
+  const step = data.length > 10 ? Math.ceil(data.length / 6) : 1;
+
+  return (
+    <div className="flex items-end gap-1">
+      {data.map((d, i) => {
+        const showLabel = i % step === 0 || i === data.length - 1;
+        const label =
+          data.length > 10
+            ? new Date(`${d.date}T00:00:00Z`).getUTCDate().toString()
+            : new Date(`${d.date}T00:00:00Z`).toLocaleDateString("en-US", {
+                weekday: "short",
+                timeZone: "UTC",
+              });
+        return (
+          <div key={d.date} className="flex flex-1 flex-col items-center gap-1">
+            <div className="flex h-24 w-full items-end">
+              <div
+                className="w-full rounded-t-sm bg-primary/80 transition-all"
+                style={{ height: `${Math.max((d.revenue / max) * 100, d.revenue > 0 ? 4 : 1)}%` }}
+                title={`${d.date}: ${formatCurrency(d.revenue)}`}
+              />
+            </div>
+            <span className="text-[10px] text-muted">{showLabel ? label : ""}</span>
+          </div>
+        );
+      })}
+    </div>
   );
 }
