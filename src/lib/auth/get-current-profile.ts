@@ -12,7 +12,6 @@ export type CurrentProfile = {
     subscriptionStatus: "trialing" | "active" | "past_due" | "canceled";
     logoUrl: string | null;
     primaryColor: string | null;
-    bannerStyle: "logo" | "typeset";
   };
 };
 
@@ -27,7 +26,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, shop_id, role, platform_admin, display_name, shops(id, name, subscription_status, logo_url, primary_color, banner_style)",
+      "id, shop_id, role, platform_admin, display_name, shops(id, name, subscription_status, logo_url, primary_color)",
     )
     .eq("id", user.id)
     .single();
@@ -48,7 +47,6 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
       subscriptionStatus: shop.subscription_status,
       logoUrl: shop.logo_url,
       primaryColor: shop.primary_color,
-      bannerStyle: shop.banner_style,
     },
   };
 }

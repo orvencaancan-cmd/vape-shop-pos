@@ -35,9 +35,12 @@ export default async function AppLayout({
       }
     >
       <header className="border-b border-hairline bg-canvas">
-        <div className="relative flex h-32 items-center justify-center border-b border-hairline bg-canvas-soft px-4 sm:h-48">
-          <AgentOneLogo className="absolute left-4 top-3 text-sm sm:text-base" />
-          <div className="absolute right-4 top-3 flex shrink-0 items-center gap-3">
+        <div className="relative flex h-16 items-center justify-center border-b border-hairline bg-canvas-soft px-4 sm:h-20">
+          <AgentOneLogo className="absolute left-4 text-xs sm:text-sm" />
+          <span className="max-w-[55%] truncate text-center font-serif text-sm font-normal uppercase tracking-[0.25em] text-ink sm:max-w-[60%] sm:text-lg sm:tracking-[0.35em]">
+            {profile.shop.name}
+          </span>
+          <div className="absolute right-4 flex shrink-0 items-center gap-3">
             <ThemeToggle />
             <form action={signOutAction}>
               <button
@@ -48,18 +51,6 @@ export default async function AppLayout({
               </button>
             </form>
           </div>
-          {profile.shop.logoUrl && profile.shop.bannerStyle === "logo" ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profile.shop.logoUrl}
-              alt={`${profile.shop.name} logo`}
-              className="h-full max-w-[80%] object-contain py-4"
-            />
-          ) : (
-            <span className="max-w-[90%] truncate text-center font-serif text-5xl font-normal leading-none tracking-wide text-ink sm:text-8xl">
-              {profile.shop.name}
-            </span>
-          )}
         </div>
         <nav className="mx-auto flex max-w-5xl gap-4 overflow-x-auto px-4 py-3 text-sm">
           {navItems.map((item) => (

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
-import { LogoForm, ColorForm, BannerStyleForm } from "./branding-forms";
+import { ColorForm } from "./branding-forms";
 
 export default async function BrandingPage() {
   const profile = await getCurrentProfile();
@@ -12,23 +12,6 @@ export default async function BrandingPage() {
       <h1 className="font-serif text-2xl font-normal text-ink">Branding</h1>
 
       <section className="mt-6">
-        <h2 className="text-sm font-medium text-muted">Logo</h2>
-        <div className="mt-2">
-          <LogoForm currentLogoUrl={profile.shop.logoUrl} />
-        </div>
-      </section>
-
-      <section className="mt-8">
-        <h2 className="text-sm font-medium text-muted">Banner display</h2>
-        <div className="mt-2">
-          <BannerStyleForm
-            currentStyle={profile.shop.bannerStyle}
-            hasLogo={Boolean(profile.shop.logoUrl)}
-          />
-        </div>
-      </section>
-
-      <section className="mt-8">
         <h2 className="text-sm font-medium text-muted">Primary color</h2>
         <div className="mt-2">
           <ColorForm currentColor={profile.shop.primaryColor ?? "#b8863a"} />
