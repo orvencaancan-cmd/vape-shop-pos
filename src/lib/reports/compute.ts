@@ -8,6 +8,8 @@ export type SaleItemRow = {
     flavor: string | null;
     nicotine_mg: number | null;
     size: string | null;
+    for_device: string | null;
+    ohms: number | null;
     product_id: string;
     products: { name: string; category: "ejuice" | "accessory" } | null;
   } | null;
@@ -18,6 +20,8 @@ export type VariantRow = {
   flavor: string | null;
   nicotine_mg: number | null;
   size: string | null;
+  for_device: string | null;
+  ohms: number | null;
   stock_qty: number;
   low_stock_threshold: number;
   cost: number;
@@ -36,9 +40,17 @@ function variantLabel(v: {
   flavor: string | null;
   nicotine_mg: number | null;
   size: string | null;
+  for_device?: string | null;
+  ohms?: number | null;
 }) {
   return (
-    [v.flavor, v.nicotine_mg != null ? `${v.nicotine_mg}mg` : null, v.size]
+    [
+      v.flavor,
+      v.nicotine_mg != null ? `${v.nicotine_mg}mg` : null,
+      v.size,
+      v.for_device ? `For ${v.for_device}` : null,
+      v.ohms != null ? `${v.ohms}Ω` : null,
+    ]
       .filter(Boolean)
       .join(" · ") || "Default"
   );

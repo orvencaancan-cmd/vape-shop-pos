@@ -16,7 +16,7 @@ export default async function DashboardPage() {
     supabase
       .from("variants")
       .select(
-        "id, flavor, nicotine_mg, size, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
+        "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
       ),
     supabase
       .from("sales")

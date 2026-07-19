@@ -44,7 +44,7 @@ export default async function ReportsPage({
     ? await supabase
         .from("sale_items")
         .select(
-          "sale_id, variant_id, quantity, unit_price, unit_cost, variants(flavor, nicotine_mg, size, product_id, products(name, category))",
+          "sale_id, variant_id, quantity, unit_price, unit_cost, variants(flavor, nicotine_mg, size, for_device, ohms, product_id, products(name, category))",
         )
         .in("sale_id", saleIds)
     : { data: [] as SaleItemRow[] };
@@ -52,7 +52,7 @@ export default async function ReportsPage({
   const { data: variants } = await supabase
     .from("variants")
     .select(
-      "id, flavor, nicotine_mg, size, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
+      "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
     );
 
   const { data: receipts } = await supabase
@@ -267,6 +267,8 @@ function normalizeVariants(rows: unknown[]): VariantRow[] {
     flavor: r.flavor as string | null,
     nicotine_mg: r.nicotine_mg as number | null,
     size: r.size as string | null,
+    for_device: r.for_device as string | null,
+    ohms: r.ohms != null ? Number(r.ohms) : null,
     stock_qty: r.stock_qty as number,
     low_stock_threshold: r.low_stock_threshold as number,
     cost: r.cost as number,
