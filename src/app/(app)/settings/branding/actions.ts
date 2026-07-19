@@ -17,6 +17,9 @@ export async function uploadLogoAction(
   if (!file.type.startsWith("image/")) {
     return { error: "Logo must be an image" };
   }
+  if (file.size > 4.5 * 1024 * 1024) {
+    return { error: "Logo must be under 4.5MB" };
+  }
 
   const supabase = await createClient();
   const { data: profile } = await supabase.from("profiles").select("shop_id, role").single();

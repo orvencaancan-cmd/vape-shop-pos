@@ -34,21 +34,8 @@ export default async function AppLayout({
       }
     >
       <header className="border-b border-hairline bg-canvas">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-          <div className="flex min-w-0 items-center gap-2">
-            {profile.shop.logoUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={profile.shop.logoUrl}
-                alt={`${profile.shop.name} logo`}
-                className="h-7 w-7 shrink-0 rounded object-contain"
-              />
-            )}
-            <span className="truncate font-serif text-lg font-normal text-primary">
-              {profile.shop.name}
-            </span>
-          </div>
-          <div className="flex shrink-0 items-center gap-3">
+        <div className="relative flex h-32 items-center justify-center border-b border-hairline bg-canvas-soft px-4 sm:h-48">
+          <div className="absolute right-4 top-3 flex shrink-0 items-center gap-3">
             <ThemeToggle />
             <form action={signOutAction}>
               <button
@@ -59,8 +46,20 @@ export default async function AppLayout({
               </button>
             </form>
           </div>
+          {profile.shop.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profile.shop.logoUrl}
+              alt={`${profile.shop.name} logo`}
+              className="h-full max-w-[80%] object-contain py-4"
+            />
+          ) : (
+            <span className="truncate font-serif text-2xl font-normal text-primary">
+              {profile.shop.name}
+            </span>
+          )}
         </div>
-        <nav className="mx-auto flex max-w-5xl gap-4 overflow-x-auto px-4 pb-3 text-sm">
+        <nav className="mx-auto flex max-w-5xl gap-4 overflow-x-auto px-4 py-3 text-sm">
           {navItems.map((item) => (
             <Link
               key={item.href}
