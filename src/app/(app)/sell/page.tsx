@@ -10,7 +10,9 @@ export default async function SellPage() {
   const supabase = await createClient();
   const { data: variants } = await supabase
     .from("variants")
-    .select("id, flavor, nicotine_mg, size, price, stock_qty, products(name, category, archived)")
+    .select(
+      "id, flavor, nicotine_mg, size, for_device, price, stock_qty, products(name, category, archived)",
+    )
     .order("created_at");
 
   const items = (variants ?? [])
@@ -22,7 +24,12 @@ export default async function SellPage() {
         productName: product.name as string,
         category: product.category as "ejuice" | "accessory",
         label:
-          [v.flavor, v.nicotine_mg != null ? `${v.nicotine_mg}mg` : null, v.size]
+          [
+            v.flavor,
+            v.nicotine_mg != null ? `${v.nicotine_mg}mg` : null,
+            v.size,
+            v.for_device ? `For ${v.for_device}` : null,
+          ]
             .filter(Boolean)
             .join(" · ") || "Default",
         price: Number(v.price),

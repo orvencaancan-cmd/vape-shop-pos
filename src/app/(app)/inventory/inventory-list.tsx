@@ -11,9 +11,11 @@ export type InventoryVariant = {
   productName: string;
   brand: string | null;
   category: "ejuice" | "accessory";
+  subcategory: string | null;
   flavor: string | null;
   nicotineMg: number | null;
   size: string | null;
+  forDevice: string | null;
   price: number;
   stockQty: number;
   lowStockThreshold: number;
@@ -36,6 +38,7 @@ export function InventoryList({
   const [brand, setBrand] = useState(ALL);
   const [flavor, setFlavor] = useState(ALL);
   const [nicotine, setNicotine] = useState(ALL);
+  const [device, setDevice] = useState(ALL);
 
   const brands = useMemo(
     () => [...new Set(variants.map((v) => v.brand).filter(Boolean))].sort() as string[],
@@ -52,15 +55,20 @@ export function InventoryList({
       ) as number[],
     [variants],
   );
+  const devices = useMemo(
+    () => [...new Set(variants.map((v) => v.forDevice).filter(Boolean))].sort() as string[],
+    [variants],
+  );
 
   const filtered = variants.filter((v) => {
     if (category !== "all" && v.category !== category) return false;
     if (brand !== ALL && v.brand !== brand) return false;
     if (flavor !== ALL && v.flavor !== flavor) return false;
     if (nicotine !== ALL && String(v.nicotineMg) !== nicotine) return false;
+    if (device !== ALL && v.forDevice !== device) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
-      const haystack = `${v.productName} ${v.brand ?? ""} ${v.flavor ?? ""}`.toLowerCase();
+      const haystack = `${v.productName} ${v.brand ?? ""} ${v.flavor ?? ""} ${v.subcategory ?? ""} ${v.forDevice ?? ""}`.toLowerCase();
       if (!haystack.includes(q)) return false;
     }
     return true;
@@ -73,7 +81,7 @@ export function InventoryList({
       <div className="flex flex-wrap items-center gap-2">
         <input
           type="text"
-          placeholder="Search name, brand, flavor…"
+          placeholder="Search name, brand, flavor, device…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -128,19 +136,34 @@ export function InventoryList({
             </option>
           ))}
         </select>
+        {devices.length > 0 && (
+          <select
+            value={device}
+            onChange={(e) => setDevice(e.target.value)}
+            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          >
+            <option value={ALL}>All devices</option>
+            {devices.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div className="mt-6 flex flex-col gap-8">
         {productsInOrder.map(([productId, productName]) => {
           const productVariants = filtered.filter((v) => v.productId === productId);
           const productCategory = productVariants[0]?.category;
+          const productSubcategory = productVariants[0]?.subcategory;
           return (
             <section key={productId}>
               <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                 <h2 className="text-lg font-medium text-slate-900">
                   {productName}{" "}
                   <span className="text-xs font-normal uppercase text-slate-400">
-                    {productCategory}
+                    {productSubcategory ? `${productSubcategory} · ${productCategory}` : productCategory}
                   </span>
                 </h2>
                 {canEdit && (
@@ -157,7 +180,12 @@ export function InventoryList({
                 {productVariants.map((v) => {
                   const isLow = v.stockQty <= v.lowStockThreshold;
                   const label =
-                    [v.flavor, v.nicotineMg != null ? `${v.nicotineMg}mg` : null, v.size]
+                    [
+                      v.flavor,
+                      v.nicotineMg != null ? `${v.nicotineMg}mg` : null,
+                      v.size,
+                      v.forDevice ? `For ${v.forDevice}` : null,
+                    ]
                       .filter(Boolean)
                       .join(" · ") || "Default";
                   return (

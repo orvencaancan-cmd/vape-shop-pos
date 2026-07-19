@@ -14,6 +14,7 @@ type VariantValues = {
   flavor?: string | null;
   nicotineMg?: number | null;
   size?: string | null;
+  forDevice?: string | null;
   sku?: string | null;
   cost?: number;
   price?: number;
@@ -22,10 +23,12 @@ type VariantValues = {
 
 export function VariantForm({
   productId,
+  productCategory,
   variantId,
   values,
 }: {
   productId: string;
+  productCategory: "ejuice" | "accessory";
   variantId?: string;
   values?: VariantValues;
 }) {
@@ -38,15 +41,26 @@ export function VariantForm({
   return (
     <div className="flex flex-col gap-2 rounded-md border border-slate-200 p-3">
       <form action={formAction} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Field label="Flavor" name="flavor" defaultValue={values?.flavor ?? ""} />
-        <Field
-          label="Nicotine mg"
-          name="nicotineMg"
-          type="number"
-          step="0.1"
-          defaultValue={values?.nicotineMg ?? ""}
-        />
-        <Field label="Size" name="size" defaultValue={values?.size ?? ""} />
+        {productCategory === "ejuice" ? (
+          <>
+            <Field label="Flavor" name="flavor" defaultValue={values?.flavor ?? ""} />
+            <Field
+              label="Nicotine mg"
+              name="nicotineMg"
+              type="number"
+              step="0.1"
+              defaultValue={values?.nicotineMg ?? ""}
+            />
+            <Field label="Size" name="size" defaultValue={values?.size ?? ""} />
+          </>
+        ) : (
+          <Field
+            label="For device"
+            name="forDevice"
+            defaultValue={values?.forDevice ?? ""}
+            list="device-suggestions"
+          />
+        )}
         <Field label="SKU" name="sku" defaultValue={values?.sku ?? ""} />
         <Field
           label="Cost"
@@ -78,6 +92,13 @@ export function VariantForm({
           </button>
         </div>
       </form>
+      {productCategory === "accessory" && (
+        <datalist id="device-suggestions">
+          <option value="Oneo" />
+          <option value="Xlim" />
+          <option value="Nexlim" />
+        </datalist>
+      )}
       {state.error && <p className="text-sm text-red-600">{state.error}</p>}
       {deleteAction && (
         <form action={deleteAction}>
@@ -96,12 +117,14 @@ function Field({
   type = "text",
   step,
   defaultValue,
+  list,
 }: {
   label: string;
   name: string;
   type?: string;
   step?: string;
   defaultValue?: string | number;
+  list?: string;
 }) {
   return (
     <label className="flex flex-col gap-1 text-xs">
@@ -110,6 +133,7 @@ function Field({
         name={name}
         type={type}
         step={step}
+        list={list}
         defaultValue={defaultValue}
         className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
       />

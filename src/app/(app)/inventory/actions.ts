@@ -68,6 +68,7 @@ const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   brand: z.string().optional(),
   category: z.enum(["ejuice", "accessory"]),
+  subcategory: z.string().optional(),
   description: z.string().optional(),
 });
 
@@ -79,6 +80,7 @@ export async function createProductAction(
     name: formData.get("name"),
     brand: formData.get("brand") ?? "",
     category: formData.get("category"),
+    subcategory: formData.get("subcategory") ?? "",
     description: formData.get("description") ?? "",
   });
   if (!parsed.success) {
@@ -98,6 +100,7 @@ export async function createProductAction(
       name: parsed.data.name,
       brand: parsed.data.brand || null,
       category: parsed.data.category,
+      subcategory: parsed.data.category === "accessory" ? parsed.data.subcategory || null : null,
       description: parsed.data.description,
     })
     .select("id")
@@ -116,6 +119,7 @@ export async function updateProductAction(
     name: formData.get("name"),
     brand: formData.get("brand") ?? "",
     category: formData.get("category"),
+    subcategory: formData.get("subcategory") ?? "",
     description: formData.get("description") ?? "",
   });
   if (!parsed.success) {
@@ -129,6 +133,7 @@ export async function updateProductAction(
       name: parsed.data.name,
       brand: parsed.data.brand || null,
       category: parsed.data.category,
+      subcategory: parsed.data.category === "accessory" ? parsed.data.subcategory || null : null,
       description: parsed.data.description,
     })
     .eq("id", productId);
@@ -150,6 +155,7 @@ const variantSchema = z.object({
   flavor: z.string().optional(),
   nicotineMg: z.coerce.number().nonnegative().optional().or(z.nan()),
   size: z.string().optional(),
+  forDevice: z.string().optional(),
   sku: z.string().optional(),
   cost: z.coerce.number().nonnegative(),
   price: z.coerce.number().nonnegative(),
@@ -165,6 +171,7 @@ export async function createVariantAction(
     flavor: formData.get("flavor") ?? "",
     nicotineMg: formData.get("nicotineMg") || undefined,
     size: formData.get("size") ?? "",
+    forDevice: formData.get("forDevice") ?? "",
     sku: formData.get("sku") ?? "",
     cost: formData.get("cost") || 0,
     price: formData.get("price") || 0,
@@ -186,6 +193,7 @@ export async function createVariantAction(
     flavor: parsed.data.flavor || null,
     nicotine_mg: Number.isNaN(parsed.data.nicotineMg) ? null : parsed.data.nicotineMg,
     size: parsed.data.size || null,
+    for_device: parsed.data.forDevice || null,
     sku: parsed.data.sku || null,
     cost: parsed.data.cost,
     price: parsed.data.price,
@@ -208,6 +216,7 @@ export async function updateVariantAction(
     flavor: formData.get("flavor") ?? "",
     nicotineMg: formData.get("nicotineMg") || undefined,
     size: formData.get("size") ?? "",
+    forDevice: formData.get("forDevice") ?? "",
     sku: formData.get("sku") ?? "",
     cost: formData.get("cost") || 0,
     price: formData.get("price") || 0,
@@ -224,6 +233,7 @@ export async function updateVariantAction(
       flavor: parsed.data.flavor || null,
       nicotine_mg: Number.isNaN(parsed.data.nicotineMg) ? null : parsed.data.nicotineMg,
       size: parsed.data.size || null,
+      for_device: parsed.data.forDevice || null,
       sku: parsed.data.sku || null,
       cost: parsed.data.cost,
       price: parsed.data.price,

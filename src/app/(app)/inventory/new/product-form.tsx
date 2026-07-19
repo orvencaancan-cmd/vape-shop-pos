@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { createProductAction, type ActionState } from "../actions";
 
 const initialState: ActionState = {};
 
 export function NewProductForm() {
   const [state, formAction, pending] = useActionState(createProductAction, initialState);
+  const [category, setCategory] = useState<"ejuice" | "accessory">("ejuice");
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -28,11 +29,32 @@ export function NewProductForm() {
       </label>
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700">Category</span>
-        <select name="category" className="rounded-md border border-slate-300 px-3 py-2">
+        <select
+          name="category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as "ejuice" | "accessory")}
+          className="rounded-md border border-slate-300 px-3 py-2"
+        >
           <option value="ejuice">E-juice</option>
           <option value="accessory">Accessory</option>
         </select>
       </label>
+      {category === "accessory" && (
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">Subcategory (optional)</span>
+          <input
+            name="subcategory"
+            list="subcategory-suggestions"
+            placeholder="e.g. Cartridge"
+            className="rounded-md border border-slate-300 px-3 py-2"
+          />
+          <datalist id="subcategory-suggestions">
+            <option value="Cartridge" />
+            <option value="Coil" />
+            <option value="Battery" />
+          </datalist>
+        </label>
+      )}
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700">Description (optional)</span>
         <textarea

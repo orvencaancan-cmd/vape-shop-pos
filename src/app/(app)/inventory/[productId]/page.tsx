@@ -19,14 +19,16 @@ export default async function ProductPage({
   const supabase = await createClient();
   const { data: product } = await supabase
     .from("products")
-    .select("id, name, brand, category, description")
+    .select("id, name, brand, category, subcategory, description")
     .eq("id", productId)
     .maybeSingle();
   if (!product) notFound();
 
   const { data: variants } = await supabase
     .from("variants")
-    .select("id, flavor, nicotine_mg, size, sku, cost, price, stock_qty, low_stock_threshold")
+    .select(
+      "id, flavor, nicotine_mg, size, for_device, sku, cost, price, stock_qty, low_stock_threshold",
+    )
     .eq("product_id", productId)
     .order("created_at");
 
@@ -46,6 +48,7 @@ export default async function ProductPage({
             name={product.name}
             brand={product.brand}
             category={product.category}
+            subcategory={product.subcategory}
             description={product.description}
           />
         </div>
@@ -63,11 +66,13 @@ export default async function ProductPage({
             <div key={v.id} className="flex flex-col gap-2">
               <VariantForm
                 productId={product.id}
+                productCategory={product.category}
                 variantId={v.id}
                 values={{
                   flavor: v.flavor,
                   nicotineMg: v.nicotine_mg,
                   size: v.size,
+                  forDevice: v.for_device,
                   sku: v.sku,
                   cost: v.cost,
                   price: v.price,
@@ -90,7 +95,7 @@ export default async function ProductPage({
           stock&quot; row that appears next to it above to log your starting quantity.
         </p>
         <div className="mt-2">
-          <VariantForm productId={product.id} />
+          <VariantForm productId={product.id} productCategory={product.category} />
         </div>
       </section>
     </main>
