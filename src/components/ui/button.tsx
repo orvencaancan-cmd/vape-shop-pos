@@ -22,7 +22,7 @@ const sizeClasses: Record<Size, string> = {
  * <button> (invalid HTML — two interactive elements).
  */
 export function buttonClasses(variant: Variant = "primary", size: Size = "md") {
-  return `inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${variantClasses[variant]} ${sizeClasses[size]}`;
+  return `inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${variantClasses[variant]} ${sizeClasses[size]}`;
 }
 
 export function Button({

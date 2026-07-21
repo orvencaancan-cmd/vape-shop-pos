@@ -45,7 +45,7 @@ export function VariantForm({
   const isCartridge = productSubcategory?.trim().toLowerCase() === "cartridge";
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-hairline bg-canvas-soft p-3">
+    <div className="flex flex-col gap-2 rounded-lg border border-hairline bg-canvas-soft p-3">
       <form action={formAction} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {productCategory === "ejuice" ? (
           <>

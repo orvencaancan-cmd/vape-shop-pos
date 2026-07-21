@@ -94,13 +94,13 @@ export function InventoryList({
           placeholder="Search name, brand, flavor, device…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 rounded-md border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+          className="flex-1 rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
         />
         {(["all", "ejuice", "accessory"] as const).map((c) => (
           <button
             key={c}
             onClick={() => setCategory(c)}
-            className={`rounded-md px-3 py-2 text-sm transition-colors ${
+            className={`rounded-lg px-3 py-2 text-sm transition-colors ${
               category === c
                 ? "bg-primary text-on-primary"
                 : "bg-canvas-strong text-body hover:text-ink"
@@ -115,7 +115,7 @@ export function InventoryList({
         <select
           value={brand}
           onChange={(e) => setBrand(e.target.value)}
-          className="rounded-md border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink"
+          className="rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink"
         >
           <option value={ALL}>All brands</option>
           {brands.map((b) => (
@@ -127,7 +127,7 @@ export function InventoryList({
         <select
           value={flavor}
           onChange={(e) => setFlavor(e.target.value)}
-          className="rounded-md border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink"
+          className="rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink"
         >
           <option value={ALL}>All flavors</option>
           {flavors.map((f) => (
@@ -139,7 +139,7 @@ export function InventoryList({
         <select
           value={nicotine}
           onChange={(e) => setNicotine(e.target.value)}
-          className="rounded-md border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink"
+          className="rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink"
         >
           <option value={ALL}>All nicotine levels</option>
           {nicotineLevels.map((n) => (
@@ -152,7 +152,7 @@ export function InventoryList({
           <select
             value={device}
             onChange={(e) => setDevice(e.target.value)}
-            className="rounded-md border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink"
+            className="rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink"
           >
             <option value={ALL}>All devices</option>
             {devices.map((d) => (
@@ -166,7 +166,7 @@ export function InventoryList({
           <select
             value={ohms}
             onChange={(e) => setOhms(e.target.value)}
-            className="rounded-md border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink"
+            className="rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink"
           >
             <option value={ALL}>All ohms</option>
             {ohmsLevels.map((o) => (

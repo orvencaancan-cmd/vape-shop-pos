@@ -25,7 +25,7 @@ export default async function SuppliersPage() {
           return (
             <div
               key={s.id}
-              className="flex items-center gap-3 rounded-md border border-hairline bg-canvas-soft p-3"
+              className="flex items-center gap-3 rounded-lg border border-hairline bg-canvas-soft p-3"
             >
               <div className="flex-1">
                 <SupplierForm supplierId={s.id} name={s.name} contactInfo={s.contact_info} />

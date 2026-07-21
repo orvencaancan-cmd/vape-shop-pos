@@ -89,7 +89,7 @@ export default async function AdminPage() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-hairline bg-canvas-soft px-4 py-3">
+    <div className="rounded-xl border border-hairline bg-canvas-soft px-4 py-3">
       <p className="text-xs text-muted">{label}</p>
       <p className="text-lg font-semibold text-ink">{value}</p>
     </div>

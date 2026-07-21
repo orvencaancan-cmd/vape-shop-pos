@@ -13,7 +13,7 @@ export function Card({
 }: HTMLAttributes<HTMLDivElement> & { padding?: keyof typeof paddingClasses }) {
   return (
     <div
-      className={`rounded-lg border border-hairline bg-canvas-soft ${paddingClasses[padding]} ${className}`}
+      className={`rounded-xl border border-hairline bg-canvas-soft ${paddingClasses[padding]} ${className}`}
       {...props}
     />
   );

@@ -13,7 +13,7 @@ export function SignUpForm() {
 
   if (state.success) {
     return (
-      <div className="animate-fade-in-up rounded-lg border border-hairline bg-success/10 p-4 text-sm text-success">
+      <div className="animate-fade-in-up rounded-xl border border-hairline bg-success/10 p-4 text-sm text-success">
         Check your email to confirm your account — once confirmed, you&apos;ll
         set up your shop and start your 14-day free trial.
       </div>

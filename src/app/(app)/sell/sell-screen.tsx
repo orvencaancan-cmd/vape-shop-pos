@@ -92,13 +92,13 @@ export function SellScreen({ variants }: { variants: Variant[] }) {
             placeholder="Search products…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 rounded-md border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+            className="flex-1 rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
           />
           {(["all", "ejuice", "accessory"] as const).map((c) => (
             <button
               key={c}
               onClick={() => setCategory(c)}
-              className={`rounded-md px-3 py-2 text-sm transition-colors ${
+              className={`rounded-lg px-3 py-2 text-sm transition-colors ${
                 category === c
                   ? "bg-primary text-on-primary"
                   : "bg-canvas-strong text-body hover:text-ink"
@@ -115,7 +115,7 @@ export function SellScreen({ variants }: { variants: Variant[] }) {
               key={v.id}
               onClick={() => addToCart(v.id)}
               disabled={v.stockQty <= 0}
-              className="flex flex-col items-start rounded-md border border-hairline bg-canvas-soft p-3 text-left transition-shadow hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex flex-col items-start rounded-lg border border-hairline bg-canvas-soft p-3 text-left transition-shadow hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
             >
               <span className="text-sm font-medium text-ink">{v.productName}</span>
               <span className="text-xs text-muted">{v.label}</span>
@@ -131,7 +131,7 @@ export function SellScreen({ variants }: { variants: Variant[] }) {
         </div>
       </div>
 
-      <div className="flex flex-col rounded-lg border border-hairline bg-canvas-soft p-4">
+      <div className="flex flex-col rounded-xl border border-hairline bg-canvas-soft p-4">
         <h2 className="text-sm font-medium text-muted">Cart</h2>
         <div className="mt-3 flex flex-1 flex-col gap-3">
           {cart.length === 0 && <p className="text-sm text-muted">No items yet.</p>}
@@ -179,7 +179,7 @@ export function SellScreen({ variants }: { variants: Variant[] }) {
           <button
             onClick={completeSale}
             disabled={cart.length === 0 || pending}
-            className="mt-3 w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active disabled:opacity-50"
+            className="mt-3 w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active disabled:opacity-50"
           >
             {pending ? "Processing…" : "Complete sale"}
           </button>

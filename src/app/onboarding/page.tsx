@@ -30,7 +30,7 @@ export default async function OnboardingPage() {
       <form action={completeOnboarding}>
         <button
           type="submit"
-          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
+          className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
         >
           Continue to billing
         </button>

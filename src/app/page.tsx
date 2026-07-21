@@ -65,7 +65,7 @@ export default async function Home() {
       </header>
 
       <main className="flex-1">
-        <section className="mx-auto max-w-3xl px-4 py-20 text-center sm:py-28">
+        <section className="mx-auto max-w-3xl px-4 py-24 text-center sm:py-32">
           <h1 className="animate-fade-in-up font-serif text-4xl font-normal tracking-tight text-ink sm:text-6xl">
             POS &amp; inventory built for vape shops
           </h1>
@@ -83,32 +83,41 @@ export default async function Home() {
           >
             <Link
               href="/signup"
-              className="rounded-md bg-primary px-6 py-3 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
+              className="rounded-lg bg-primary px-6 py-3 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
             >
               Start your free trial
             </Link>
             <Link
               href="/login"
-              className="rounded-md border border-hairline px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-canvas-soft"
+              className="rounded-lg border border-hairline px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-canvas-soft"
             >
               Log in
             </Link>
           </div>
         </section>
 
-        <section className="mx-auto max-w-5xl px-4 py-12 sm:py-16">
-          <div className="stagger grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((f) => (
-              <Card key={f.title} padding="md" className="transition-shadow hover:shadow-sm">
-                <h3 className="font-medium text-ink">{f.title}</h3>
-                <p className="mt-2 text-sm text-body">{f.body}</p>
-              </Card>
-            ))}
+        <section className="border-t border-hairline bg-canvas-soft px-4 py-20 sm:py-28">
+          <div className="mx-auto max-w-5xl">
+            <p className="text-center text-xs font-medium uppercase tracking-[0.2em] text-primary">
+              What you get
+            </p>
+            <h2 className="mt-3 text-center font-serif text-2xl font-normal text-ink sm:text-3xl">
+              Everything your shop needs to run day to day
+            </h2>
+            <div className="stagger mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {FEATURES.map((f) => (
+                <Card key={f.title} padding="md" className="transition-shadow hover:shadow-sm">
+                  <h3 className="font-medium text-ink">{f.title}</h3>
+                  <p className="mt-2 text-sm text-body">{f.body}</p>
+                </Card>
+              ))}
+            </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-md px-4 py-16 text-center sm:py-24">
-          <h2 className="font-serif text-3xl font-normal text-ink">Simple pricing</h2>
+        <section className="border-t border-hairline px-4 py-20 text-center sm:py-28">
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Pricing</p>
+          <h2 className="mt-3 font-serif text-3xl font-normal text-ink">Simple pricing</h2>
           <p className="mt-2 font-serif text-4xl font-normal text-ink">
             {priceLabel ?? "One flat monthly price"}
           </p>
@@ -117,14 +126,14 @@ export default async function Home() {
           </p>
           <Link
             href="/signup"
-            className="mt-6 inline-block rounded-md bg-primary px-6 py-3 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
+            className="mt-6 inline-block rounded-lg bg-primary px-6 py-3 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
           >
             Start free trial
           </Link>
         </section>
       </main>
 
-      <footer className="border-t border-hairline py-6 text-center text-xs text-muted">
+      <footer className="border-t border-hairline bg-canvas-soft py-6 text-center text-xs text-muted">
         VapeStock
       </footer>
     </div>

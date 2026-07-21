@@ -25,7 +25,7 @@ export function MemberRow({
   const boundRemove = removeStaffAction.bind(null, profileId);
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-md border border-hairline bg-canvas-soft p-3">
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-hairline bg-canvas-soft p-3">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-ink">
           {displayName || email} {isCurrentUser && <span className="text-muted">(you)</span>}
@@ -39,7 +39,7 @@ export function MemberRow({
           name="role"
           defaultValue={role}
           disabled={!canDemoteOrRemove && role === "owner"}
-          className="rounded-md border border-hairline bg-canvas px-2 py-1 text-sm text-ink disabled:opacity-50"
+          className="rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink disabled:opacity-50"
         >
           <option value="staff">Staff</option>
           <option value="owner">Owner</option>
@@ -47,7 +47,7 @@ export function MemberRow({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-canvas-strong px-2 py-1 text-xs text-body transition-colors hover:text-ink disabled:opacity-50"
+          className="rounded-lg bg-canvas-strong px-2 py-1 text-xs text-body transition-colors hover:text-ink disabled:opacity-50"
         >
           {pending ? "Saving…" : "Save"}
         </button>

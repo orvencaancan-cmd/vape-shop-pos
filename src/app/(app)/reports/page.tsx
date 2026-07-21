@@ -203,7 +203,7 @@ function RangeLink({
   return (
     <Link
       href={`/reports?range=${range}`}
-      className={`rounded-md px-3 py-1.5 transition-colors ${active ? "bg-primary text-on-primary" : "bg-canvas-strong text-body hover:text-ink"}`}
+      className={`rounded-lg px-3 py-1.5 transition-colors ${active ? "bg-primary text-on-primary" : "bg-canvas-strong text-body hover:text-ink"}`}
     >
       {label}
     </Link>
@@ -221,7 +221,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-hairline bg-canvas-soft px-4 py-3">
+    <div className="rounded-xl border border-hairline bg-canvas-soft px-4 py-3">
       <p className="text-xs text-muted">{label}</p>
       <p className="text-lg font-semibold text-ink">{value}</p>
     </div>
