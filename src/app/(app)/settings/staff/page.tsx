@@ -22,6 +22,7 @@ export default async function StaffPage() {
   const admin = createAdminClient();
   const { data: userList } = await admin.auth.admin.listUsers();
   const emailById = new Map(userList?.users.map((u) => [u.id, u.email ?? ""]));
+  const pendingById = new Map(userList?.users.map((u) => [u.id, !u.last_sign_in_at]));
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
@@ -37,6 +38,7 @@ export default async function StaffPage() {
             role={m.role}
             isCurrentUser={m.id === profile.id}
             canDemoteOrRemove={m.role !== "owner" || ownerCount > 1}
+            pending={pendingById.get(m.id) ?? false}
           />
         ))}
       </div>

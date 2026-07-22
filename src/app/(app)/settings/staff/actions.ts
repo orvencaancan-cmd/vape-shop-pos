@@ -51,6 +51,21 @@ export async function inviteStaffAction(
   return { success: `Invited ${parsed.data.email} as ${parsed.data.role}` };
 }
 
+export async function resendInviteAction(email: string): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.role !== "owner") {
+    return { error: "Only the shop owner can resend invites" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/accept-invite`,
+  });
+  if (error) return { error: error.message };
+
+  return { success: `Resent invite to ${email}` };
+}
+
 const roleSchema = z.object({ role: z.enum(["owner", "staff"]) });
 
 export async function changeRoleAction(
