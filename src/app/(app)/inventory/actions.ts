@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getAccessorySubcategory } from "@/lib/inventory/accessory-subcategories";
 
 export type ActionState = { error?: string };
 
@@ -211,6 +212,88 @@ export async function createFlavorBatchAction(
       product_id: product.id,
       nicotine_mg: mg,
       size: size || null,
+      cost,
+      price,
+      low_stock_threshold: lowStockThreshold,
+    })),
+  );
+  const { error: variantsError } = await supabase.from("variants").insert(variantRows);
+  if (variantsError) return { error: variantsError.message };
+
+  revalidatePath("/inventory");
+  redirect("/inventory");
+}
+
+const accessoryBatchSchema = z.object({
+  subcategoryKey: z.string().min(1),
+  brand: z.string().optional(),
+  items: z.array(z.string()).transform((arr) => arr.map((f) => f.trim()).filter(Boolean)),
+  variantOptions: z.array(z.string()).optional().default([]),
+  cost: z.coerce.number().nonnegative(),
+  price: z.coerce.number().nonnegative(),
+  lowStockThreshold: z.coerce.number().int().nonnegative(),
+});
+
+export async function createAccessoryBatchAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = accessoryBatchSchema.safeParse({
+    subcategoryKey: formData.get("subcategoryKey"),
+    brand: formData.get("brand") ?? "",
+    items: formData.getAll("items"),
+    variantOptions: formData.getAll("variantOptions"),
+    cost: formData.get("cost") || 0,
+    price: formData.get("price") || 0,
+    lowStockThreshold: formData.get("lowStockThreshold") || 5,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const { subcategoryKey, brand, items, variantOptions, cost, price, lowStockThreshold } =
+    parsed.data;
+  if (items.length === 0) {
+    return { error: `Add at least one ${subcategoryKey === "cotton" ? "product" : "item"}` };
+  }
+
+  const subcategory = getAccessorySubcategory(subcategoryKey);
+  if (!subcategory) {
+    return { error: "Invalid accessory type" };
+  }
+
+  const supabase = await createClient();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("shop_id")
+    .single();
+  const shopId = profile!.shop_id;
+
+  const { data: products, error: productsError } = await supabase
+    .from("products")
+    .insert(
+      items.map((item) => ({
+        shop_id: shopId,
+        name: subcategory.nameTemplate(item),
+        brand: brand || null,
+        category: "accessory" as const,
+        subcategory: subcategory.dbSubcategory,
+      })),
+    )
+    .select("id");
+  if (productsError) return { error: productsError.message };
+
+  const levels = subcategory.variantDimension ? variantOptions : [null];
+  if (subcategory.variantDimension && levels.length === 0) {
+    return { error: `Select at least one ${subcategory.variantDimension.label.toLowerCase()}` };
+  }
+
+  const variantRows = products.flatMap((product, i) =>
+    levels.map((level) => ({
+      shop_id: shopId,
+      product_id: product.id,
+      for_device: subcategory.setForDevice ? items[i] : null,
+      ohms: subcategory.variantDimension?.field === "ohms" && level ? Number(level) : null,
+      size: subcategory.variantDimension?.field === "size" && level ? `${level}g` : null,
       cost,
       price,
       low_stock_threshold: lowStockThreshold,
