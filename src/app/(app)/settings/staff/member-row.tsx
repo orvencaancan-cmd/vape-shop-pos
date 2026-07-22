@@ -12,7 +12,6 @@ export function MemberRow({
   role,
   isCurrentUser,
   canDemoteOrRemove,
-  pending: invitePending,
 }: {
   profileId: string;
   displayName: string | null;
@@ -20,7 +19,6 @@ export function MemberRow({
   role: "owner" | "staff";
   isCurrentUser: boolean;
   canDemoteOrRemove: boolean;
-  pending: boolean;
 }) {
   const boundRoleAction = changeRoleAction.bind(null, profileId);
   const [state, formAction, pending] = useActionState(boundRoleAction, initialState);
@@ -36,23 +34,18 @@ export function MemberRow({
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-ink">
           {displayName || email} {isCurrentUser && <span className="text-muted">(you)</span>}
-          {invitePending && (
-            <span className="ml-2 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning">
-              Invite pending
-            </span>
-          )}
         </p>
         <p className="text-xs text-muted">{email}</p>
       </div>
 
-      {invitePending && (
+      {!isCurrentUser && (
         <form action={resendFormAction}>
           <button
             type="submit"
             disabled={resendPending}
             className="text-xs text-primary underline underline-offset-2 disabled:opacity-50"
           >
-            {resendPending ? "Resending…" : "Resend invite"}
+            {resendPending ? "Sending…" : "Send login link"}
           </button>
         </form>
       )}
