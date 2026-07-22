@@ -9,7 +9,13 @@ const initialState: ActionState = {};
 
 const NICOTINE_LEVELS = [3, 6, 12, 24, 36];
 
-export function NewFlavorBatchForm({ brands }: { brands: string[] }) {
+export function NewFlavorBatchForm({
+  brands,
+  role,
+}: {
+  brands: string[];
+  role: "owner" | "staff";
+}) {
   const [state, formAction, pending] = useActionState(createFlavorBatchAction, initialState);
   const [flavorRows, setFlavorRows] = useState<number[]>([0, 1, 2]);
   const [nextRowId, setNextRowId] = useState(3);
@@ -74,7 +80,7 @@ export function NewFlavorBatchForm({ brands }: { brands: string[] }) {
         <div className="mt-2 flex flex-wrap gap-4">
           {NICOTINE_LEVELS.map((mg) => (
             <label key={mg} className="flex items-center gap-1.5 text-sm text-ink">
-              <input type="checkbox" name="nicotineLevels" value={mg} defaultChecked />
+              <input type="checkbox" name="nicotineLevels" value={mg} />
               {mg}mg
             </label>
           ))}
@@ -82,10 +88,12 @@ export function NewFlavorBatchForm({ brands }: { brands: string[] }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <label className="flex flex-col gap-1.5">
-          <Label>Cost (per unit)</Label>
-          <Input name="cost" type="number" step="0.01" defaultValue={0} />
-        </label>
+        {role === "owner" && (
+          <label className="flex flex-col gap-1.5">
+            <Label>Cost (per unit)</Label>
+            <Input name="cost" type="number" step="0.01" defaultValue={0} />
+          </label>
+        )}
         <label className="flex flex-col gap-1.5">
           <Label>Price (per unit)</Label>
           <Input name="price" type="number" step="0.01" defaultValue={0} />
@@ -96,8 +104,9 @@ export function NewFlavorBatchForm({ brands }: { brands: string[] }) {
         </label>
       </div>
       <p className="-mt-3 text-xs text-muted">
-        Cost, price, and low-stock threshold apply to every variant created — you can adjust
-        individual ones afterward.
+        {role === "owner"
+          ? "Cost, price, and low-stock threshold apply to every variant created — you can adjust individual ones afterward."
+          : "Price and low-stock threshold apply to every variant created — you can adjust individual ones afterward."}
       </p>
 
       {state.error && <p className="text-sm text-error">{state.error}</p>}

@@ -15,11 +15,11 @@ export default async function NewProductPage({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
-  if (profile.role !== "owner") redirect("/inventory");
 
   const { mode, category, subcategory: subcategoryKey } = await searchParams;
 
   if (mode === "single") {
+    if (profile.role !== "owner") redirect("/inventory/new");
     return (
       <PageShell title="Add a single product" subtitle="For a one-off item.">
         <NewProductForm />
@@ -60,6 +60,7 @@ export default async function NewProductPage({
               : undefined,
           }}
           brands={brands}
+          role={profile.role}
         />
       </PageShell>
     );
@@ -98,7 +99,7 @@ export default async function NewProductPage({
         backHref="/inventory/new"
         backLabel="Change category"
       >
-        <NewFlavorBatchForm brands={brands} />
+        <NewFlavorBatchForm brands={brands} role={profile.role} />
       </PageShell>
     );
   }
@@ -117,12 +118,14 @@ export default async function NewProductPage({
           </Card>
         </Link>
       </div>
-      <Link
-        href="/inventory/new?mode=single"
-        className="mt-6 inline-block text-sm text-muted underline underline-offset-2 hover:text-ink"
-      >
-        Or add a single product manually
-      </Link>
+      {profile.role === "owner" && (
+        <Link
+          href="/inventory/new?mode=single"
+          className="mt-6 inline-block text-sm text-muted underline underline-offset-2 hover:text-ink"
+        >
+          Or add a single product manually
+        </Link>
+      )}
     </PageShell>
   );
 }

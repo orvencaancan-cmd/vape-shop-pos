@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 
 export type ActionState = { error?: string };
 
@@ -23,11 +24,12 @@ export async function createSupplierAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
-  const supabase = await createClient();
-  const { data: profile } = await supabase.from("profiles").select("shop_id").single();
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
 
+  const supabase = await createClient();
   const { error } = await supabase.from("suppliers").insert({
-    shop_id: profile!.shop_id,
+    shop_id: profile.shopId,
     name: parsed.data.name,
     contact_info: parsed.data.contactInfo || null,
   });

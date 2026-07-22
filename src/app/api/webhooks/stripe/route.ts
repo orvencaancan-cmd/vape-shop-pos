@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
-import { toShopSubscriptionStatus } from "@/lib/stripe-status";
+import { toShopSubscriptionStatus, getCurrentPeriodEnd } from "@/lib/stripe-status";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
@@ -43,6 +43,7 @@ export async function POST(request: Request) {
           trial_ends_at: subscription.trial_end
             ? new Date(subscription.trial_end * 1000).toISOString()
             : null,
+          current_period_end: getCurrentPeriodEnd(subscription),
         })
         .eq("id", shopId);
       break;
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
           trial_ends_at: subscription.trial_end
             ? new Date(subscription.trial_end * 1000).toISOString()
             : null,
+          current_period_end: getCurrentPeriodEnd(subscription),
         });
 
       if (shopId) {

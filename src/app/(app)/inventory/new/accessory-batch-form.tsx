@@ -20,9 +20,11 @@ const initialState: ActionState = {};
 export function NewAccessoryBatchForm({
   subcategory,
   brands,
+  role,
 }: {
   subcategory: ClientSubcategory;
   brands: string[];
+  role: "owner" | "staff";
 }) {
   const [state, formAction, pending] = useActionState(createAccessoryBatchAction, initialState);
   const [rows, setRows] = useState<number[]>([0, 1]);
@@ -92,10 +94,12 @@ export function NewAccessoryBatchForm({
       )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <label className="flex flex-col gap-1.5">
-          <Label>Cost (per unit)</Label>
-          <Input name="cost" type="number" step="0.01" defaultValue={0} />
-        </label>
+        {role === "owner" && (
+          <label className="flex flex-col gap-1.5">
+            <Label>Cost (per unit)</Label>
+            <Input name="cost" type="number" step="0.01" defaultValue={0} />
+          </label>
+        )}
         <label className="flex flex-col gap-1.5">
           <Label>Price (per unit)</Label>
           <Input name="price" type="number" step="0.01" defaultValue={0} />
@@ -106,8 +110,9 @@ export function NewAccessoryBatchForm({
         </label>
       </div>
       <p className="-mt-3 text-xs text-muted">
-        Cost, price, and low-stock threshold apply to every variant created — you can adjust
-        individual ones afterward.
+        {role === "owner"
+          ? "Cost, price, and low-stock threshold apply to every variant created — you can adjust individual ones afterward."
+          : "Price and low-stock threshold apply to every variant created — you can adjust individual ones afterward."}
       </p>
 
       {state.error && <p className="text-sm text-error">{state.error}</p>}

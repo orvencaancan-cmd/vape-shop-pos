@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/currency";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
+import { DashboardRecentSales } from "./recent-sales";
 
 export default async function DashboardPage({
   searchParams,
@@ -31,13 +32,14 @@ export default async function DashboardPage({
       ),
     supabase
       .from("sales")
-      .select("id, total, created_at")
+      .select("id, total, created_at, voided_at")
       .order("created_at", { ascending: false })
       .limit(10),
     supabase
       .from("sales")
       .select("total, created_at")
-      .gte("created_at", chartWindowStart),
+      .gte("created_at", chartWindowStart)
+      .is("voided_at", null),
   ]);
 
   const lowStock = computeLowStock(
@@ -140,20 +142,14 @@ export default async function DashboardPage({
 
       <Card padding="sm" className="mt-6">
         <h2 className="text-sm font-medium text-muted">Recent sales</h2>
-        {(recentSales?.length ?? 0) === 0 ? (
-          <p className="mt-2 text-sm text-muted">No sales yet.</p>
-        ) : (
-          <ul className="mt-2 flex flex-col gap-1 text-sm">
-            {recentSales!.map((s) => (
-              <li key={s.id} className="flex justify-between">
-                <span className="text-muted">
-                  {new Date(s.created_at).toLocaleString()}
-                </span>
-                <span className="text-ink">{formatCurrency(Number(s.total))}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <DashboardRecentSales
+          sales={(recentSales ?? []).map((s) => ({
+            id: s.id,
+            total: Number(s.total),
+            createdAt: s.created_at,
+            voidedAt: s.voided_at,
+          }))}
+        />
       </Card>
     </main>
   );

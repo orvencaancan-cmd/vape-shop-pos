@@ -67,6 +67,15 @@ body {
   border-color: var(--color-hairline);
 }
 
+button:not(:disabled),
+[role="button"],
+select,
+input[type="checkbox"],
+input[type="radio"],
+summary {
+  cursor: pointer;
+}
+
 /* Motion — kept deliberately light: entrance + hover feedback, no heavy library. */
 
 @keyframes fade-in-up {

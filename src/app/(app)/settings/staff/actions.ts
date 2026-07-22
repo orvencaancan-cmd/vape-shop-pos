@@ -4,12 +4,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 
 export type ActionState = { error?: string; success?: string };
 
 const inviteSchema = z.object({
   email: z.string().email("Enter a valid email"),
   displayName: z.string().optional(),
+  role: z.enum(["owner", "staff"]).default("staff"),
 });
 
 export async function inviteStaffAction(
@@ -19,13 +21,13 @@ export async function inviteStaffAction(
   const parsed = inviteSchema.safeParse({
     email: formData.get("email"),
     displayName: formData.get("displayName") ?? "",
+    role: formData.get("role") || "staff",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
-  const supabase = await createClient();
-  const { data: profile } = await supabase.from("profiles").select("shop_id, role").single();
+  const profile = await getCurrentProfile();
   if (!profile || profile.role !== "owner") {
     return { error: "Only the shop owner can invite staff" };
   }
@@ -39,14 +41,14 @@ export async function inviteStaffAction(
 
   const { error: profileError } = await admin.from("profiles").insert({
     id: invited.user.id,
-    shop_id: profile.shop_id,
-    role: "staff",
+    shop_id: profile.shopId,
+    role: parsed.data.role,
     display_name: parsed.data.displayName || null,
   });
   if (profileError) return { error: profileError.message };
 
   revalidatePath("/settings/staff");
-  return { success: `Invited ${parsed.data.email}` };
+  return { success: `Invited ${parsed.data.email} as ${parsed.data.role}` };
 }
 
 const roleSchema = z.object({ role: z.enum(["owner", "staff"]) });

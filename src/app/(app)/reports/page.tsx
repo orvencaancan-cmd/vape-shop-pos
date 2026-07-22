@@ -12,6 +12,7 @@ import {
   computeSlowMovers,
   computeInventoryValue,
   computeSupplierActivity,
+  computeStaffActivity,
   type SaleItemRow,
   type VariantRow,
   type ReceiptRow,
@@ -36,7 +37,8 @@ export default async function ReportsPage({
     .from("sales")
     .select("id, total, created_at")
     .gte("created_at", from.toISOString())
-    .lt("created_at", to.toISOString());
+    .lt("created_at", to.toISOString())
+    .is("voided_at", null);
 
   const saleIds = (sales ?? []).map((s) => s.id);
 
@@ -61,6 +63,16 @@ export default async function ReportsPage({
     .gte("received_at", from.toISOString())
     .lt("received_at", to.toISOString());
 
+  const { data: staffSales } = await supabase
+    .from("sales")
+    .select("total, created_by, voided_at")
+    .gte("created_at", from.toISOString())
+    .lt("created_at", to.toISOString());
+
+  const { data: staffProfiles } = await supabase
+    .from("profiles")
+    .select("id, display_name");
+
   const items = normalizeSaleItems(saleItems ?? []);
   const variantRows = normalizeVariants(variants ?? []);
   const receiptRows = normalizeReceipts(receipts ?? []);
@@ -73,6 +85,7 @@ export default async function ReportsPage({
   const slowMovers = computeSlowMovers(variantRows, items);
   const inventoryValue = computeInventoryValue(variantRows);
   const supplierActivity = computeSupplierActivity(receiptRows);
+  const staffActivity = computeStaffActivity(staffSales ?? [], staffProfiles ?? []);
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-4xl px-4 py-8">
@@ -182,6 +195,22 @@ export default async function ReportsPage({
               s.name,
               `${s.quantity} received`,
               formatCurrency(s.cost),
+            ])}
+          />
+        )}
+      </Section>
+
+      <Section title="Staff activity">
+        {staffActivity.length === 0 ? (
+          <Empty />
+        ) : (
+          <Table
+            rows={staffActivity.map((s) => [
+              s.name,
+              `${s.count} sale${s.count === 1 ? "" : "s"} · avg ${formatCurrency(s.averageSale)}${
+                s.voidedCount > 0 ? ` · ${s.voidedCount} voided` : ""
+              }`,
+              formatCurrency(s.revenue),
             ])}
           />
         )}

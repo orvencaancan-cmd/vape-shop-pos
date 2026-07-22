@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 
 export type ActionState = { error?: string };
 
@@ -19,16 +20,16 @@ export async function updateColorAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid color" };
   }
 
-  const supabase = await createClient();
-  const { data: profile } = await supabase.from("profiles").select("shop_id, role").single();
+  const profile = await getCurrentProfile();
   if (!profile || profile.role !== "owner") {
     return { error: "Only the shop owner can update branding" };
   }
 
+  const supabase = await createClient();
   const { error } = await supabase
     .from("shops")
     .update({ primary_color: parsed.data.primaryColor })
-    .eq("id", profile.shop_id);
+    .eq("id", profile.shopId);
   if (error) return { error: error.message };
 
   revalidatePath("/", "layout");

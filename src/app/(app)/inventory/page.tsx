@@ -62,24 +62,20 @@ export default async function InventoryPage() {
     <main className="animate-fade-in-up mx-auto max-w-5xl px-4 py-8">
       <div className="flex items-center justify-between">
         <h1 className="font-serif text-2xl font-normal text-ink">Inventory</h1>
-        {profile.role === "owner" && (
-          <Link
-            href="/inventory/new"
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
-          >
-            Add product
-          </Link>
-        )}
+        <Link
+          href="/inventory/new"
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
+        >
+          Add product
+        </Link>
       </div>
 
       {items.length === 0 ? (
         <p className="mt-6 text-sm text-muted">
           No products yet.{" "}
-          {profile.role === "owner" && (
-            <Link href="/inventory/new" className="text-primary underline underline-offset-2">
-              Add your first one
-            </Link>
-          )}
+          <Link href="/inventory/new" className="text-primary underline underline-offset-2">
+            Add your first one
+          </Link>
         </p>
       ) : (
         <InventoryList

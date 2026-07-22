@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { recordSaleAction } from "./actions";
+import { useRouter } from "next/navigation";
+import { recordSaleAction, voidSaleAction } from "./actions";
 import { formatCurrency } from "@/lib/currency";
 
 type Variant = {
@@ -13,9 +14,25 @@ type Variant = {
   stockQty: number;
 };
 
+type RecentSale = {
+  id: string;
+  total: number;
+  createdAt: string;
+  createdByName: string | null;
+  voidedAt: string | null;
+  canVoid: boolean;
+};
+
 type CartLine = { variantId: string; quantity: number };
 
-export function SellScreen({ variants }: { variants: Variant[] }) {
+export function SellScreen({
+  variants,
+  recentSales,
+}: {
+  variants: Variant[];
+  recentSales: RecentSale[];
+}) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<"all" | "ejuice" | "accessory">("all");
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -23,6 +40,7 @@ export function SellScreen({ variants }: { variants: Variant[] }) {
     null,
   );
   const [pending, startTransition] = useTransition();
+  const [voidingId, setVoidingId] = useState<string | null>(null);
 
   const variantsById = useMemo(
     () => new Map(variants.map((v) => [v.id, v])),
@@ -79,6 +97,23 @@ export function SellScreen({ variants }: { variants: Variant[] }) {
       } else {
         setMessage({ type: "success", text: `Sale recorded — ${formatCurrency(total)}` });
         setCart([]);
+        router.refresh();
+      }
+    });
+  }
+
+  function voidSale(saleId: string, saleTotal: number) {
+    if (!confirm(`Void this ${formatCurrency(saleTotal)} sale? This restores the stock quantity.`)) {
+      return;
+    }
+    setVoidingId(saleId);
+    startTransition(async () => {
+      const result = await voidSaleAction(saleId);
+      setVoidingId(null);
+      if (result.error) {
+        setMessage({ type: "error", text: result.error });
+      } else {
+        router.refresh();
       }
     });
   }
@@ -191,6 +226,46 @@ export function SellScreen({ variants }: { variants: Variant[] }) {
             >
               {message.text}
             </p>
+          )}
+        </div>
+      </div>
+
+      <div className="md:col-span-3">
+        <div className="rounded-xl border border-hairline bg-canvas-soft p-4">
+          <h2 className="text-sm font-medium text-muted">Recent sales</h2>
+          {recentSales.length === 0 ? (
+            <p className="mt-2 text-sm text-muted">No sales yet.</p>
+          ) : (
+            <ul className="mt-2 flex flex-col divide-y divide-hairline">
+              {recentSales.map((s) => (
+                <li
+                  key={s.id}
+                  className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
+                >
+                  <div className="min-w-0">
+                    <span className={s.voidedAt ? "text-muted line-through" : "text-ink"}>
+                      {new Date(s.createdAt).toLocaleTimeString()} — {formatCurrency(s.total)}
+                    </span>
+                    {s.createdByName && (
+                      <span className="ml-2 text-xs text-muted">{s.createdByName}</span>
+                    )}
+                  </div>
+                  {s.voidedAt ? (
+                    <span className="rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-muted">
+                      Voided
+                    </span>
+                  ) : s.canVoid ? (
+                    <button
+                      onClick={() => voidSale(s.id, s.total)}
+                      disabled={voidingId === s.id}
+                      className="text-xs text-error underline underline-offset-2 disabled:opacity-50"
+                    >
+                      {voidingId === s.id ? "Voiding…" : "Void"}
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </div>

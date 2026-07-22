@@ -18,7 +18,7 @@ export default async function BillingPage() {
   const supabase = await createClient();
   const { data: shop } = await supabase
     .from("shops")
-    .select("subscription_status, trial_ends_at, stripe_customer_id")
+    .select("subscription_status, trial_ends_at, current_period_end, stripe_customer_id")
     .eq("id", profile.shopId)
     .single();
 
@@ -33,9 +33,15 @@ export default async function BillingPage() {
         </p>
         {shop?.subscription_status === "trialing" && shop.trial_ends_at && (
           <p className="mt-1 text-xs text-muted">
-            Trial ends {new Date(shop.trial_ends_at).toLocaleDateString()}
+            Free trial ends {new Date(shop.trial_ends_at).toLocaleDateString()}
           </p>
         )}
+        {(shop?.subscription_status === "active" || shop?.subscription_status === "past_due") &&
+          shop.current_period_end && (
+            <p className="mt-1 text-xs text-muted">
+              Renews {new Date(shop.current_period_end).toLocaleDateString()}
+            </p>
+          )}
       </div>
 
       {shop?.stripe_customer_id ? (

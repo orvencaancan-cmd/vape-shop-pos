@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ReceiveStockForm } from "./receive-stock-form";
+import { archiveProductAction } from "./actions";
 import { formatCurrency } from "@/lib/currency";
 
 export type InventoryVariant = {
@@ -193,12 +194,30 @@ export function InventoryList({
                   </span>
                 </h2>
                 {canEdit && (
-                  <Link
-                    href={`/inventory/${productId}`}
-                    className="text-sm text-primary underline underline-offset-2"
-                  >
-                    Edit
-                  </Link>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <Link
+                      href={`/inventory/${productId}`}
+                      className="text-sm text-primary underline underline-offset-2"
+                    >
+                      Edit
+                    </Link>
+                    <form
+                      action={archiveProductAction.bind(null, productId)}
+                      onSubmit={(e) => {
+                        if (
+                          !confirm(
+                            `Delete ${productName}? This hides it from your inventory but keeps its sales history.`,
+                          )
+                        ) {
+                          e.preventDefault();
+                        }
+                      }}
+                    >
+                      <button type="submit" className="text-sm text-error underline underline-offset-2">
+                        Delete
+                      </button>
+                    </form>
+                  </div>
                 )}
               </div>
 

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { getAccessorySubcategory } from "@/lib/inventory/accessory-subcategories";
 
 export type ActionState = { error?: string };
@@ -39,13 +40,11 @@ export async function receiveStockAction(
 
   let resolvedSupplierId = supplierId || null;
   if (newSupplierName?.trim()) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("shop_id")
-      .single();
+    const profile = await getCurrentProfile();
+    if (!profile) return { error: "Not signed in" };
     const { data: newSupplier, error: supplierError } = await supabase
       .from("suppliers")
-      .insert({ shop_id: profile!.shop_id, name: newSupplierName.trim() })
+      .insert({ shop_id: profile.shopId, name: newSupplierName.trim() })
       .select("id")
       .single();
     if (supplierError) return { error: supplierError.message };
@@ -89,15 +88,13 @@ export async function createProductAction(
   }
 
   const supabase = await createClient();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("shop_id")
-    .single();
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
 
   const { data: product, error } = await supabase
     .from("products")
     .insert({
-      shop_id: profile!.shop_id,
+      shop_id: profile.shopId,
       name: parsed.data.name,
       brand: parsed.data.brand || null,
       category: parsed.data.category,
@@ -147,7 +144,14 @@ export async function updateProductAction(
 
 export async function archiveProductAction(productId: string) {
   const supabase = await createClient();
-  await supabase.from("products").update({ archived: true }).eq("id", productId);
+  const { error } = await supabase
+    .from("products")
+    .update({ archived: true })
+    .eq("id", productId);
+  if (error) {
+    console.error("archiveProductAction failed:", error.message);
+    return;
+  }
   revalidatePath("/inventory");
   redirect("/inventory");
 }
@@ -187,11 +191,10 @@ export async function createFlavorBatchAction(
   }
 
   const supabase = await createClient();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("shop_id")
-    .single();
-  const shopId = profile!.shop_id;
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+  const shopId = profile.shopId;
+  const effectiveCost = profile.role === "owner" ? cost : 0;
 
   const { data: products, error: productsError } = await supabase
     .from("products")
@@ -212,7 +215,7 @@ export async function createFlavorBatchAction(
       product_id: product.id,
       nicotine_mg: mg,
       size: size || null,
-      cost,
+      cost: effectiveCost,
       price,
       low_stock_threshold: lowStockThreshold,
     })),
@@ -262,11 +265,10 @@ export async function createAccessoryBatchAction(
   }
 
   const supabase = await createClient();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("shop_id")
-    .single();
-  const shopId = profile!.shop_id;
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+  const shopId = profile.shopId;
+  const effectiveCost = profile.role === "owner" ? cost : 0;
 
   const { data: products, error: productsError } = await supabase
     .from("products")
@@ -294,7 +296,7 @@ export async function createAccessoryBatchAction(
       for_device: subcategory.setForDevice ? items[i] : null,
       ohms: subcategory.variantDimension?.field === "ohms" && level ? Number(level) : null,
       size: subcategory.variantDimension?.field === "size" && level ? `${level}g` : null,
-      cost,
+      cost: effectiveCost,
       price,
       low_stock_threshold: lowStockThreshold,
     })),
@@ -339,13 +341,11 @@ export async function createVariantAction(
   }
 
   const supabase = await createClient();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("shop_id")
-    .single();
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
 
   const { error } = await supabase.from("variants").insert({
-    shop_id: profile!.shop_id,
+    shop_id: profile.shopId,
     product_id: productId,
     flavor: parsed.data.flavor || null,
     nicotine_mg: Number.isNaN(parsed.data.nicotineMg) ? null : parsed.data.nicotineMg,

@@ -25,3 +25,17 @@ export async function recordSaleAction(
   revalidatePath("/inventory");
   return { saleId: data as string };
 }
+
+export type VoidResult = { error?: string };
+
+export async function voidSaleAction(saleId: string): Promise<VoidResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("void_sale", { p_sale_id: saleId });
+  if (error) return { error: error.message };
+
+  revalidatePath("/sell");
+  revalidatePath("/inventory");
+  revalidatePath("/dashboard");
+  revalidatePath("/reports");
+  return {};
+}

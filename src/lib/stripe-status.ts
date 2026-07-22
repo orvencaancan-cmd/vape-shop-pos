@@ -22,3 +22,9 @@ export function toShopSubscriptionStatus(
       return "past_due";
   }
 }
+
+/** current_period_end lives on the subscription item, not the subscription itself, in this API version. */
+export function getCurrentPeriodEnd(subscription: Stripe.Subscription): string | null {
+  const end = subscription.items.data[0]?.current_period_end;
+  return end ? new Date(end * 1000).toISOString() : null;
+}

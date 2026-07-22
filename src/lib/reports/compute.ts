@@ -178,6 +178,41 @@ export function computeDailySeries(sales: { total: number; created_at: string }[
   return [...buckets.entries()].map(([date, revenue]) => ({ date, revenue }));
 }
 
+export type StaffSaleRow = { total: number; created_by: string | null; voided_at: string | null };
+
+export function computeStaffActivity(
+  sales: StaffSaleRow[],
+  profiles: { id: string; display_name: string | null }[],
+) {
+  const nameById = new Map(profiles.map((p) => [p.id, p.display_name]));
+  const byStaff = new Map<
+    string,
+    { name: string; count: number; revenue: number; voidedCount: number }
+  >();
+  for (const s of sales) {
+    const key = s.created_by ?? "unknown";
+    const existing = byStaff.get(key) ?? {
+      name: nameById.get(key) || "Unnamed staff",
+      count: 0,
+      revenue: 0,
+      voidedCount: 0,
+    };
+    if (s.voided_at) {
+      existing.voidedCount += 1;
+    } else {
+      existing.count += 1;
+      existing.revenue += Number(s.total);
+    }
+    byStaff.set(key, existing);
+  }
+  return [...byStaff.values()]
+    .map((s) => ({
+      ...s,
+      averageSale: s.count > 0 ? s.revenue / s.count : 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+}
+
 export function computeSupplierActivity(receipts: ReceiptRow[]) {
   const bySupplier = new Map<string, { name: string; quantity: number; cost: number }>();
   for (const r of receipts) {
