@@ -151,6 +151,78 @@ export async function archiveProductAction(productId: string) {
   redirect("/inventory");
 }
 
+const flavorBatchSchema = z.object({
+  brand: z.string().optional(),
+  size: z.string().optional(),
+  flavors: z.array(z.string()).transform((arr) => arr.map((f) => f.trim()).filter(Boolean)),
+  nicotineLevels: z
+    .array(z.coerce.number())
+    .transform((arr) => [...new Set(arr)])
+    .refine((arr) => arr.length > 0, "Select at least one nicotine level"),
+  cost: z.coerce.number().nonnegative(),
+  price: z.coerce.number().nonnegative(),
+  lowStockThreshold: z.coerce.number().int().nonnegative(),
+});
+
+export async function createFlavorBatchAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = flavorBatchSchema.safeParse({
+    brand: formData.get("brand") ?? "",
+    size: formData.get("size") ?? "",
+    flavors: formData.getAll("flavors"),
+    nicotineLevels: formData.getAll("nicotineLevels"),
+    cost: formData.get("cost") || 0,
+    price: formData.get("price") || 0,
+    lowStockThreshold: formData.get("lowStockThreshold") || 5,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const { brand, size, flavors, nicotineLevels, cost, price, lowStockThreshold } = parsed.data;
+  if (flavors.length === 0) {
+    return { error: "Add at least one flavor" };
+  }
+
+  const supabase = await createClient();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("shop_id")
+    .single();
+  const shopId = profile!.shop_id;
+
+  const { data: products, error: productsError } = await supabase
+    .from("products")
+    .insert(
+      flavors.map((name) => ({
+        shop_id: shopId,
+        name,
+        brand: brand || null,
+        category: "ejuice" as const,
+      })),
+    )
+    .select("id");
+  if (productsError) return { error: productsError.message };
+
+  const variantRows = products.flatMap((product) =>
+    nicotineLevels.map((mg) => ({
+      shop_id: shopId,
+      product_id: product.id,
+      nicotine_mg: mg,
+      size: size || null,
+      cost,
+      price,
+      low_stock_threshold: lowStockThreshold,
+    })),
+  );
+  const { error: variantsError } = await supabase.from("variants").insert(variantRows);
+  if (variantsError) return { error: variantsError.message };
+
+  revalidatePath("/inventory");
+  redirect("/inventory");
+}
+
 const variantSchema = z.object({
   flavor: z.string().optional(),
   nicotineMg: z.coerce.number().nonnegative().optional().or(z.nan()),
