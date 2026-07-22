@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getStripe } from "@/lib/stripe";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 
 async function getPriceLabel() {
   const priceId = process.env.STRIPE_PRICE_ID;
@@ -45,6 +47,11 @@ const FEATURES = [
 ];
 
 export default async function Home() {
+  const profile = await getCurrentProfile();
+  if (profile) {
+    redirect(profile.role === "owner" ? "/dashboard" : "/sell");
+  }
+
   const priceLabel = await getPriceLabel();
 
   return (
