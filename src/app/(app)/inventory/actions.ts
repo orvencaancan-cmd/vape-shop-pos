@@ -232,6 +232,7 @@ const accessoryBatchSchema = z.object({
   brand: z.string().optional(),
   items: z.array(z.string()).transform((arr) => arr.map((f) => f.trim()).filter(Boolean)),
   variantOptions: z.array(z.string()).optional().default([]),
+  variantOptionsText: z.string().optional(),
   cost: z.coerce.number().nonnegative(),
   price: z.coerce.number().nonnegative(),
   lowStockThreshold: z.coerce.number().int().nonnegative(),
@@ -246,6 +247,7 @@ export async function createAccessoryBatchAction(
     brand: formData.get("brand") ?? "",
     items: formData.getAll("items"),
     variantOptions: formData.getAll("variantOptions"),
+    variantOptionsText: formData.get("variantOptionsText") ?? "",
     cost: formData.get("cost") || 0,
     price: formData.get("price") || 0,
     lowStockThreshold: formData.get("lowStockThreshold") || 5,
@@ -253,8 +255,16 @@ export async function createAccessoryBatchAction(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
-  const { subcategoryKey, brand, items, variantOptions, cost, price, lowStockThreshold } =
-    parsed.data;
+  const {
+    subcategoryKey,
+    brand,
+    items,
+    variantOptions,
+    variantOptionsText,
+    cost,
+    price,
+    lowStockThreshold,
+  } = parsed.data;
   if (items.length === 0) {
     return { error: `Add at least one ${subcategoryKey === "cotton" ? "product" : "item"}` };
   }
@@ -284,9 +294,17 @@ export async function createAccessoryBatchAction(
     .select("id");
   if (productsError) return { error: productsError.message };
 
-  const levels = subcategory.variantDimension ? variantOptions : [null];
+  let levels: (string | null)[];
+  if (subcategory.variantDimension?.inputType === "freeText") {
+    levels = [...new Set((variantOptionsText ?? "").split(",").map((v) => v.trim()).filter(Boolean))];
+  } else if (subcategory.variantDimension) {
+    levels = variantOptions;
+  } else {
+    levels = [null];
+  }
   if (subcategory.variantDimension && levels.length === 0) {
-    return { error: `Select at least one ${subcategory.variantDimension.label.toLowerCase()}` };
+    const verb = subcategory.variantDimension.inputType === "freeText" ? "Add" : "Select";
+    return { error: `${verb} at least one ${subcategory.variantDimension.label.toLowerCase()}` };
   }
 
   const variantRows = products.flatMap((product, i) =>
@@ -295,7 +313,10 @@ export async function createAccessoryBatchAction(
       product_id: product.id,
       for_device: subcategory.setForDevice ? items[i] : null,
       ohms: subcategory.variantDimension?.field === "ohms" && level ? Number(level) : null,
-      size: subcategory.variantDimension?.field === "size" && level ? `${level}g` : null,
+      size:
+        subcategory.variantDimension?.field === "size" && level
+          ? (subcategory.variantDimension.formatValue?.(level) ?? level)
+          : null,
       cost: effectiveCost,
       price,
       low_stock_threshold: lowStockThreshold,

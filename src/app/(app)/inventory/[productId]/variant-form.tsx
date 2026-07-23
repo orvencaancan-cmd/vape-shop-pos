@@ -9,6 +9,7 @@ import {
 } from "../actions";
 import { Input, Label } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
+import { getAccessorySubcategoryByDbName } from "@/lib/inventory/accessory-subcategories";
 
 const initialState: ActionState = {};
 
@@ -42,7 +43,12 @@ export function VariantForm({
     : createVariantAction.bind(null, productId);
   const [state, formAction, pending] = useActionState(boundAction, initialState);
   const deleteAction = variantId ? deleteVariantAction.bind(null, variantId, productId) : undefined;
-  const isCartridge = productSubcategory?.trim().toLowerCase() === "cartridge";
+  const dimension =
+    productCategory === "accessory" && productSubcategory
+      ? getAccessorySubcategoryByDbName(productSubcategory)?.variantDimension
+      : undefined;
+  const dimensionSuggestions =
+    dimension?.inputType === "checklist" ? dimension.options.map((o) => o.value) : [];
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-hairline bg-canvas-soft p-3">
@@ -67,14 +73,22 @@ export function VariantForm({
               defaultValue={values?.forDevice ?? ""}
               list="device-suggestions"
             />
-            {isCartridge && (
+            {dimension?.field === "ohms" && (
               <Field
-                label="Ohms"
+                label={dimension.label}
                 name="ohms"
                 type="number"
                 step="0.1"
                 defaultValue={values?.ohms ?? ""}
-                list="ohms-suggestions"
+                list={dimensionSuggestions.length > 0 ? "dimension-suggestions" : undefined}
+              />
+            )}
+            {dimension?.field === "size" && (
+              <Field
+                label={dimension.label}
+                name="size"
+                defaultValue={values?.size ?? ""}
+                list={dimensionSuggestions.length > 0 ? "dimension-suggestions" : undefined}
               />
             )}
           </>
@@ -113,11 +127,11 @@ export function VariantForm({
           <option value="Nexlim" />
         </datalist>
       )}
-      {isCartridge && (
-        <datalist id="ohms-suggestions">
-          <option value="0.4" />
-          <option value="0.6" />
-          <option value="0.8" />
+      {dimensionSuggestions.length > 0 && (
+        <datalist id="dimension-suggestions">
+          {dimensionSuggestions.map((v) => (
+            <option key={v} value={v} />
+          ))}
         </datalist>
       )}
       {state.error && <p className="text-sm text-error">{state.error}</p>}

@@ -5,6 +5,7 @@ const FEATURE_BOXES = [
       "Track specifics of your stock — flavor, strength, and size",
       "Stock updates the moment a sale is made",
       "See what's low before you run out",
+      "Check your stock from your phone, anytime, anywhere",
     ],
   },
   {
@@ -13,6 +14,7 @@ const FEATURE_BOXES = [
       "A simple screen to ring up a sale — no training needed",
       "Search or tap to add items, then check out",
       "Totals and stock update as you go",
+      "Check today's sales from anywhere, not just the register",
     ],
   },
   {

@@ -9,10 +9,9 @@ type ClientSubcategory = {
   label: string;
   listLabel: string;
   listHelp: string;
-  variantDimension?: {
-    label: string;
-    options: { value: string; label: string }[];
-  };
+  variantDimension?:
+    | { label: string; inputType: "checklist"; options: { value: string; label: string }[] }
+    | { label: string; inputType: "freeText"; placeholder: string };
 };
 
 const initialState: ActionState = {};
@@ -76,7 +75,7 @@ export function NewAccessoryBatchForm({
         </button>
       </div>
 
-      {subcategory.variantDimension && (
+      {subcategory.variantDimension?.inputType === "checklist" && (
         <div>
           <Label>{subcategory.variantDimension.label}</Label>
           <p className="mt-1 text-xs text-muted">
@@ -91,6 +90,17 @@ export function NewAccessoryBatchForm({
             ))}
           </div>
         </div>
+      )}
+
+      {subcategory.variantDimension?.inputType === "freeText" && (
+        <label className="flex flex-col gap-1.5">
+          <Label>{subcategory.variantDimension.label}</Label>
+          <p className="mt-1 text-xs text-muted">
+            Each item listed above gets one variant per {subcategory.variantDimension.label.toLowerCase()}
+            , separated by commas.
+          </p>
+          <Input name="variantOptionsText" placeholder={subcategory.variantDimension.placeholder} />
+        </label>
       )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

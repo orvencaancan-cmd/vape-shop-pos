@@ -53,12 +53,20 @@ export default async function NewProductPage({
             label: subcategory.label,
             listLabel: subcategory.listLabel,
             listHelp: subcategory.listHelp,
-            variantDimension: subcategory.variantDimension
-              ? {
-                  label: subcategory.variantDimension.label,
-                  options: subcategory.variantDimension.options,
-                }
-              : undefined,
+            variantDimension:
+              subcategory.variantDimension?.inputType === "checklist"
+                ? {
+                    label: subcategory.variantDimension.label,
+                    inputType: "checklist",
+                    options: subcategory.variantDimension.options,
+                  }
+                : subcategory.variantDimension?.inputType === "freeText"
+                  ? {
+                      label: subcategory.variantDimension.label,
+                      inputType: "freeText",
+                      placeholder: subcategory.variantDimension.placeholder,
+                    }
+                  : undefined,
           }}
           brands={brands}
           role={profile.role}
