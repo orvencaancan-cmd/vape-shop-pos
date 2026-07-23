@@ -37,7 +37,7 @@ export function LoginForm() {
         {pending ? "Logging in…" : "Log in"}
       </Button>
 
-      <p className="text-center text-sm text-muted">
+      <p className="text-sm text-muted">
         Don&apos;t have a shop yet?{" "}
         <Link href="/signup" className="text-primary underline underline-offset-2">
           Start a free trial

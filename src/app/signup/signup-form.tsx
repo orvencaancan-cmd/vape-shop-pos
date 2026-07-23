@@ -42,7 +42,7 @@ export function SignUpForm() {
         {pending ? "Creating account…" : "Start free trial"}
       </Button>
 
-      <p className="text-center text-sm text-muted">
+      <p className="text-sm text-muted">
         Already have an account?{" "}
         <Link href="/login" className="text-primary underline underline-offset-2">
           Log in

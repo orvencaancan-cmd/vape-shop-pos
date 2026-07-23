@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PasswordForm } from "./password-form";
+import { AuthCardShell } from "@/components/auth-card-shell";
 
 export default async function AcceptInvitePage() {
   const supabase = await createClient();
@@ -10,14 +11,8 @@ export default async function AcceptInvitePage() {
   if (!user) redirect("/login");
 
   return (
-    <main className="animate-fade-in-up mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4">
-      <div className="text-center">
-        <h1 className="font-serif text-3xl font-normal text-ink">Welcome aboard</h1>
-        <p className="mt-1 text-sm text-muted">
-          Set a password so you can log in next time.
-        </p>
-      </div>
+    <AuthCardShell heading="Welcome aboard" subtitle="Set a password so you can log in next time.">
       <PasswordForm />
-    </main>
+    </AuthCardShell>
   );
 }

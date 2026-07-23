@@ -4,6 +4,7 @@ import { getStripe } from "@/lib/stripe";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { FeaturePanel } from "@/components/feature-panel";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 
 async function getPriceLabel() {
@@ -58,7 +59,7 @@ export default async function Home() {
     <div className="flex flex-1 flex-col bg-canvas">
       <header className="border-b border-hairline">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <span className="font-serif text-lg font-normal text-ink">VapeStock</span>
+          <span className="heading text-lg">VapeStock</span>
           <nav className="flex items-center gap-3 text-sm">
             <ThemeToggle />
             <Link href="/login" className="text-body hover:text-ink">
@@ -72,34 +73,35 @@ export default async function Home() {
       </header>
 
       <main className="flex-1">
-        <section className="mx-auto max-w-3xl px-4 py-24 text-center sm:py-32">
-          <h1 className="animate-fade-in-up font-serif text-4xl font-normal tracking-tight text-ink sm:text-6xl">
-            POS &amp; inventory built for vape shops
-          </h1>
-          <p
-            className="animate-fade-in-up mx-auto mt-5 max-w-xl text-lg text-body"
-            style={{ animationDelay: "80ms" }}
-          >
-            Track e-juice flavors, nicotine strengths, and sizes, ring up sales
-            that deduct stock automatically, and see what&apos;s low — from
-            your phone or your computer.
-          </p>
-          <div
-            className="animate-fade-in-up mt-8 flex justify-center gap-3"
-            style={{ animationDelay: "160ms" }}
-          >
-            <Link
-              href="/signup"
-              className="rounded-lg bg-primary px-6 py-3 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
+        <section className="mx-auto grid max-w-5xl gap-10 px-4 py-16 sm:py-24 lg:grid-cols-[1.1fr_1fr] lg:items-center">
+          <div>
+            <h1 className="animate-fade-in-up heading text-4xl sm:text-6xl">
+              POS &amp; inventory built for vape shops
+            </h1>
+            <p
+              className="animate-fade-in-up mt-5 max-w-xl text-lg text-body"
+              style={{ animationDelay: "80ms" }}
             >
-              Start your free trial
-            </Link>
-            <Link
-              href="/login"
-              className="rounded-lg border border-hairline px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-canvas-soft"
+              Track e-juice flavors, nicotine strengths, and sizes, ring up sales
+              that deduct stock automatically, and see what&apos;s low — from
+              your phone or your computer.
+            </p>
+            <div
+              className="animate-fade-in-up mt-8 flex gap-3"
+              style={{ animationDelay: "160ms" }}
             >
-              Log in
-            </Link>
+              <Link href="/signup" className={buttonClasses("primary", "md")}>
+                Start your free trial
+              </Link>
+              <Link href="/login" className={buttonClasses("secondary", "md")}>
+                Log in
+              </Link>
+            </div>
+          </div>
+
+          <div className="animate-fade-in-up" style={{ animationDelay: "120ms" }}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">What it does</p>
+            <FeaturePanel className="mt-4" />
           </div>
         </section>
 
@@ -108,7 +110,7 @@ export default async function Home() {
             <p className="text-center text-xs font-medium uppercase tracking-[0.2em] text-primary">
               What you get
             </p>
-            <h2 className="mt-3 text-center font-serif text-2xl font-normal text-ink sm:text-3xl">
+            <h2 className="heading mt-3 text-center text-2xl sm:text-3xl">
               Everything your shop needs to run day to day
             </h2>
             <div className="stagger mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -124,17 +126,12 @@ export default async function Home() {
 
         <section className="border-t border-hairline px-4 py-20 text-center sm:py-28">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Pricing</p>
-          <h2 className="mt-3 font-serif text-3xl font-normal text-ink">Simple pricing</h2>
-          <p className="mt-2 font-serif text-4xl font-normal text-ink">
-            {priceLabel ?? "One flat monthly price"}
-          </p>
+          <h2 className="heading mt-3 text-3xl">Simple pricing</h2>
+          <p className="heading mt-2 text-4xl">{priceLabel ?? "One flat monthly price"}</p>
           <p className="mt-2 text-sm text-body">
             14-day free trial. No charge until it ends. Cancel anytime.
           </p>
-          <Link
-            href="/signup"
-            className="mt-6 inline-block rounded-lg bg-primary px-6 py-3 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
-          >
+          <Link href="/signup" className={`mt-6 inline-flex ${buttonClasses("primary", "md")}`}>
             Start free trial
           </Link>
         </section>
