@@ -3,16 +3,17 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --color-canvas: #faf8f4;
-  --color-canvas-soft: #f2ede4;
-  --color-canvas-strong: #e9e1d3;
-  --color-ink: #1b1a17;
-  --color-body: #4a463e;
-  --color-muted: #8a8478;
-  --color-hairline: #e3ddd0;
+  --color-canvas: #f6f8fa;
+  --color-canvas-soft: #ffffff;
+  --color-canvas-strong: #e8edf3;
+  --color-ink: #131a22;
+  --color-body: #5b6672;
+  --color-muted: #88919b;
+  --color-hairline: #dfe4ea;
 
-  --color-primary: #b8863a;
+  --color-primary: #1f5c96;
   --color-primary-active: color-mix(in srgb, var(--color-primary) 82%, black);
+  --color-primary-soft: color-mix(in srgb, var(--color-primary) 12%, var(--color-canvas));
   --color-on-primary: #ffffff;
 
   --color-success: #4d9a5c;
@@ -21,17 +22,18 @@
 }
 
 .dark {
-  --color-canvas: #171614;
-  --color-canvas-soft: #201f1c;
-  --color-canvas-strong: #2a2824;
-  --color-ink: #f5f2ec;
-  --color-body: #c9c3b8;
-  --color-muted: #8f897d;
-  --color-hairline: #322f2a;
+  --color-canvas: #0e1216;
+  --color-canvas-soft: #161b21;
+  --color-canvas-strong: #212a33;
+  --color-ink: #edf1f5;
+  --color-body: #a3aeb8;
+  --color-muted: #737e88;
+  --color-hairline: #262e37;
 
-  --color-primary: #d1a452;
+  --color-primary: #6badf0;
   --color-primary-active: color-mix(in srgb, var(--color-primary) 82%, white);
-  --color-on-primary: #171614;
+  --color-primary-soft: color-mix(in srgb, var(--color-primary) 12%, var(--color-canvas));
+  --color-on-primary: #0b1420;
 
   --color-success: #6fbb7d;
   --color-warning: #d1a452;
@@ -48,6 +50,7 @@
   --color-hairline: var(--color-hairline);
   --color-primary: var(--color-primary);
   --color-primary-active: var(--color-primary-active);
+  --color-primary-soft: var(--color-primary-soft);
   --color-on-primary: var(--color-on-primary);
   --color-success: var(--color-success);
   --color-warning: var(--color-warning);
@@ -56,6 +59,13 @@
   --font-sans: var(--font-geist-sans);
   --font-serif: var(--font-fraunces);
   --font-mono: var(--font-geist-mono);
+}
+
+@utility heading {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
 }
 
 body {

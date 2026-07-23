@@ -9,7 +9,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const profile = await getCurrentProfile();
 
   const name = profile?.shop.name ?? "VapeStock";
-  const themeColor = profile?.shop.primaryColor || "#0f172a";
+  const themeColor = profile?.shop.primaryColor || "#1f5c96";
 
   const icons: MetadataRoute.Manifest["icons"] = profile?.shop.logoUrl
     ? [
@@ -24,7 +24,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     description: "Point of sale and inventory management.",
     start_url: profile ? "/sell" : "/",
     display: "standalone",
-    background_color: "#f8fafc",
+    background_color: "#f6f8fa",
     theme_color: themeColor,
     icons,
   };
