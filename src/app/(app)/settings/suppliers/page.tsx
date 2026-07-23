@@ -7,6 +7,7 @@ import { deleteSupplierAction } from "./actions";
 export default async function SuppliersPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
+  if (profile.shop.isPlatformShop) redirect("/admin");
   if (profile.role !== "owner") redirect("/inventory");
 
   const supabase = await createClient();

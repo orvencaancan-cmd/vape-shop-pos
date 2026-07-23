@@ -6,6 +6,7 @@ import { SellScreen } from "./sell-screen";
 export default async function SellPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
+  if (profile.shop.isPlatformShop) redirect("/admin");
 
   const supabase = await createClient();
   const { data: variants } = await supabase

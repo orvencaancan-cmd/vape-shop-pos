@@ -16,6 +16,7 @@ export default async function DashboardPage({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
+  if (profile.shop.isPlatformShop) redirect("/admin");
   if (profile.role !== "owner") redirect("/sell");
 
   const params = await searchParams;

@@ -7,6 +7,7 @@ import { InventoryList, type InventoryVariant } from "./inventory-list";
 export default async function InventoryPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
+  if (profile.shop.isPlatformShop) redirect("/admin");
 
   const supabase = await createClient();
 

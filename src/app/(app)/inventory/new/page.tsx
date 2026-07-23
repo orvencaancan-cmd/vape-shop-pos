@@ -15,6 +15,7 @@ export default async function NewProductPage({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
+  if (profile.shop.isPlatformShop) redirect("/admin");
 
   const { mode, category, subcategory: subcategoryKey } = await searchParams;
 
