@@ -18,7 +18,12 @@ export function LoginForm() {
         <Input name="email" type="email" required />
       </label>
       <label className="flex flex-col gap-1.5">
-        <Label>Password</Label>
+        <div className="flex items-center justify-between">
+          <Label>Password</Label>
+          <Link href="/forgot-password" className="text-xs text-primary underline underline-offset-2">
+            Forgot password?
+          </Link>
+        </div>
         <Input name="password" type="password" required />
       </label>
 
