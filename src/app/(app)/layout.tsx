@@ -15,7 +15,10 @@ export default async function AppLayout({
   if (profile.shop.suspended && !profile.platformAdmin) redirect("/shop-suspended");
 
   const navItems = profile.shop.isPlatformShop
-    ? [{ href: "/admin", label: "Admin", show: true }].filter((item) => item.show)
+    ? [
+        { href: "/admin", label: "Admin", show: true },
+        { href: "/admin/reports", label: "Reports", show: true },
+      ].filter((item) => item.show)
     : [
         { href: "/sell", label: "Sell", show: true },
         { href: "/inventory", label: "Inventory", show: true },

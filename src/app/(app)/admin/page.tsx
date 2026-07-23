@@ -20,6 +20,7 @@ export default async function AdminPage() {
   const { data: shops } = await supabase
     .from("shops")
     .select("id, name, subscription_status, trial_ends_at, suspended_at, created_at")
+    .eq("is_platform_shop", false)
     .order("created_at", { ascending: false });
 
   const counts = { trialing: 0, active: 0, past_due: 0, canceled: 0 };
@@ -44,7 +45,12 @@ export default async function AdminPage() {
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-3xl px-4 py-8">
-      <h1 className="font-serif text-2xl font-normal text-ink">Platform admin</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="font-serif text-2xl font-normal text-ink">Platform admin</h1>
+        <Link href="/admin/reports" className="text-xs text-primary underline underline-offset-2">
+          View reports
+        </Link>
+      </div>
 
       <div className="stagger mt-6 flex flex-wrap gap-4">
         <Stat label="Total shops" value={String(shops?.length ?? 0)} />
