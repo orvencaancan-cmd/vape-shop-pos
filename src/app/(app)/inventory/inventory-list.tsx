@@ -24,6 +24,20 @@ export type InventoryVariant = {
   latestSupplier: string | null;
 };
 
+type ProductGroup = {
+  productId: string;
+  productName: string;
+  category: "ejuice" | "accessory";
+  subcategory: string | null;
+  variants: InventoryVariant[];
+};
+
+type BrandGroup = {
+  brandKey: string;
+  brandLabel: string;
+  products: ProductGroup[];
+};
+
 const ALL = "__all__";
 
 export function InventoryList({
@@ -85,7 +99,40 @@ export function InventoryList({
     return true;
   });
 
-  const productsInOrder = [...new Map(filtered.map((v) => [v.productId, v.productName])).entries()];
+  const NO_BRAND = "__no_brand__";
+  const brandGroupMap = new Map<string, BrandGroup>();
+  const productMapByBrand = new Map<string, Map<string, ProductGroup>>();
+
+  for (const v of filtered) {
+    const brandKey = v.brand ?? NO_BRAND;
+    if (!brandGroupMap.has(brandKey)) {
+      brandGroupMap.set(brandKey, { brandKey, brandLabel: v.brand ?? "No brand", products: [] });
+      productMapByBrand.set(brandKey, new Map());
+    }
+    const productMap = productMapByBrand.get(brandKey)!;
+    if (!productMap.has(v.productId)) {
+      const group: ProductGroup = {
+        productId: v.productId,
+        productName: v.productName,
+        category: v.category,
+        subcategory: v.subcategory,
+        variants: [],
+      };
+      productMap.set(v.productId, group);
+      brandGroupMap.get(brandKey)!.products.push(group);
+    }
+    productMap.get(v.productId)!.variants.push(v);
+  }
+
+  const brandGroups = [...brandGroupMap.values()];
+  brandGroups.sort((a, b) => {
+    if (a.brandKey === NO_BRAND) return 1;
+    if (b.brandKey === NO_BRAND) return -1;
+    return a.brandLabel.localeCompare(b.brandLabel);
+  });
+  for (const g of brandGroups) {
+    g.products.sort((a, b) => a.productName.localeCompare(b.productName));
+  }
 
   return (
     <div>
@@ -179,95 +226,99 @@ export function InventoryList({
         )}
       </div>
 
-      <div className="stagger mt-6 flex flex-col gap-8">
-        {productsInOrder.map(([productId, productName]) => {
-          const productVariants = filtered.filter((v) => v.productId === productId);
-          const productCategory = productVariants[0]?.category;
-          const productSubcategory = productVariants[0]?.subcategory;
-          return (
-            <section key={productId}>
-              <div className="flex items-center justify-between border-b border-hairline pb-2">
-                <h2 className="text-lg font-medium text-ink">
-                  {productName}{" "}
-                  <span className="text-xs font-normal uppercase text-muted">
-                    {productSubcategory ? `${productSubcategory} · ${productCategory}` : productCategory}
-                  </span>
-                </h2>
-                {canEdit && (
-                  <div className="flex shrink-0 items-center gap-3">
-                    <Link
-                      href={`/inventory/${productId}`}
-                      className="text-sm text-primary underline underline-offset-2"
-                    >
-                      Edit
-                    </Link>
-                    <form
-                      action={archiveProductAction.bind(null, productId)}
-                      onSubmit={(e) => {
-                        if (
-                          !confirm(
-                            `Delete ${productName}? This hides it from your inventory but keeps its sales history.`,
-                          )
-                        ) {
-                          e.preventDefault();
-                        }
-                      }}
-                    >
-                      <button type="submit" className="text-sm text-error underline underline-offset-2">
-                        Delete
-                      </button>
-                    </form>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-2 flex flex-col divide-y divide-hairline">
-                {productVariants.map((v) => {
-                  const isLow = v.stockQty <= v.lowStockThreshold;
-                  const label =
-                    [
-                      v.flavor,
-                      v.nicotineMg != null ? `${v.nicotineMg}mg` : null,
-                      v.size,
-                      v.forDevice ? `For ${v.forDevice}` : null,
-                      v.ohms != null ? `${v.ohms}Ω` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ") || "Default";
-                  return (
-                    <div
-                      key={v.id}
-                      className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
-                        <span className="text-sm text-ink">{label}</span>
-                        {v.brand && (
-                          <span className="text-xs text-muted">{v.brand}</span>
-                        )}
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                            isLow ? "bg-error/15 text-error" : "bg-canvas-strong text-body"
-                          }`}
+      <div className="stagger mt-6 flex flex-col gap-6">
+        {brandGroups.map((brandGroup) => (
+          <section
+            key={brandGroup.brandKey}
+            className="rounded-xl border border-hairline bg-canvas-soft px-5 py-4"
+          >
+            <h2 className="heading text-lg">{brandGroup.brandLabel}</h2>
+            <div className="mt-4 flex flex-col gap-5">
+              {brandGroup.products.map((product) => (
+                <div key={product.productId}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-ink">
+                      {product.productName}{" "}
+                      <span className="text-xs font-normal uppercase text-muted">
+                        {product.subcategory
+                          ? `${product.subcategory} · ${product.category}`
+                          : product.category}
+                      </span>
+                    </h3>
+                    {canEdit && (
+                      <div className="flex shrink-0 items-center gap-3">
+                        <Link
+                          href={`/inventory/${product.productId}`}
+                          className="text-sm text-primary underline underline-offset-2"
                         >
-                          {v.stockQty} in stock
-                        </span>
-                        <span className="text-xs text-muted">
-                          {formatCurrency(v.price)}
-                        </span>
-                        <span className="text-xs text-muted">
-                          {v.latestSupplier ?? "no supplier logged"}
-                        </span>
+                          Edit
+                        </Link>
+                        <form
+                          action={archiveProductAction.bind(null, product.productId)}
+                          onSubmit={(e) => {
+                            if (
+                              !confirm(
+                                `Delete ${product.productName}? This hides it from your inventory but keeps its sales history.`,
+                              )
+                            ) {
+                              e.preventDefault();
+                            }
+                          }}
+                        >
+                          <button type="submit" className="text-sm text-error underline underline-offset-2">
+                            Delete
+                          </button>
+                        </form>
                       </div>
-                      <ReceiveStockForm variantId={v.id} suppliers={suppliers} />
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          );
-        })}
+                    )}
+                  </div>
 
-        {productsInOrder.length === 0 && (
+                  <div className="mt-2 flex flex-col divide-y divide-hairline">
+                    {product.variants.map((v) => {
+                      const isLow = v.stockQty <= v.lowStockThreshold;
+                      const label =
+                        [
+                          v.flavor && v.flavor !== v.productName ? v.flavor : null,
+                          v.nicotineMg != null ? `${v.nicotineMg}mg` : null,
+                          v.size,
+                          v.forDevice ? `For ${v.forDevice}` : null,
+                          v.ohms != null ? `${v.ohms}Ω` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "Default";
+                      return (
+                        <div
+                          key={v.id}
+                          className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+                            <span className="text-sm text-ink">{label}</span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                isLow ? "bg-error/15 text-error" : "bg-canvas-strong text-body"
+                              }`}
+                            >
+                              {v.stockQty} in stock
+                            </span>
+                            <span className="text-xs text-muted">
+                              {formatCurrency(v.price)}
+                            </span>
+                            <span className="text-xs text-muted">
+                              {v.latestSupplier ?? "no supplier logged"}
+                            </span>
+                          </div>
+                          <ReceiveStockForm variantId={v.id} suppliers={suppliers} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+
+        {brandGroups.length === 0 && (
           <p className="text-sm text-muted">No products match.</p>
         )}
       </div>
