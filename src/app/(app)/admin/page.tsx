@@ -46,7 +46,7 @@ export default async function AdminPage() {
   return (
     <main className="animate-fade-in-up mx-auto max-w-3xl px-4 py-8">
       <div className="flex items-center justify-between">
-        <h1 className="font-serif text-2xl font-normal text-ink">Platform admin</h1>
+        <h1 className="heading text-2xl">Platform admin</h1>
         <Link href="/admin/reports" className="text-xs text-primary underline underline-offset-2">
           View reports
         </Link>

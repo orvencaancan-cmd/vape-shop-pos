@@ -62,7 +62,7 @@ export default async function DashboardPage({
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
-      <h1 className="font-serif text-2xl font-normal text-ink">
+      <h1 className="heading text-2xl">
         {profile.shop.name} — Dashboard
       </h1>
       <p className="mt-1 text-sm text-muted">

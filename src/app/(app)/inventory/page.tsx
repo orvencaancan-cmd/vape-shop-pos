@@ -62,7 +62,7 @@ export default async function InventoryPage() {
   return (
     <main className="animate-fade-in-up mx-auto max-w-5xl px-4 py-8">
       <div className="flex items-center justify-between">
-        <h1 className="font-serif text-2xl font-normal text-ink">Inventory</h1>
+        <h1 className="heading text-2xl">Inventory</h1>
         <Link
           href="/inventory/new"
           className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"

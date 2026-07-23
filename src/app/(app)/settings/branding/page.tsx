@@ -10,7 +10,7 @@ export default async function BrandingPage() {
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-md px-4 py-8">
-      <h1 className="font-serif text-2xl font-normal text-ink">Branding</h1>
+      <h1 className="heading text-2xl">Branding</h1>
 
       <section className="mt-6">
         <h2 className="text-sm font-medium text-muted">Primary color</h2>

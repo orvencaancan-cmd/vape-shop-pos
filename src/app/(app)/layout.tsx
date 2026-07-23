@@ -43,7 +43,7 @@ export default async function AppLayout({
       <header className="border-b border-hairline bg-canvas">
         <div className="relative flex h-16 items-center justify-center border-b border-hairline bg-canvas-soft px-4 sm:h-20">
           <AgentOneLogo className="absolute left-4 text-xs sm:text-sm" />
-          <span className="max-w-[55%] truncate text-center font-serif text-sm font-normal uppercase tracking-[0.25em] text-ink sm:max-w-[60%] sm:text-lg sm:tracking-[0.35em]">
+          <span className="max-w-[55%] truncate text-center text-sm font-semibold uppercase tracking-[0.25em] text-ink sm:max-w-[60%] sm:text-lg sm:tracking-[0.35em]">
             {profile.shop.name}
           </span>
           <div className="absolute right-4 flex shrink-0 items-center gap-3">

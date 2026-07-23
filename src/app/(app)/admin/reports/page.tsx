@@ -114,7 +114,7 @@ export default async function AdminReportsPage() {
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-3xl px-4 py-8">
-      <h1 className="font-serif text-2xl font-normal text-ink">Platform reports</h1>
+      <h1 className="heading text-2xl">Platform reports</h1>
       <p className="mt-1 text-xs text-muted">
         VapeStock&apos;s own subscription revenue and growth — not subscriber sales data.
       </p>

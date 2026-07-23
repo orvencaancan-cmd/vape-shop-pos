@@ -18,7 +18,7 @@ export default async function SuppliersPage() {
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
-      <h1 className="font-serif text-2xl font-normal text-ink">Suppliers</h1>
+      <h1 className="heading text-2xl">Suppliers</h1>
 
       <div className="stagger mt-6 flex flex-col gap-3">
         {(suppliers ?? []).map((s) => {

@@ -39,7 +39,7 @@ export default async function ProductPage({
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-3xl px-4 py-8">
-      <h1 className="font-serif text-2xl font-normal text-ink">{product.name}</h1>
+      <h1 className="heading text-2xl">{product.name}</h1>
 
       <section className="mt-6">
         <h2 className="text-sm font-medium text-muted">Product details</h2>

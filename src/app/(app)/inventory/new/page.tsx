@@ -110,12 +110,12 @@ export default async function NewProductPage({
       <div className="grid grid-cols-2 gap-3">
         <Link href="/inventory/new?category=ejuice">
           <Card padding="lg" className="h-full text-center transition-shadow hover:shadow-sm">
-            <span className="font-serif text-lg font-normal text-ink">E-juice</span>
+            <span className="heading text-lg">E-juice</span>
           </Card>
         </Link>
         <Link href="/inventory/new?category=accessory">
           <Card padding="lg" className="h-full text-center transition-shadow hover:shadow-sm">
-            <span className="font-serif text-lg font-normal text-ink">Accessory</span>
+            <span className="heading text-lg">Accessory</span>
           </Card>
         </Link>
       </div>
@@ -151,7 +151,7 @@ function PageShell({
           ← {backLabel}
         </Link>
       )}
-      <h1 className="mt-2 font-serif text-2xl font-normal text-ink">{title}</h1>
+      <h1 className="heading mt-2 text-2xl">{title}</h1>
       {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
       <div className="mt-6">{children}</div>
     </main>

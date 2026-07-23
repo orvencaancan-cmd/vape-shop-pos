@@ -90,7 +90,7 @@ export default async function ReportsPage({
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-4xl px-4 py-8">
-      <h1 className="font-serif text-2xl font-normal text-ink">Reports</h1>
+      <h1 className="heading text-2xl">Reports</h1>
 
       <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
         <RangeLink range="today" current={preset} label="Today" />

@@ -25,7 +25,7 @@ export default async function BillingPage() {
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-md px-4 py-8">
-      <h1 className="font-serif text-2xl font-normal text-ink">Billing</h1>
+      <h1 className="heading text-2xl">Billing</h1>
 
       <div className="mt-6 rounded-xl border border-hairline bg-canvas-soft p-4">
         <p className="text-sm text-muted">Subscription status</p>

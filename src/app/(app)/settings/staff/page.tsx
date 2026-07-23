@@ -26,7 +26,7 @@ export default async function StaffPage() {
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
-      <h1 className="font-serif text-2xl font-normal text-ink">Staff</h1>
+      <h1 className="heading text-2xl">Staff</h1>
 
       <div className="stagger mt-6 flex flex-col gap-3">
         {(members ?? []).map((m) => (

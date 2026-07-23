@@ -55,7 +55,7 @@ export default async function AdminShopPage({
       <Link href="/admin" className="text-xs text-muted underline underline-offset-2 hover:text-ink">
         ← All shops
       </Link>
-      <h1 className="mt-2 font-serif text-2xl font-normal text-ink">{shop.name}</h1>
+      <h1 className="heading mt-2 text-2xl">{shop.name}</h1>
 
       <Card padding="sm" className="mt-4">
         <p className="text-sm text-muted">Subscription status</p>
