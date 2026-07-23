@@ -15,7 +15,7 @@ export default async function BrandingPage() {
       <section className="mt-6">
         <h2 className="text-sm font-medium text-muted">Primary color</h2>
         <div className="mt-2">
-          <ColorForm currentColor={profile.shop.primaryColor ?? "#b8863a"} />
+          <ColorForm currentColor={profile.shop.primaryColor ?? "#1f5c96"} />
         </div>
       </section>
     </main>
