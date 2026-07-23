@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { createFlavorBatchAction, type ActionState } from "../actions";
-import { Input, Label } from "@/components/ui/field";
+import { Input, Label, Textarea } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 
 const initialState: ActionState = {};
@@ -17,8 +17,6 @@ export function NewFlavorBatchForm({
   role: "owner" | "staff";
 }) {
   const [state, formAction, pending] = useActionState(createFlavorBatchAction, initialState);
-  const [flavorRows, setFlavorRows] = useState<number[]>([0, 1, 2]);
-  const [nextRowId, setNextRowId] = useState(3);
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
@@ -38,39 +36,18 @@ export function NewFlavorBatchForm({
         </label>
       </div>
 
-      <div>
+      <label className="flex flex-col gap-1.5">
         <Label>Flavors</Label>
         <p className="mt-1 text-xs text-muted">
           One flavor per line — each becomes its own product.
         </p>
-        <div className="mt-2 flex flex-col gap-2">
-          {flavorRows.map((rowId, i) => (
-            <div key={rowId} className="flex items-center gap-2">
-              <Input name="flavors" placeholder={`Flavor ${i + 1}`} />
-              {flavorRows.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => setFlavorRows((rows) => rows.filter((r) => r !== rowId))}
-                  className="shrink-0 text-xs text-muted hover:text-error"
-                  aria-label="Remove flavor"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            setFlavorRows((rows) => [...rows, nextRowId]);
-            setNextRowId((n) => n + 1);
-          }}
-          className="mt-2 text-xs text-primary underline underline-offset-2"
-        >
-          + Add another flavor
-        </button>
-      </div>
+        <Textarea
+          name="flavors"
+          rows={5}
+          placeholder={"Blue Razz Ice\nMango Ice\nWatermelon Ice"}
+          className="mt-2"
+        />
+      </label>
 
       <div>
         <Label>Nicotine levels</Label>

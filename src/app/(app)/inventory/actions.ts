@@ -159,7 +159,9 @@ export async function archiveProductAction(productId: string) {
 const flavorBatchSchema = z.object({
   brand: z.string().optional(),
   size: z.string().optional(),
-  flavors: z.array(z.string()).transform((arr) => arr.map((f) => f.trim()).filter(Boolean)),
+  flavors: z
+    .string()
+    .transform((text) => text.split("\n").map((f) => f.trim()).filter(Boolean)),
   nicotineLevels: z
     .array(z.coerce.number())
     .transform((arr) => [...new Set(arr)])
@@ -176,7 +178,7 @@ export async function createFlavorBatchAction(
   const parsed = flavorBatchSchema.safeParse({
     brand: formData.get("brand") ?? "",
     size: formData.get("size") ?? "",
-    flavors: formData.getAll("flavors"),
+    flavors: formData.get("flavors") ?? "",
     nicotineLevels: formData.getAll("nicotineLevels"),
     cost: formData.get("cost") || 0,
     price: formData.get("price") || 0,
