@@ -211,10 +211,11 @@ export async function createFlavorBatchAction(
     .select("id");
   if (productsError) return { error: productsError.message };
 
-  const variantRows = products.flatMap((product) =>
+  const variantRows = products.flatMap((product, i) =>
     nicotineLevels.map((mg) => ({
       shop_id: shopId,
       product_id: product.id,
+      flavor: flavors[i],
       nicotine_mg: mg,
       size: size || null,
       cost: effectiveCost,
