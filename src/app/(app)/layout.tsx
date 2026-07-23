@@ -12,6 +12,7 @@ export default async function AppLayout({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
+  if (profile.shop.suspended && !profile.platformAdmin) redirect("/shop-suspended");
 
   const navItems = [
     { href: "/sell", label: "Sell", show: true },

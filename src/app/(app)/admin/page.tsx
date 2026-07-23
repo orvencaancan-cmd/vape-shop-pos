@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
@@ -18,7 +19,7 @@ export default async function AdminPage() {
   const supabase = await createClient();
   const { data: shops } = await supabase
     .from("shops")
-    .select("id, name, subscription_status, trial_ends_at, created_at")
+    .select("id, name, subscription_status, trial_ends_at, suspended_at, created_at")
     .order("created_at", { ascending: false });
 
   const counts = { trialing: 0, active: 0, past_due: 0, canceled: 0 };
@@ -68,9 +69,17 @@ export default async function AdminPage() {
           <tbody>
             {(shops ?? []).map((s) => (
               <tr key={s.id} className="border-b border-hairline">
-                <td className="py-1.5 pr-3 text-ink">{s.name}</td>
+                <td className="py-1.5 pr-3">
+                  <Link
+                    href={`/admin/${s.id}`}
+                    className="text-primary underline underline-offset-2"
+                  >
+                    {s.name}
+                  </Link>
+                </td>
                 <td className="py-1.5 pr-3 text-body">
                   {STATUS_LABEL[s.subscription_status] ?? s.subscription_status}
+                  {s.suspended_at && <span className="ml-1 text-xs text-error">(suspended)</span>}
                 </td>
                 <td className="py-1.5 pr-3 text-muted">
                   {s.trial_ends_at ? new Date(s.trial_ends_at).toLocaleDateString() : "—"}
