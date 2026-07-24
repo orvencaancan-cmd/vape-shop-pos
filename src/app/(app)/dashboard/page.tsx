@@ -63,8 +63,18 @@ export default async function DashboardPage({
     (s) => s.created_at.slice(0, 10) === series[series.length - 1]?.date,
   ).length;
 
+  const ownedShopCount = profile.shops.filter((s) => s.role === "owner").length;
+
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
+      {ownedShopCount > 1 && (
+        <Link
+          href="/branches"
+          className="text-xs text-muted underline underline-offset-2 hover:text-ink"
+        >
+          ← All branches
+        </Link>
+      )}
       <h1 className="heading text-2xl">
         {profile.shop.name} — Dashboard
       </h1>

@@ -75,10 +75,16 @@ export default async function ReportsPage({
     .gte("created_at", from.toISOString())
     .lt("created_at", to.toISOString());
 
+  // No shop_id filter: this is purely an id -> display_name lookup for
+  // computeStaffActivity below, keyed off the shop-scoped staffSales list.
+  // A staff member who was later transferred to another owned branch would
+  // otherwise fail this lookup (their profiles.shop_id no longer matches
+  // this shop) and show as "Unnamed staff" on their own historical sales.
+  // RLS's profiles_select already limits rows to shops this caller belongs
+  // to, so no cross-tenant data is exposed by dropping the filter.
   const { data: staffProfiles } = await supabase
     .from("profiles")
-    .select("id, display_name")
-    .eq("shop_id", profile.shopId);
+    .select("id, display_name");
 
   const items = normalizeSaleItems(saleItems ?? []);
   const variantRows = normalizeVariants(variants ?? []);

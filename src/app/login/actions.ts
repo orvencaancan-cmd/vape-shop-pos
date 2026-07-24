@@ -21,5 +21,7 @@ export async function loginAction(
 
   const profile = await getCurrentProfile();
   if (!profile) redirect("/onboarding");
+  const ownedShopCount = profile.shops.filter((s) => s.role === "owner").length;
+  if (ownedShopCount > 1) redirect("/branches");
   redirect(profile.role === "owner" ? "/dashboard" : "/sell");
 }

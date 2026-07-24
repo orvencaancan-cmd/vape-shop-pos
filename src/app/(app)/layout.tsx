@@ -23,6 +23,11 @@ export default async function AppLayout({
     : [
         { href: "/sell", label: "Sell", show: true },
         { href: "/inventory", label: "Inventory", show: true },
+        {
+          href: "/branches",
+          label: "Branches",
+          show: profile.role === "owner" && profile.shops.filter((s) => s.role === "owner").length > 1,
+        },
         { href: "/dashboard", label: "Dashboard", show: profile.role === "owner" },
         { href: "/reports", label: "Reports", show: profile.role === "owner" },
         { href: "/settings/suppliers", label: "Suppliers", show: profile.role === "owner" },

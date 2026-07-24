@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
+import { inviteStaffToShop } from "@/lib/staff/invite-staff";
 
 export type ActionState = { error?: string; success?: string };
 
@@ -32,62 +32,16 @@ export async function inviteStaffAction(
     return { error: "Only the shop owner can invite staff" };
   }
 
-  const admin = createAdminClient();
-  const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/accept-invite`;
-  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
-    parsed.data.email,
-    { redirectTo },
-  );
-
-  let userId: string;
-  let needsFreshLink = false;
-
-  if (inviteError) {
-    if (!inviteError.message.toLowerCase().includes("already been registered")) {
-      return { error: inviteError.message };
-    }
-
-    // This email already has a login (e.g. a removed staff member, or an
-    // invite that was never completed) -- reattach it instead of erroring,
-    // as long as it isn't already tied to a different shop.
-    const { data: userList, error: listError } = await admin.auth.admin.listUsers();
-    if (listError) return { error: listError.message };
-    const existingUser = userList.users.find((u) => u.email === parsed.data.email);
-    if (!existingUser) return { error: inviteError.message };
-
-    const { data: existingProfile } = await admin
-      .from("profiles")
-      .select("shops(name)")
-      .eq("user_id", existingUser.id)
-      .maybeSingle();
-    if (existingProfile) {
-      const shop = Array.isArray(existingProfile.shops) ? existingProfile.shops[0] : existingProfile.shops;
-      return {
-        error: `${parsed.data.email} already belongs to another shop${shop?.name ? ` (${shop.name})` : ""} and can't be added here.`,
-      };
-    }
-
-    userId = existingUser.id;
-    needsFreshLink = !existingUser.last_sign_in_at;
-  } else {
-    userId = invited.user.id;
-  }
-
-  const { error: profileError } = await admin.from("profiles").insert({
-    user_id: userId,
-    shop_id: profile.shopId,
+  const result = await inviteStaffToShop({
+    shopId: profile.shopId,
+    email: parsed.data.email,
+    displayName: parsed.data.displayName ?? "",
     role: parsed.data.role,
-    display_name: parsed.data.displayName || null,
   });
-  if (profileError) return { error: profileError.message };
-
-  if (needsFreshLink) {
-    const supabase = await createClient();
-    await supabase.auth.resetPasswordForEmail(parsed.data.email, { redirectTo });
-  }
+  if (result.error) return result;
 
   revalidatePath("/settings/staff");
-  return { success: `Added ${parsed.data.email} as ${parsed.data.role}` };
+  return result;
 }
 
 export async function resendInviteAction(email: string): Promise<ActionState> {
