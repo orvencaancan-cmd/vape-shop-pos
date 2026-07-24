@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { computeLowStock, computeDailySeries, type VariantRow } from "@/lib/reports/compute";
 import { formatCurrency } from "@/lib/currency";
 import { Card } from "@/components/ui/card";
@@ -8,6 +9,10 @@ import type { ShopMembership } from "@/lib/auth/get-current-profile";
 export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembership[] }) {
   const supabase = await createClient();
   const chartWindowStart = new Date(new Date().getTime() - 7 * 86400000).toISOString();
+
+  const admin = createAdminClient();
+  const { data: userList } = await admin.auth.admin.listUsers();
+  const emailByUserId = new Map(userList?.users.map((u) => [u.id, u.email ?? ""]));
 
   const cards = await Promise.all(
     ownedShops.map(async (s) => {
@@ -24,7 +29,7 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
           .eq("shop_id", s.shopId)
           .gte("created_at", chartWindowStart)
           .is("voided_at", null),
-        supabase.from("profiles").select("id").eq("shop_id", s.shopId),
+        supabase.from("profiles").select("user_id, display_name").eq("shop_id", s.shopId),
       ]);
 
       const lowStock = computeLowStock(
@@ -36,12 +41,16 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
       const series = computeDailySeries(weekSales ?? [], 7);
       const todayRevenue = series[series.length - 1]?.revenue ?? 0;
 
+      const staffNames = (staff ?? []).map(
+        (m) => m.display_name || emailByUserId.get(m.user_id) || "Unnamed",
+      );
+
       return {
         shopId: s.shopId,
         shopName: s.shopName,
         todayRevenue,
-        lowStockCount: lowStock.length,
-        staffCount: (staff ?? []).length,
+        lowStock,
+        staffNames,
       };
     }),
   );
@@ -53,27 +62,42 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
       <div className="stagger mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {cards.map((c) => (
           <Card key={c.shopId} padding="md">
-            <h2 className="text-sm font-semibold text-ink">{c.shopName}</h2>
-            <dl className="mt-3 flex flex-col gap-1.5 text-sm">
-              <div className="flex items-center justify-between">
-                <dt className="text-muted">Today&apos;s sales</dt>
-                <dd className="text-ink">{formatCurrency(c.todayRevenue)}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-muted">Low on stock</dt>
-                <dd>
-                  {c.lowStockCount > 0 ? (
-                    <Badge variant="warning">{c.lowStockCount}</Badge>
-                  ) : (
-                    <span className="text-ink">0</span>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-ink">{c.shopName}</h2>
+              <span className="text-sm text-ink">{formatCurrency(c.todayRevenue)} today</span>
+            </div>
+
+            <div className="mt-3">
+              <p className="text-xs font-medium uppercase text-muted">Low on stock</p>
+              {c.lowStock.length === 0 ? (
+                <p className="mt-1 text-sm text-ink">Nothing low.</p>
+              ) : (
+                <ul className="mt-1 flex flex-col gap-1">
+                  {c.lowStock.slice(0, 5).map((v) => (
+                    <li key={v.id} className="flex items-center justify-between text-sm">
+                      <span className="text-ink">
+                        {v.productName} — {v.label}
+                      </span>
+                      <Badge variant="warning">{v.stockQty} left</Badge>
+                    </li>
+                  ))}
+                  {c.lowStock.length > 5 && (
+                    <li className="text-xs text-muted">
+                      +{c.lowStock.length - 5} more
+                    </li>
                   )}
-                </dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-muted">Staff assigned</dt>
-                <dd className="text-ink">{c.staffCount}</dd>
-              </div>
-            </dl>
+                </ul>
+              )}
+            </div>
+
+            <div className="mt-3">
+              <p className="text-xs font-medium uppercase text-muted">Staff assigned</p>
+              {c.staffNames.length === 0 ? (
+                <p className="mt-1 text-sm text-ink">No staff yet.</p>
+              ) : (
+                <p className="mt-1 text-sm text-ink">{c.staffNames.join(", ")}</p>
+              )}
+            </div>
           </Card>
         ))}
       </div>

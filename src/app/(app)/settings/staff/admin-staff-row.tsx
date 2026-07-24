@@ -52,23 +52,26 @@ export function AdminStaffRow({
             }
           }}
         >
-          <select
-            name="toShopId"
-            defaultValue={otherShops[0]?.shopId}
-            className="rounded-lg border border-hairline bg-canvas px-2 py-1 text-xs text-ink"
-          >
-            {otherShops.map((s) => (
-              <option key={s.shopId} value={s.shopId}>
-                {s.shopName}
-              </option>
-            ))}
-          </select>
+          <label className="flex items-center gap-1.5 text-xs text-muted">
+            Reassign to
+            <select
+              name="toShopId"
+              defaultValue={otherShops[0]?.shopId}
+              className="rounded-lg border border-hairline bg-canvas px-2 py-1 text-xs text-ink"
+            >
+              {otherShops.map((s) => (
+                <option key={s.shopId} value={s.shopId}>
+                  {s.shopName}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="submit"
             disabled={pending}
-            className="rounded-lg bg-canvas-strong px-2 py-1 text-xs text-body transition-colors hover:text-ink disabled:opacity-50"
+            className="rounded-lg bg-primary px-2 py-1 text-xs font-medium text-on-primary transition-colors hover:bg-primary-active disabled:opacity-50"
           >
-            {pending ? "Moving…" : "Transfer"}
+            {pending ? "Moving…" : "Reassign"}
           </button>
         </form>
       )}
