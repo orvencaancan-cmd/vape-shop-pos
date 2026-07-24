@@ -2,29 +2,9 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { resolveRange } from "@/lib/reports/date-range";
-import {
-  computeSalesSummary,
-  computeRevenueProfit,
-  computeBestSellers,
-  computeSalesByCategory,
-  computeLowStock,
-  computeSlowMovers,
-  computeInventoryValue,
-  computeSupplierActivity,
-  computeStaffActivity,
-  type SaleItemRow,
-} from "@/lib/reports/compute";
+import { fetchSingleShopReportData } from "@/lib/reports/fetch-single-shop";
 import { formatCurrency } from "@/lib/currency";
-import {
-  RangeLink,
-  Section,
-  Stat,
-  Empty,
-  Table,
-  normalizeSaleItems,
-  normalizeVariants,
-  normalizeReceipts,
-} from "./report-ui";
+import { RangeLink, Section, Stat, Empty, Table } from "./report-ui";
 import { AdminReportsPage } from "./admin-reports";
 
 export default async function ReportsPage({
@@ -44,79 +24,40 @@ export default async function ReportsPage({
   }
   if (profile.role !== "owner") redirect("/sell");
 
-  const { from, to, preset } = resolveRange(params);
+  const range = resolveRange(params);
+  const { preset } = range;
 
   const supabase = await createClient();
+  const {
+    salesSummary,
+    revenueProfit,
+    bestSellers,
+    byCategory,
+    byNicotine,
+    lowStock,
+    slowMovers,
+    inventoryValue,
+    supplierActivity,
+    staffActivity,
+  } = await fetchSingleShopReportData(supabase, profile.shopId, range);
 
-  const { data: sales } = await supabase
-    .from("sales")
-    .select("id, total, created_at")
-    .eq("shop_id", profile.shopId)
-    .gte("created_at", from.toISOString())
-    .lt("created_at", to.toISOString())
-    .is("voided_at", null);
-
-  const saleIds = (sales ?? []).map((s) => s.id);
-
-  const { data: saleItems } = saleIds.length
-    ? await supabase
-        .from("sale_items")
-        .select(
-          "sale_id, variant_id, quantity, unit_price, unit_cost, variants(flavor, nicotine_mg, size, for_device, ohms, product_id, products(name, category))",
-        )
-        .eq("shop_id", profile.shopId)
-        .in("sale_id", saleIds)
-    : { data: [] as SaleItemRow[] };
-
-  const { data: variants } = await supabase
-    .from("variants")
-    .select(
-      "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
-    )
-    .eq("shop_id", profile.shopId);
-
-  const { data: receipts } = await supabase
-    .from("stock_receipts")
-    .select("supplier_id, quantity_added, unit_cost, suppliers(name)")
-    .eq("shop_id", profile.shopId)
-    .gte("received_at", from.toISOString())
-    .lt("received_at", to.toISOString());
-
-  const { data: staffSales } = await supabase
-    .from("sales")
-    .select("total, created_by, voided_at")
-    .eq("shop_id", profile.shopId)
-    .gte("created_at", from.toISOString())
-    .lt("created_at", to.toISOString());
-
-  // No shop_id filter: this is purely an id -> display_name lookup for
-  // computeStaffActivity below, keyed off the shop-scoped staffSales list.
-  // A staff member who was later transferred to another owned branch would
-  // otherwise fail this lookup (their profiles.shop_id no longer matches
-  // this shop) and show as "Unnamed staff" on their own historical sales.
-  // RLS's profiles_select already limits rows to shops this caller belongs
-  // to, so no cross-tenant data is exposed by dropping the filter.
-  const { data: staffProfiles } = await supabase
-    .from("profiles")
-    .select("id, display_name");
-
-  const items = normalizeSaleItems(saleItems ?? []);
-  const variantRows = normalizeVariants(variants ?? []);
-  const receiptRows = normalizeReceipts(receipts ?? []);
-
-  const salesSummary = computeSalesSummary(sales ?? []);
-  const revenueProfit = computeRevenueProfit(items);
-  const bestSellers = computeBestSellers(items);
-  const { byCategory, byNicotine } = computeSalesByCategory(items);
-  const lowStock = computeLowStock(variantRows);
-  const slowMovers = computeSlowMovers(variantRows, items);
-  const inventoryValue = computeInventoryValue(variantRows);
-  const supplierActivity = computeSupplierActivity(receiptRows);
-  const staffActivity = computeStaffActivity(staffSales ?? [], staffProfiles ?? []);
+  const exportQuery = new URLSearchParams(
+    Object.entries({ range: preset, from: params.from, to: params.to }).filter(
+      ([, v]) => v != null,
+    ) as [string, string][],
+  ).toString();
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-4xl px-4 py-8">
-      <h1 className="heading text-2xl">Reports</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="heading text-2xl">Reports</h1>
+        <a
+          href={`/api/reports/export?${exportQuery}`}
+          className="rounded-lg bg-canvas-strong px-3 py-1.5 text-xs text-body transition-colors hover:text-ink"
+        >
+          Download Excel
+        </a>
+      </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
         <RangeLink range="today" current={preset} label="Today" />
