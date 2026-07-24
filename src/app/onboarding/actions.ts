@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { getStripe } from "@/lib/stripe";
 
 export async function completeOnboarding() {
@@ -11,15 +12,11 @@ export async function completeOnboarding() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: existingProfile } = await supabase
-    .from("profiles")
-    .select("shop_id, role")
-    .eq("id", user.id)
-    .maybeSingle();
+  const existingProfile = await getCurrentProfile();
 
-  let shopId = existingProfile?.shop_id as string | undefined;
+  let shopId: string;
 
-  if (!shopId) {
+  if (!existingProfile) {
     const shopName = (user.user_metadata?.pending_shop_name as string) || "My Shop";
     const displayName =
       (user.user_metadata?.pending_display_name as string | undefined) ?? null;
@@ -32,7 +29,7 @@ export async function completeOnboarding() {
     shopId = data as string;
   } else {
     // Already onboarded (e.g. re-clicked). Send them where they belong.
-    redirect(existingProfile!.role === "owner" ? "/dashboard" : "/sell");
+    redirect(existingProfile.role === "owner" ? "/dashboard" : "/sell");
   }
 
   const stripe = getStripe();

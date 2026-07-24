@@ -22,6 +22,7 @@ export default async function ProductPage({
     .from("products")
     .select("id, name, brand, category, subcategory, description")
     .eq("id", productId)
+    .eq("shop_id", profile.shopId)
     .maybeSingle();
   if (!product) notFound();
 
@@ -31,9 +32,14 @@ export default async function ProductPage({
       "id, flavor, nicotine_mg, size, for_device, ohms, sku, cost, price, stock_qty, low_stock_threshold",
     )
     .eq("product_id", productId)
+    .eq("shop_id", profile.shopId)
     .order("created_at");
 
-  const { data: suppliers } = await supabase.from("suppliers").select("id, name").order("name");
+  const { data: suppliers } = await supabase
+    .from("suppliers")
+    .select("id, name")
+    .eq("shop_id", profile.shopId)
+    .order("name");
 
   const boundArchive = archiveProductAction.bind(null, productId);
 

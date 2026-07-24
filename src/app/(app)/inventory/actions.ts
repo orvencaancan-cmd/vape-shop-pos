@@ -36,12 +36,13 @@ export async function receiveStockAction(
   const { variantId, quantity, supplierId, newSupplierName, unitCost, note } =
     parsed.data;
 
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+
   const supabase = await createClient();
 
   let resolvedSupplierId = supplierId || null;
   if (newSupplierName?.trim()) {
-    const profile = await getCurrentProfile();
-    if (!profile) return { error: "Not signed in" };
     const { data: newSupplier, error: supplierError } = await supabase
       .from("suppliers")
       .insert({ shop_id: profile.shopId, name: newSupplierName.trim() })
@@ -52,6 +53,7 @@ export async function receiveStockAction(
   }
 
   const { error } = await supabase.rpc("receive_stock", {
+    p_shop_id: profile.shopId,
     p_variant_id: variantId,
     p_quantity: quantity,
     p_supplier_id: resolvedSupplierId,
@@ -124,6 +126,9 @@ export async function updateProductAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("products")
@@ -134,7 +139,8 @@ export async function updateProductAction(
       subcategory: parsed.data.category === "accessory" ? parsed.data.subcategory || null : null,
       description: parsed.data.description,
     })
-    .eq("id", productId);
+    .eq("id", productId)
+    .eq("shop_id", profile.shopId);
   if (error) return { error: error.message };
 
   revalidatePath(`/inventory/${productId}`);
@@ -143,11 +149,15 @@ export async function updateProductAction(
 }
 
 export async function archiveProductAction(productId: string) {
+  const profile = await getCurrentProfile();
+  if (!profile) return;
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("products")
     .update({ archived: true })
-    .eq("id", productId);
+    .eq("id", productId)
+    .eq("shop_id", profile.shopId);
   if (error) {
     console.error("archiveProductAction failed:", error.message);
     return;
@@ -409,6 +419,9 @@ export async function updateVariantAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("variants")
@@ -423,7 +436,8 @@ export async function updateVariantAction(
       price: parsed.data.price,
       low_stock_threshold: parsed.data.lowStockThreshold,
     })
-    .eq("id", variantId);
+    .eq("id", variantId)
+    .eq("shop_id", profile.shopId);
   if (error) return { error: error.message };
 
   revalidatePath(`/inventory/${productId}`);
@@ -432,8 +446,11 @@ export async function updateVariantAction(
 }
 
 export async function deleteVariantAction(variantId: string, productId: string) {
+  const profile = await getCurrentProfile();
+  if (!profile) return;
+
   const supabase = await createClient();
-  await supabase.from("variants").delete().eq("id", variantId);
+  await supabase.from("variants").delete().eq("id", variantId).eq("shop_id", profile.shopId);
   revalidatePath(`/inventory/${productId}`);
   revalidatePath("/inventory");
 }

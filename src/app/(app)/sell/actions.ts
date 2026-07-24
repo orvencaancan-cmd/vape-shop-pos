@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 
 export type SaleResult = { error?: string; saleId?: string };
 
@@ -12,8 +13,12 @@ export async function recordSaleAction(
     return { error: "Cart is empty" };
   }
 
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("record_sale", {
+    p_shop_id: profile.shopId,
     items: cart.map((item) => ({
       variant_id: item.variantId,
       quantity: item.quantity,
@@ -29,8 +34,14 @@ export async function recordSaleAction(
 export type VoidResult = { error?: string };
 
 export async function voidSaleAction(saleId: string): Promise<VoidResult> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+
   const supabase = await createClient();
-  const { error } = await supabase.rpc("void_sale", { p_sale_id: saleId });
+  const { error } = await supabase.rpc("void_sale", {
+    p_shop_id: profile.shopId,
+    p_sale_id: saleId,
+  });
   if (error) return { error: error.message };
 
   revalidatePath("/sell");

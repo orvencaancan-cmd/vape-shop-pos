@@ -58,7 +58,7 @@ export async function inviteStaffAction(
     const { data: existingProfile } = await admin
       .from("profiles")
       .select("shops(name)")
-      .eq("id", existingUser.id)
+      .eq("user_id", existingUser.id)
       .maybeSingle();
     if (existingProfile) {
       const shop = Array.isArray(existingProfile.shops) ? existingProfile.shops[0] : existingProfile.shops;
@@ -74,7 +74,7 @@ export async function inviteStaffAction(
   }
 
   const { error: profileError } = await admin.from("profiles").insert({
-    id: userId,
+    user_id: userId,
     shop_id: profile.shopId,
     role: parsed.data.role,
     display_name: parsed.data.displayName || null,
@@ -115,11 +115,17 @@ export async function changeRoleAction(
   const parsed = roleSchema.safeParse({ role: formData.get("role") });
   if (!parsed.success) return { error: "Invalid role" };
 
+  const profile = await getCurrentProfile();
+  if (!profile || profile.role !== "owner") {
+    return { error: "Only the shop owner can change roles" };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
     .update({ role: parsed.data.role })
-    .eq("id", profileId);
+    .eq("id", profileId)
+    .eq("shop_id", profile.shopId);
   if (error) return { error: error.message };
 
   revalidatePath("/settings/staff");
@@ -127,7 +133,10 @@ export async function changeRoleAction(
 }
 
 export async function removeStaffAction(profileId: string) {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.role !== "owner") return;
+
   const supabase = await createClient();
-  await supabase.from("profiles").delete().eq("id", profileId);
+  await supabase.from("profiles").delete().eq("id", profileId).eq("shop_id", profile.shopId);
   revalidatePath("/settings/staff");
 }

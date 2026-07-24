@@ -14,6 +14,7 @@ export default async function SellPage() {
     .select(
       "id, flavor, nicotine_mg, size, for_device, ohms, price, stock_qty, products(name, category, archived)",
     )
+    .eq("shop_id", profile.shopId)
     .order("created_at");
 
   const items = (variants ?? [])
@@ -43,6 +44,7 @@ export default async function SellPage() {
   const { data: recentSalesRaw } = await supabase
     .from("sales")
     .select("id, total, created_at, created_by, voided_at, profiles!sales_created_by_fkey(display_name)")
+    .eq("shop_id", profile.shopId)
     .order("created_at", { ascending: false })
     .limit(20);
 

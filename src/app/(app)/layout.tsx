@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { signOutAction } from "@/lib/auth/actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AgentOneLogo } from "@/components/agentone-logo";
+import { ShopSwitcher } from "@/components/shop-switcher";
 
 export default async function AppLayout({
   children,
@@ -26,6 +27,7 @@ export default async function AppLayout({
         { href: "/reports", label: "Reports", show: profile.role === "owner" },
         { href: "/settings/suppliers", label: "Suppliers", show: profile.role === "owner" },
         { href: "/settings/staff", label: "Staff", show: profile.role === "owner" },
+        { href: "/settings/shops", label: "Shops", show: profile.role === "owner" },
         { href: "/settings/billing", label: "Billing", show: profile.role === "owner" },
         { href: "/settings/branding", label: "Branding", show: profile.role === "owner" },
         { href: "/admin", label: "Admin", show: profile.platformAdmin },
@@ -43,9 +45,13 @@ export default async function AppLayout({
       <header className="border-b border-hairline bg-canvas">
         <div className="relative flex h-16 items-center justify-center border-b border-hairline bg-canvas-soft px-4 sm:h-20">
           <AgentOneLogo className="absolute left-4 text-xs sm:text-sm" />
-          <span className="max-w-[55%] truncate text-center text-sm font-semibold uppercase tracking-[0.25em] text-ink sm:max-w-[60%] sm:text-lg sm:tracking-[0.35em]">
-            {profile.shop.name}
-          </span>
+          {profile.shops.length > 1 ? (
+            <ShopSwitcher shops={profile.shops} activeShopId={profile.shopId} />
+          ) : (
+            <span className="max-w-[55%] truncate text-center text-sm font-semibold uppercase tracking-[0.25em] text-ink sm:max-w-[60%] sm:text-lg sm:tracking-[0.35em]">
+              {profile.shop.name}
+            </span>
+          )}
           <div className="absolute right-4 flex shrink-0 items-center gap-3">
             <ThemeToggle />
             <form action={signOutAction}>

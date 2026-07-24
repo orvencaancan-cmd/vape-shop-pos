@@ -52,6 +52,9 @@ export async function updateSupplierAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("suppliers")
@@ -59,7 +62,8 @@ export async function updateSupplierAction(
       name: parsed.data.name,
       contact_info: parsed.data.contactInfo || null,
     })
-    .eq("id", supplierId);
+    .eq("id", supplierId)
+    .eq("shop_id", profile.shopId);
   if (error) return { error: error.message };
 
   revalidatePath("/settings/suppliers");
@@ -67,7 +71,10 @@ export async function updateSupplierAction(
 }
 
 export async function deleteSupplierAction(supplierId: string) {
+  const profile = await getCurrentProfile();
+  if (!profile) return;
+
   const supabase = await createClient();
-  await supabase.from("suppliers").delete().eq("id", supplierId);
+  await supabase.from("suppliers").delete().eq("id", supplierId).eq("shop_id", profile.shopId);
   revalidatePath("/settings/suppliers");
 }

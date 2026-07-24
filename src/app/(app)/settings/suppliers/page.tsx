@@ -14,6 +14,7 @@ export default async function SuppliersPage() {
   const { data: suppliers } = await supabase
     .from("suppliers")
     .select("id, name, contact_info")
+    .eq("shop_id", profile.shopId)
     .order("name");
 
   return (

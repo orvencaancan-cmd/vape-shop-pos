@@ -1,4 +1,14 @@
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+
+export const ACTIVE_SHOP_COOKIE = "active_shop_id";
+
+export type ShopMembership = {
+  profileId: string;
+  shopId: string;
+  shopName: string;
+  role: "owner" | "staff";
+};
 
 export type CurrentProfile = {
   id: string;
@@ -15,9 +25,17 @@ export type CurrentProfile = {
     suspended: boolean;
     isPlatformShop: boolean;
   };
+  /** Every shop this login has a membership at — for the shop switcher. */
+  shops: ShopMembership[];
 };
 
-/** Server-side only: current user's profile + shop, or null if not signed in / no profile yet. */
+/**
+ * Server-side only: current user's active profile + shop, or null if not
+ * signed in / no membership yet. A login can belong to more than one
+ * shop; the "active" one is resolved from the active_shop_id cookie
+ * (falling back to the oldest membership if unset/stale) rather than
+ * derived from a single row, since profiles is now a membership table.
+ */
 export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   const supabase = await createClient();
   const {
@@ -25,32 +43,49 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: profile } = await supabase
+  const { data: memberships } = await supabase
     .from("profiles")
     .select(
       "id, shop_id, role, platform_admin, display_name, shops(id, name, subscription_status, logo_url, primary_color, suspended_at, is_platform_shop)",
     )
-    .eq("id", user.id)
-    .single();
+    .eq("user_id", user.id)
+    .order("created_at");
 
-  if (!profile || !profile.shops) return null;
+  if (!memberships || memberships.length === 0) return null;
 
-  const shop = Array.isArray(profile.shops) ? profile.shops[0] : profile.shops;
+  const cookieStore = await cookies();
+  const activeShopId = cookieStore.get(ACTIVE_SHOP_COOKIE)?.value;
+
+  const active = memberships.find((m) => m.shop_id === activeShopId) ?? memberships[0];
+  if (!active.shops) return null;
+
+  const activeShop = Array.isArray(active.shops) ? active.shops[0] : active.shops;
+
+  const shops: ShopMembership[] = memberships.map((m) => {
+    const s = Array.isArray(m.shops) ? m.shops[0] : m.shops;
+    return {
+      profileId: m.id,
+      shopId: m.shop_id,
+      shopName: s?.name ?? "",
+      role: m.role,
+    };
+  });
 
   return {
-    id: profile.id,
-    shopId: profile.shop_id,
-    role: profile.role,
-    platformAdmin: profile.platform_admin,
-    displayName: profile.display_name,
+    id: active.id,
+    shopId: active.shop_id,
+    role: active.role,
+    platformAdmin: memberships.some((m) => m.platform_admin),
+    displayName: active.display_name,
     shop: {
-      id: shop.id,
-      name: shop.name,
-      subscriptionStatus: shop.subscription_status,
-      logoUrl: shop.logo_url,
-      primaryColor: shop.primary_color,
-      suspended: shop.suspended_at != null,
-      isPlatformShop: shop.is_platform_shop,
+      id: activeShop.id,
+      name: activeShop.name,
+      subscriptionStatus: activeShop.subscription_status,
+      logoUrl: activeShop.logo_url,
+      primaryColor: activeShop.primary_color,
+      suspended: activeShop.suspended_at != null,
+      isPlatformShop: activeShop.is_platform_shop,
     },
+    shops,
   };
 }

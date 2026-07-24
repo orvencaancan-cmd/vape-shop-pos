@@ -37,6 +37,7 @@ export default async function ReportsPage({
   const { data: sales } = await supabase
     .from("sales")
     .select("id, total, created_at")
+    .eq("shop_id", profile.shopId)
     .gte("created_at", from.toISOString())
     .lt("created_at", to.toISOString())
     .is("voided_at", null);
@@ -49,6 +50,7 @@ export default async function ReportsPage({
         .select(
           "sale_id, variant_id, quantity, unit_price, unit_cost, variants(flavor, nicotine_mg, size, for_device, ohms, product_id, products(name, category))",
         )
+        .eq("shop_id", profile.shopId)
         .in("sale_id", saleIds)
     : { data: [] as SaleItemRow[] };
 
@@ -56,23 +58,27 @@ export default async function ReportsPage({
     .from("variants")
     .select(
       "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
-    );
+    )
+    .eq("shop_id", profile.shopId);
 
   const { data: receipts } = await supabase
     .from("stock_receipts")
     .select("supplier_id, quantity_added, unit_cost, suppliers(name)")
+    .eq("shop_id", profile.shopId)
     .gte("received_at", from.toISOString())
     .lt("received_at", to.toISOString());
 
   const { data: staffSales } = await supabase
     .from("sales")
     .select("total, created_by, voided_at")
+    .eq("shop_id", profile.shopId)
     .gte("created_at", from.toISOString())
     .lt("created_at", to.toISOString());
 
   const { data: staffProfiles } = await supabase
     .from("profiles")
-    .select("id, display_name");
+    .select("id, display_name")
+    .eq("shop_id", profile.shopId);
 
   const items = normalizeSaleItems(saleItems ?? []);
   const variantRows = normalizeVariants(variants ?? []);

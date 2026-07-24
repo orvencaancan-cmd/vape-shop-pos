@@ -14,7 +14,8 @@ export default async function StaffPage() {
   const supabase = await createClient();
   const { data: members } = await supabase
     .from("profiles")
-    .select("id, display_name, role")
+    .select("id, user_id, display_name, role")
+    .eq("shop_id", profile.shopId)
     .order("role");
 
   const ownerCount = (members ?? []).filter((m) => m.role === "owner").length;
@@ -22,7 +23,7 @@ export default async function StaffPage() {
   // profiles doesn't store email; look it up via the admin API for display.
   const admin = createAdminClient();
   const { data: userList } = await admin.auth.admin.listUsers();
-  const emailById = new Map(userList?.users.map((u) => [u.id, u.email ?? ""]));
+  const emailByUserId = new Map(userList?.users.map((u) => [u.id, u.email ?? ""]));
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
@@ -34,7 +35,7 @@ export default async function StaffPage() {
             key={m.id}
             profileId={m.id}
             displayName={m.display_name}
-            email={emailById.get(m.id) ?? "unknown"}
+            email={emailByUserId.get(m.user_id) ?? "unknown"}
             role={m.role}
             isCurrentUser={m.id === profile.id}
             canDemoteOrRemove={m.role !== "owner" || ownerCount > 1}

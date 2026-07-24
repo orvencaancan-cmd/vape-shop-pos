@@ -16,11 +16,13 @@ export default async function InventoryPage() {
       .from("variants")
       .select(
         "id, product_id, flavor, nicotine_mg, size, for_device, ohms, price, stock_qty, low_stock_threshold, products(name, brand, category, subcategory, archived)",
-      ),
-    supabase.from("suppliers").select("id, name").order("name"),
+      )
+      .eq("shop_id", profile.shopId),
+    supabase.from("suppliers").select("id, name").eq("shop_id", profile.shopId).order("name"),
     supabase
       .from("stock_receipts")
       .select("variant_id, received_at, suppliers(name)")
+      .eq("shop_id", profile.shopId)
       .order("received_at", { ascending: false })
       .limit(300),
   ]);

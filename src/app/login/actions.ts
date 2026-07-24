@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 
 export type LoginState = { error?: string };
 
@@ -18,16 +19,7 @@ export async function loginAction(
     return { error: error.message };
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user!.id)
-    .maybeSingle();
-
+  const profile = await getCurrentProfile();
   if (!profile) redirect("/onboarding");
   redirect(profile.role === "owner" ? "/dashboard" : "/sell");
 }

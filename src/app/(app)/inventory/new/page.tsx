@@ -37,6 +37,7 @@ export default async function NewProductPage({
     const { data: brandRows } = await supabase
       .from("products")
       .select("brand")
+      .eq("shop_id", profile.shopId)
       .not("brand", "is", null);
     const brands = [...new Set((brandRows ?? []).map((r) => r.brand as string))].sort();
 
@@ -98,6 +99,7 @@ export default async function NewProductPage({
     const { data: brandRows } = await supabase
       .from("products")
       .select("brand")
+      .eq("shop_id", profile.shopId)
       .not("brand", "is", null);
     const brands = [...new Set((brandRows ?? []).map((r) => r.brand as string))].sort();
 

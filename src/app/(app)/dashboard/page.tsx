@@ -30,15 +30,18 @@ export default async function DashboardPage({
       .from("variants")
       .select(
         "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
-      ),
+      )
+      .eq("shop_id", profile.shopId),
     supabase
       .from("sales")
       .select("id, total, created_at, voided_at")
+      .eq("shop_id", profile.shopId)
       .order("created_at", { ascending: false })
       .limit(10),
     supabase
       .from("sales")
       .select("total, created_at")
+      .eq("shop_id", profile.shopId)
       .gte("created_at", chartWindowStart)
       .is("voided_at", null),
   ]);
