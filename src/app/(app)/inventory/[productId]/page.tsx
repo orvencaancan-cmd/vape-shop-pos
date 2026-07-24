@@ -15,6 +15,9 @@ export default async function ProductPage({
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
   if (profile.shop.isPlatformShop) redirect("/admin");
+  if (profile.inAdminOverview || (profile.shop.archived && profile.role === "owner")) {
+    redirect("/dashboard");
+  }
   if (profile.role !== "owner") redirect("/inventory");
 
   const supabase = await createClient();

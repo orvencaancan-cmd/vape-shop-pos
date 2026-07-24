@@ -22,3 +22,9 @@ export async function switchShopAction(shopId: string, role: "owner" | "staff") 
   });
   redirect(role === "owner" ? "/dashboard" : "/sell");
 }
+
+export async function backToAdminAction() {
+  const cookieStore = await cookies();
+  cookieStore.delete(ACTIVE_SHOP_COOKIE);
+  redirect("/dashboard");
+}

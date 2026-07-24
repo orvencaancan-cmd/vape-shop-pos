@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { inviteStaffAction, type ActionState } from "./actions";
+import { inviteStaffToBranchAction, type ActionState } from "./actions";
 import { Input, Label } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import type { ShopMembership } from "@/lib/auth/get-current-profile";
@@ -13,8 +13,8 @@ const ROLE_LABEL: Record<string, string> = {
   owner: "Owner — full access including reports, pricing, and billing",
 };
 
-export function InviteForm({ shops }: { shops: ShopMembership[] }) {
-  const [state, formAction, pending] = useActionState(inviteStaffAction, initialState);
+export function AdminInviteForm({ shops }: { shops: ShopMembership[] }) {
+  const [state, formAction, pending] = useActionState(inviteStaffToBranchAction, initialState);
 
   return (
     <form

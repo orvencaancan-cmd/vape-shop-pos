@@ -1,191 +1,81 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { switchShopAction } from "@/lib/auth/actions";
-import { computeLowStock, computeDailySeries, type VariantRow } from "@/lib/reports/compute";
-import { formatCurrency } from "@/lib/currency";
-import { Badge } from "@/components/ui/badge";
-import { InviteForm } from "./invite-form";
-import { StaffRow } from "./staff-row";
+import { AddShopForm } from "./add-shop-form";
+import { BranchRow } from "./branch-row";
 
 export default async function BranchesPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
   if (profile.shop.isPlatformShop) redirect("/admin");
+  if (profile.role !== "owner") redirect("/inventory");
 
   const ownedShops = profile.shops.filter((s) => s.role === "owner");
-  if (ownedShops.length < 2) redirect(profile.role === "owner" ? "/dashboard" : "/sell");
 
-  const supabase = await createClient();
-  const chartWindowStart = new Date(new Date().getTime() - 7 * 86400000).toISOString();
+  if (ownedShops.length <= 1) {
+    return (
+      <main className="animate-fade-in-up mx-auto max-w-md px-4 py-8">
+        <h1 className="heading text-2xl">Branches</h1>
+        <p className="mt-1 text-sm text-muted">Every shop you own, and a way to add another.</p>
 
-  const branchData = await Promise.all(
-    ownedShops.map(async (s) => {
-      const [{ data: variants }, { data: weekSales }] = await Promise.all([
-        supabase
-          .from("variants")
-          .select(
-            "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
-          )
-          .eq("shop_id", s.shopId),
-        supabase
-          .from("sales")
-          .select("total, created_at")
-          .eq("shop_id", s.shopId)
-          .gte("created_at", chartWindowStart)
-          .is("voided_at", null),
-      ]);
+        <ul className="mt-6 flex flex-col gap-2">
+          {ownedShops.map((s) => (
+            <li
+              key={s.shopId}
+              className="flex items-center justify-between rounded-lg border border-hairline px-3 py-2 text-sm"
+            >
+              <span className="text-ink">{s.shopName}</span>
+              <span className="text-xs text-muted">Active</span>
+            </li>
+          ))}
+        </ul>
 
-      const lowStock = computeLowStock(
-        (variants ?? []).map((v) => ({
-          ...v,
-          products: Array.isArray(v.products) ? (v.products[0] ?? null) : v.products,
-        })) as VariantRow[],
-      );
+        <div className="mt-8">
+          <h2 className="text-sm font-medium text-muted">Add another shop</h2>
+          <p className="mt-1 text-xs text-muted">
+            Each shop gets its own inventory and staff. Billing setup is coming soon.
+          </p>
+          <AddShopForm />
+        </div>
+      </main>
+    );
+  }
 
-      const series = computeDailySeries(weekSales ?? [], 7);
-      const todayRevenue = series[series.length - 1]?.revenue ?? 0;
-      const weekRevenue = series.reduce((sum, d) => sum + d.revenue, 0);
-
-      return { shopId: s.shopId, shopName: s.shopName, lowStock, todayRevenue, weekRevenue };
-    }),
-  );
-
-  const combined = branchData.reduce(
-    (acc, b) => ({
-      todayRevenue: acc.todayRevenue + b.todayRevenue,
-      weekRevenue: acc.weekRevenue + b.weekRevenue,
-      lowStockCount: acc.lowStockCount + b.lowStock.length,
-    }),
-    { todayRevenue: 0, weekRevenue: 0, lowStockCount: 0 },
-  );
-
-  const shopIds = ownedShops.map((s) => s.shopId);
-  const { data: members } = await supabase
-    .from("profiles")
-    .select("id, user_id, shop_id, display_name, role")
-    .in("shop_id", shopIds)
-    .order("role");
-
-  const admin = createAdminClient();
-  const { data: userList } = await admin.auth.admin.listUsers();
-  const emailByUserId = new Map(userList?.users.map((u) => [u.id, u.email ?? ""]));
-  const shopNameById = new Map(ownedShops.map((s) => [s.shopId, s.shopName]));
+  const activeShops = ownedShops.filter((s) => !s.archivedAt);
+  const archivedShops = ownedShops.filter((s) => s.archivedAt);
 
   return (
-    <main className="animate-fade-in-up mx-auto max-w-4xl px-4 py-8">
-      <h1 className="heading text-2xl">Shops Administration</h1>
+    <main className="animate-fade-in-up mx-auto max-w-md px-4 py-8">
+      <h1 className="heading text-2xl">Branches</h1>
       <p className="mt-1 text-sm text-muted">
-        All {ownedShops.length} branches you own, combined and separately.
+        Add, archive, or step into any of your {activeShops.length} branches.
       </p>
 
-      <div className="stagger mt-6 flex flex-wrap gap-4">
-        <Stat label="Branches" value={String(ownedShops.length)} />
-        <Stat label="Today (combined)" value={formatCurrency(combined.todayRevenue)} />
-        <Stat label="Last 7 days (combined)" value={formatCurrency(combined.weekRevenue)} />
-        <Stat label="Low stock (combined)" value={String(combined.lowStockCount)} />
+      <h2 className="mt-6 text-sm font-medium text-muted">Active branches</h2>
+      <div className="mt-2 flex flex-col gap-2">
+        {activeShops.map((s) => (
+          <BranchRow key={s.shopId} shopId={s.shopId} shopName={s.shopName} archived={false} />
+        ))}
       </div>
 
-      <h2 className="mt-8 text-sm font-medium text-muted">By branch</h2>
-      <div className="mt-2 overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-hairline text-left text-xs text-muted">
-              <th className="py-1.5 pr-3">Branch</th>
-              <th className="py-1.5 pr-3">Today</th>
-              <th className="py-1.5 pr-3">Last 7 days</th>
-              <th className="py-1.5 pr-3">Low stock</th>
-              <th className="py-1.5" />
-            </tr>
-          </thead>
-          <tbody>
-            {branchData.map((b) => {
-              const boundSwitch = switchShopAction.bind(null, b.shopId, "owner");
-              return (
-                <tr key={b.shopId} className="border-b border-hairline">
-                  <td className="py-1.5 pr-3 text-ink">{b.shopName}</td>
-                  <td className="py-1.5 pr-3 text-body">{formatCurrency(b.todayRevenue)}</td>
-                  <td className="py-1.5 pr-3 text-body">{formatCurrency(b.weekRevenue)}</td>
-                  <td className="py-1.5 pr-3">
-                    {b.lowStock.length > 0 ? (
-                      <Badge variant="warning">{b.lowStock.length}</Badge>
-                    ) : (
-                      <span className="text-muted">—</span>
-                    )}
-                  </td>
-                  <td className="py-1.5">
-                    <form action={boundSwitch}>
-                      <button
-                        type="submit"
-                        className="text-xs text-primary underline underline-offset-2"
-                      >
-                        View dashboard
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {combined.lowStockCount > 0 && (
+      {archivedShops.length > 0 && (
         <>
-          <h2 className="mt-8 text-sm font-medium text-muted">Low stock, all branches</h2>
-          <div className="mt-2 flex flex-col gap-1">
-            {branchData.flatMap((b) =>
-              b.lowStock.map((v) => (
-                <div
-                  key={`${b.shopId}-${v.id}`}
-                  className="flex items-center justify-between rounded-lg border border-hairline bg-canvas-soft px-3 py-2 text-sm"
-                >
-                  <span className="text-ink">
-                    {v.productName} — {v.label}{" "}
-                    <span className="text-muted">({b.shopName})</span>
-                  </span>
-                  <Badge variant="warning">{v.stockQty} left</Badge>
-                </div>
-              )),
-            )}
+          <h2 className="mt-8 text-sm font-medium text-muted">Archived branches</h2>
+          <p className="mt-1 text-xs text-muted">
+            Hidden from daily use, but all their history is kept.
+          </p>
+          <div className="mt-2 flex flex-col gap-2">
+            {archivedShops.map((s) => (
+              <BranchRow key={s.shopId} shopId={s.shopId} shopName={s.shopName} archived={true} />
+            ))}
           </div>
         </>
       )}
 
-      <h2 className="mt-8 text-sm font-medium text-muted">Staff across branches</h2>
-      <div className="stagger mt-2 flex flex-col gap-3">
-        {(members ?? []).length === 0 ? (
-          <p className="text-sm text-muted">No staff at any of your branches yet.</p>
-        ) : (
-          (members ?? []).map((m) => (
-            <StaffRow
-              key={m.id}
-              profileId={m.id}
-              displayName={m.display_name}
-              email={emailByUserId.get(m.user_id) ?? "unknown"}
-              role={m.role}
-              currentShopId={m.shop_id}
-              currentShopName={shopNameById.get(m.shop_id) ?? ""}
-              otherShops={ownedShops.filter((s) => s.shopId !== m.shop_id)}
-            />
-          ))
-        )}
-      </div>
-
-      <h2 className="mt-8 text-sm font-medium text-muted">Add staff to a branch</h2>
-      <div className="mt-2">
-        <InviteForm shops={ownedShops} />
-      </div>
+      <h2 className="mt-8 text-sm font-medium text-muted">Add another branch</h2>
+      <p className="mt-1 text-xs text-muted">
+        Each branch gets its own inventory and staff. Billing setup is coming soon.
+      </p>
+      <AddShopForm />
     </main>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-hairline bg-canvas-soft px-4 py-3">
-      <p className="text-xs text-muted">{label}</p>
-      <p className="text-lg font-semibold text-ink">{value}</p>
-    </div>
   );
 }

@@ -1,79 +1,84 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile } from "@/lib/auth/get-current-profile";
-import { inviteStaffToShop } from "@/lib/staff/invite-staff";
+import { getCurrentProfile, ACTIVE_SHOP_COOKIE } from "@/lib/auth/get-current-profile";
 
 export type ActionState = { error?: string; success?: string };
 
-const inviteSchema = z.object({
-  shopId: z.string().uuid(),
-  email: z.string().email("Enter a valid email"),
-  displayName: z.string().optional(),
-  role: z.enum(["owner", "staff"]).default("staff"),
-});
+const addShopSchema = z.object({ shopName: z.string().min(1, "Shop name is required") });
 
-export async function inviteStaffAction(
+export async function addShopAction(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const parsed = inviteSchema.safeParse({
-    shopId: formData.get("shopId"),
-    email: formData.get("email"),
-    displayName: formData.get("displayName") ?? "",
-    role: formData.get("role") || "staff",
-  });
+  const parsed = addShopSchema.safeParse({ shopName: formData.get("shopName") });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
   const profile = await getCurrentProfile();
-  const owns = profile?.shops.some(
-    (s) => s.shopId === parsed.data.shopId && s.role === "owner",
-  );
-  if (!profile || !owns) {
-    return { error: "You must be an owner of that branch to invite staff there" };
-  }
-
-  const result = await inviteStaffToShop({
-    shopId: parsed.data.shopId,
-    email: parsed.data.email,
-    displayName: parsed.data.displayName ?? "",
-    role: parsed.data.role,
-  });
-  if (result.error) return result;
-
-  revalidatePath("/branches");
-  return result;
-}
-
-export async function transferStaffAction(
-  profileId: string,
-  fromShopId: string,
-  _prevState: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const toShopId = String(formData.get("toShopId") ?? "");
-  if (!toShopId) return { error: "Pick a destination branch" };
-
-  const profile = await getCurrentProfile();
-  const ownsBoth =
-    profile?.shops.some((s) => s.shopId === fromShopId && s.role === "owner") &&
-    profile?.shops.some((s) => s.shopId === toShopId && s.role === "owner");
-  if (!profile || !ownsBoth) {
-    return { error: "You must own both the source and destination branch" };
-  }
+  if (!profile) redirect("/login");
+  if (profile.role !== "owner") return { error: "Only shop owners can add another shop" };
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("transfer_staff", {
-    p_profile_id: profileId,
-    p_from_shop_id: fromShopId,
-    p_to_shop_id: toShopId,
+  const { error } = await supabase.rpc("create_shop", {
+    shop_name: parsed.data.shopName,
+    owner_display_name: profile.displayName,
   });
   if (error) return { error: error.message };
 
+  redirect("/branches");
+}
+
+export async function archiveShopAction(shopId: string): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
+  if (!profile.shops.some((s) => s.shopId === shopId && s.role === "owner")) {
+    return { error: "You must own this branch to archive it" };
+  }
+  const activeOwnedCount = profile.shops.filter(
+    (s) => s.role === "owner" && !s.archivedAt,
+  ).length;
+  if (activeOwnedCount <= 1) {
+    return { error: "You need at least one active branch — add or reactivate another first." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("shops")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", shopId);
+  if (error) return { error: error.message };
+
+  // If this was the owner's currently-active shop, clear it so they land
+  // back in Admin Overview instead of hitting the shop-suspended gate for
+  // their own voluntary action.
+  if (profile.shopId === shopId) {
+    const cookieStore = await cookies();
+    cookieStore.delete(ACTIVE_SHOP_COOKIE);
+  }
+
   revalidatePath("/branches");
-  return { success: "Staff member transferred" };
+  revalidatePath("/dashboard");
+  return { success: "Branch archived" };
+}
+
+export async function reactivateShopAction(shopId: string): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
+  if (!profile.shops.some((s) => s.shopId === shopId && s.role === "owner")) {
+    return { error: "You must own this branch to reactivate it" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("shops").update({ archived_at: null }).eq("id", shopId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/branches");
+  revalidatePath("/dashboard");
+  return { success: "Branch reactivated" };
 }

@@ -6,7 +6,7 @@ import type { ShopMembership } from "@/lib/auth/get-current-profile";
 
 const initialState: ActionState = {};
 
-export function StaffRow({
+export function AdminStaffRow({
   profileId,
   displayName,
   email,

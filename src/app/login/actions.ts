@@ -1,8 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile } from "@/lib/auth/get-current-profile";
+import { getCurrentProfile, ACTIVE_SHOP_COOKIE } from "@/lib/auth/get-current-profile";
 
 export type LoginState = { error?: string };
 
@@ -21,7 +22,12 @@ export async function loginAction(
 
   const profile = await getCurrentProfile();
   if (!profile) redirect("/onboarding");
+
   const ownedShopCount = profile.shops.filter((s) => s.role === "owner").length;
-  if (ownedShopCount > 1) redirect("/branches");
+  if (ownedShopCount > 1) {
+    const cookieStore = await cookies();
+    cookieStore.delete(ACTIVE_SHOP_COOKIE); // always land in a fresh Admin Overview
+    redirect("/dashboard");
+  }
   redirect(profile.role === "owner" ? "/dashboard" : "/sell");
 }

@@ -8,6 +8,9 @@ export default async function InventoryPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
   if (profile.shop.isPlatformShop) redirect("/admin");
+  if (profile.inAdminOverview || (profile.shop.archived && profile.role === "owner")) {
+    redirect("/dashboard");
+  }
 
   const supabase = await createClient();
 

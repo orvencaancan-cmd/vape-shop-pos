@@ -5,7 +5,9 @@ import { AuthCardShell } from "@/components/auth-card-shell";
 export default async function ShopSuspendedPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
-  if (!profile.shop.suspended || profile.platformAdmin) {
+  const blocked =
+    profile.shop.suspended || (profile.shop.archived && profile.role !== "owner");
+  if (!blocked || profile.platformAdmin) {
     redirect(profile.role === "owner" ? "/dashboard" : "/sell");
   }
 

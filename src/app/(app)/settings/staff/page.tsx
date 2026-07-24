@@ -4,11 +4,16 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { InviteForm } from "./invite-form";
 import { MemberRow } from "./member-row";
+import { AdminStaffConsole } from "./admin-staff-console";
 
 export default async function StaffPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
   if (profile.shop.isPlatformShop) redirect("/admin");
+
+  if (profile.inAdminOverview) {
+    return <AdminStaffConsole ownedShops={profile.shops.filter((s) => s.role === "owner")} />;
+  }
   if (profile.role !== "owner") redirect("/inventory");
 
   const supabase = await createClient();

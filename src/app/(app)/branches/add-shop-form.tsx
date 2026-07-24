@@ -18,7 +18,7 @@ export function AddShopForm() {
       </label>
       {state.error && <p className="text-sm text-error">{state.error}</p>}
       <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Creating…" : "Add shop"}
+        {pending ? "Creating…" : "Add branch"}
       </Button>
     </form>
   );

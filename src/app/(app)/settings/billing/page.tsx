@@ -2,18 +2,18 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { openBillingPortalAction } from "./actions";
-
-const STATUS_LABEL: Record<string, string> = {
-  trialing: "Free trial",
-  active: "Active",
-  past_due: "Payment past due",
-  canceled: "Canceled",
-};
+import { STATUS_LABEL } from "./billing-ui";
+import { AdminBillingList } from "./admin-billing-list";
 
 export default async function BillingPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
   if (profile.shop.isPlatformShop) redirect("/admin");
+
+  if (profile.inAdminOverview) {
+    const activeOwnedShops = profile.shops.filter((s) => s.role === "owner" && !s.archivedAt);
+    return <AdminBillingList ownedShops={activeOwnedShops} />;
+  }
   if (profile.role !== "owner") redirect("/inventory");
 
   const supabase = await createClient();
@@ -22,6 +22,8 @@ export default async function BillingPage() {
     .select("subscription_status, trial_ends_at, current_period_end, stripe_customer_id")
     .eq("id", profile.shopId)
     .single();
+
+  const boundOpenPortal = openBillingPortalAction.bind(null, profile.shopId);
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-md px-4 py-8">
@@ -46,7 +48,7 @@ export default async function BillingPage() {
       </div>
 
       {shop?.stripe_customer_id ? (
-        <form action={openBillingPortalAction} className="mt-4">
+        <form action={boundOpenPortal} className="mt-4">
           <button
             type="submit"
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"

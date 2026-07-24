@@ -8,6 +8,7 @@ export type ShopMembership = {
   shopId: string;
   shopName: string;
   role: "owner" | "staff";
+  archivedAt: string | null;
 };
 
 export type CurrentProfile = {
@@ -16,6 +17,14 @@ export type CurrentProfile = {
   role: "owner" | "staff";
   platformAdmin: boolean;
   displayName: string | null;
+  /** How many shops this login owns (across all memberships, active or archived). */
+  ownedShopCount: number;
+  /**
+   * True when this login owns 2+ shops and hasn't explicitly picked one
+   * (no active_shop_id cookie, or a stale one) — the "Admin Overview"
+   * landing mode rather than being "inside" any single branch.
+   */
+  inAdminOverview: boolean;
   shop: {
     id: string;
     name: string;
@@ -23,9 +32,10 @@ export type CurrentProfile = {
     logoUrl: string | null;
     primaryColor: string | null;
     suspended: boolean;
+    archived: boolean;
     isPlatformShop: boolean;
   };
-  /** Every shop this login has a membership at — for the shop switcher. */
+  /** Every shop this login has a membership at — for admin-overview pages. */
   shops: ShopMembership[];
 };
 
@@ -46,7 +56,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   const { data: memberships } = await supabase
     .from("profiles")
     .select(
-      "id, shop_id, role, platform_admin, display_name, shops(id, name, subscription_status, logo_url, primary_color, suspended_at, is_platform_shop)",
+      "id, shop_id, role, platform_admin, display_name, shops(id, name, subscription_status, logo_url, primary_color, suspended_at, archived_at, is_platform_shop)",
     )
     .eq("user_id", user.id)
     .order("created_at");
@@ -68,8 +78,14 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
       shopId: m.shop_id,
       shopName: s?.name ?? "",
       role: m.role,
+      archivedAt: s?.archived_at ?? null,
     };
   });
+
+  const ownedShopCount = shops.filter((s) => s.role === "owner").length;
+  const cookieMatchesMembership =
+    activeShopId != null && memberships.some((m) => m.shop_id === activeShopId);
+  const inAdminOverview = ownedShopCount > 1 && !cookieMatchesMembership;
 
   return {
     id: active.id,
@@ -77,6 +93,8 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     role: active.role,
     platformAdmin: memberships.some((m) => m.platform_admin),
     displayName: active.display_name,
+    ownedShopCount,
+    inAdminOverview,
     shop: {
       id: activeShop.id,
       name: activeShop.name,
@@ -84,6 +102,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
       logoUrl: activeShop.logo_url,
       primaryColor: activeShop.primary_color,
       suspended: activeShop.suspended_at != null,
+      archived: activeShop.archived_at != null,
       isPlatformShop: activeShop.is_platform_shop,
     },
     shops,

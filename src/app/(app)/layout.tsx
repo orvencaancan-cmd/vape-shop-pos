@@ -1,10 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
-import { signOutAction } from "@/lib/auth/actions";
+import { signOutAction, backToAdminAction } from "@/lib/auth/actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AgentOneLogo } from "@/components/agentone-logo";
-import { ShopSwitcher } from "@/components/shop-switcher";
 
 export default async function AppLayout({
   children,
@@ -13,30 +12,36 @@ export default async function AppLayout({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
-  if (profile.shop.suspended && !profile.platformAdmin) redirect("/shop-suspended");
+  if (!profile.platformAdmin) {
+    if (profile.shop.suspended) redirect("/shop-suspended");
+    if (profile.shop.archived && profile.role !== "owner") redirect("/shop-suspended");
+  }
 
   const navItems = profile.shop.isPlatformShop
     ? [
         { href: "/admin", label: "Admin", show: true },
         { href: "/admin/reports", label: "Reports", show: true },
       ].filter((item) => item.show)
-    : [
-        { href: "/sell", label: "Sell", show: true },
-        { href: "/inventory", label: "Inventory", show: true },
-        {
-          href: "/branches",
-          label: "Branches",
-          show: profile.role === "owner" && profile.shops.filter((s) => s.role === "owner").length > 1,
-        },
-        { href: "/dashboard", label: "Dashboard", show: profile.role === "owner" },
-        { href: "/reports", label: "Reports", show: profile.role === "owner" },
-        { href: "/settings/suppliers", label: "Suppliers", show: profile.role === "owner" },
-        { href: "/settings/staff", label: "Staff", show: profile.role === "owner" },
-        { href: "/settings/shops", label: "Shops", show: profile.role === "owner" },
-        { href: "/settings/billing", label: "Billing", show: profile.role === "owner" },
-        { href: "/settings/branding", label: "Branding", show: profile.role === "owner" },
-        { href: "/admin", label: "Admin", show: profile.platformAdmin },
-      ].filter((item) => item.show);
+    : profile.inAdminOverview
+      ? [
+          { href: "/dashboard", label: "Dashboard", show: true },
+          { href: "/settings/staff", label: "Staff", show: true },
+          { href: "/branches", label: "Branches", show: true },
+          { href: "/settings/billing", label: "Billing", show: true },
+          { href: "/reports", label: "Reports", show: true },
+        ].filter((item) => item.show)
+      : [
+          { href: "/sell", label: "Sell", show: true },
+          { href: "/inventory", label: "Inventory", show: true },
+          { href: "/dashboard", label: "Dashboard", show: profile.role === "owner" },
+          { href: "/reports", label: "Reports", show: profile.role === "owner" },
+          { href: "/settings/suppliers", label: "Suppliers", show: profile.role === "owner" },
+          { href: "/settings/staff", label: "Staff", show: profile.role === "owner" },
+          { href: "/branches", label: "Branches", show: profile.role === "owner" },
+          { href: "/settings/billing", label: "Billing", show: profile.role === "owner" },
+          { href: "/settings/branding", label: "Branding", show: profile.role === "owner" },
+          { href: "/admin", label: "Admin", show: profile.platformAdmin },
+        ].filter((item) => item.show);
 
   return (
     <div
@@ -50,14 +55,20 @@ export default async function AppLayout({
       <header className="border-b border-hairline bg-canvas">
         <div className="relative flex h-16 items-center justify-center border-b border-hairline bg-canvas-soft px-4 sm:h-20">
           <AgentOneLogo className="absolute left-4 text-xs sm:text-sm" />
-          {profile.shops.length > 1 ? (
-            <ShopSwitcher shops={profile.shops} activeShopId={profile.shopId} />
-          ) : (
-            <span className="max-w-[55%] truncate text-center text-sm font-semibold uppercase tracking-[0.25em] text-ink sm:max-w-[60%] sm:text-lg sm:tracking-[0.35em]">
-              {profile.shop.name}
-            </span>
-          )}
+          <span className="max-w-[55%] truncate text-center text-sm font-semibold uppercase tracking-[0.25em] text-ink sm:max-w-[60%] sm:text-lg sm:tracking-[0.35em]">
+            {profile.inAdminOverview ? (profile.displayName ?? "Admin") : profile.shop.name}
+          </span>
           <div className="absolute right-4 flex shrink-0 items-center gap-3">
+            {profile.ownedShopCount > 1 && !profile.inAdminOverview && !profile.shop.isPlatformShop && (
+              <form action={backToAdminAction}>
+                <button
+                  type="submit"
+                  className="text-sm text-muted transition-colors hover:text-ink"
+                >
+                  ← Back to Admin
+                </button>
+              </form>
+            )}
             <ThemeToggle />
             <form action={signOutAction}>
               <button

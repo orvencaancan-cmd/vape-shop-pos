@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { DashboardRecentSales } from "./recent-sales";
+import { AdminDashboardGrid } from "./admin-dashboard-grid";
 
 export default async function DashboardPage({
   searchParams,
@@ -17,6 +18,11 @@ export default async function DashboardPage({
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
   if (profile.shop.isPlatformShop) redirect("/admin");
+
+  if (profile.inAdminOverview) {
+    const activeOwnedShops = profile.shops.filter((s) => s.role === "owner" && !s.archivedAt);
+    return <AdminDashboardGrid ownedShops={activeOwnedShops} />;
+  }
   if (profile.role !== "owner") redirect("/sell");
 
   const params = await searchParams;
@@ -63,18 +69,8 @@ export default async function DashboardPage({
     (s) => s.created_at.slice(0, 10) === series[series.length - 1]?.date,
   ).length;
 
-  const ownedShopCount = profile.shops.filter((s) => s.role === "owner").length;
-
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
-      {ownedShopCount > 1 && (
-        <Link
-          href="/branches"
-          className="text-xs text-muted underline underline-offset-2 hover:text-ink"
-        >
-          ← All branches
-        </Link>
-      )}
       <h1 className="heading text-2xl">
         {profile.shop.name} — Dashboard
       </h1>
