@@ -136,6 +136,43 @@ export async function inviteStaffToBranchAction(
   return result;
 }
 
+export async function changeRoleInBranchAction(
+  profileId: string,
+  shopId: string,
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = roleSchema.safeParse({ role: formData.get("role") });
+  if (!parsed.success) return { error: "Invalid role" };
+
+  const profile = await getCurrentProfile();
+  const owns = profile?.shops.some((s) => s.shopId === shopId && s.role === "owner");
+  if (!profile || !owns) {
+    return { error: "You must own that branch to change roles there" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ role: parsed.data.role })
+    .eq("id", profileId)
+    .eq("shop_id", shopId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/settings/staff");
+  return {};
+}
+
+export async function removeStaffFromBranchAction(profileId: string, shopId: string) {
+  const profile = await getCurrentProfile();
+  const owns = profile?.shops.some((s) => s.shopId === shopId && s.role === "owner");
+  if (!profile || !owns) return;
+
+  const supabase = await createClient();
+  await supabase.from("profiles").delete().eq("id", profileId).eq("shop_id", shopId);
+  revalidatePath("/settings/staff");
+}
+
 export async function transferStaffAction(
   profileId: string,
   fromShopId: string,

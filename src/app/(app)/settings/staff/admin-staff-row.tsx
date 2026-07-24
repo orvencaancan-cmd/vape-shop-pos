@@ -1,7 +1,12 @@
 "use client";
 
 import { useActionState } from "react";
-import { transferStaffAction, type ActionState } from "./actions";
+import {
+  changeRoleInBranchAction,
+  removeStaffFromBranchAction,
+  transferStaffAction,
+  type ActionState,
+} from "./actions";
 import type { ShopMembership } from "@/lib/auth/get-current-profile";
 
 const initialState: ActionState = {};
@@ -14,6 +19,7 @@ export function AdminStaffRow({
   currentShopId,
   currentShopName,
   otherShops,
+  canDemoteOrRemove,
 }: {
   profileId: string;
   displayName: string | null;
@@ -22,22 +28,49 @@ export function AdminStaffRow({
   currentShopId: string;
   currentShopName: string;
   otherShops: ShopMembership[];
+  canDemoteOrRemove: boolean;
 }) {
+  const boundRole = changeRoleInBranchAction.bind(null, profileId, currentShopId);
+  const [roleState, roleFormAction, rolePending] = useActionState(boundRole, initialState);
+
+  const boundRemove = removeStaffFromBranchAction.bind(null, profileId, currentShopId);
+
   const boundTransfer = transferStaffAction.bind(null, profileId, currentShopId);
-  const [state, formAction, pending] = useActionState(boundTransfer, initialState);
+  const [transferState, transferFormAction, transferPending] = useActionState(
+    boundTransfer,
+    initialState,
+  );
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-hairline bg-canvas-soft p-3">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-ink">{displayName || email}</p>
-        <p className="text-xs text-muted">
-          {email} · {currentShopName} · {role === "owner" ? "Owner" : "Staff"}
-        </p>
+        <p className="text-xs text-muted">{email} · {currentShopName}</p>
       </div>
+
+      <form action={roleFormAction} className="flex items-center gap-2">
+        <select
+          key={role}
+          name="role"
+          defaultValue={role}
+          disabled={!canDemoteOrRemove && role === "owner"}
+          className="rounded-lg border border-hairline bg-canvas px-2 py-1 text-xs text-ink disabled:opacity-50"
+        >
+          <option value="staff">Staff</option>
+          <option value="owner">Owner</option>
+        </select>
+        <button
+          type="submit"
+          disabled={rolePending}
+          className="rounded-lg bg-canvas-strong px-2 py-1 text-xs text-body transition-colors hover:text-ink disabled:opacity-50"
+        >
+          {rolePending ? "Saving…" : "Save"}
+        </button>
+      </form>
 
       {role === "staff" && otherShops.length > 0 && (
         <form
-          action={formAction}
+          action={transferFormAction}
           className="flex items-center gap-2"
           onSubmit={(e) => {
             const form = e.currentTarget;
@@ -68,16 +101,34 @@ export function AdminStaffRow({
           </label>
           <button
             type="submit"
-            disabled={pending}
+            disabled={transferPending}
             className="rounded-lg bg-primary px-2 py-1 text-xs font-medium text-on-primary transition-colors hover:bg-primary-active disabled:opacity-50"
           >
-            {pending ? "Moving…" : "Reassign"}
+            {transferPending ? "Moving…" : "Reassign"}
           </button>
         </form>
       )}
 
-      {state.error && <p className="w-full text-xs text-error">{state.error}</p>}
-      {state.success && <p className="w-full text-xs text-success">{state.success}</p>}
+      <form action={boundRemove}>
+        <button
+          type="submit"
+          disabled={!canDemoteOrRemove && role === "owner"}
+          className="text-xs text-error underline disabled:cursor-not-allowed disabled:text-muted"
+        >
+          Remove
+        </button>
+      </form>
+
+      {roleState.error && <p className="w-full text-xs text-error">{roleState.error}</p>}
+      {transferState.error && <p className="w-full text-xs text-error">{transferState.error}</p>}
+      {transferState.success && (
+        <p className="w-full text-xs text-success">{transferState.success}</p>
+      )}
+      {!canDemoteOrRemove && role === "owner" && (
+        <p className="w-full text-xs text-muted">
+          Can&apos;t change or remove this branch&apos;s last owner.
+        </p>
+      )}
     </div>
   );
 }

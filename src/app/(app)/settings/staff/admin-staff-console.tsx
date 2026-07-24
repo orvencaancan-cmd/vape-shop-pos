@@ -20,6 +20,13 @@ export async function AdminStaffConsole({ ownedShops }: { ownedShops: ShopMember
   const emailByUserId = new Map(userList?.users.map((u) => [u.id, u.email ?? ""]));
   const shopNameById = new Map(activeOwnedShops.map((s) => [s.shopId, s.shopName]));
 
+  const ownerCountByShop = new Map<string, number>();
+  for (const m of members ?? []) {
+    if (m.role === "owner") {
+      ownerCountByShop.set(m.shop_id, (ownerCountByShop.get(m.shop_id) ?? 0) + 1);
+    }
+  }
+
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
       <h1 className="heading text-2xl">Staff</h1>
@@ -39,6 +46,7 @@ export async function AdminStaffConsole({ ownedShops }: { ownedShops: ShopMember
               currentShopId={m.shop_id}
               currentShopName={shopNameById.get(m.shop_id) ?? ""}
               otherShops={activeOwnedShops.filter((s) => s.shopId !== m.shop_id)}
+              canDemoteOrRemove={m.role !== "owner" || (ownerCountByShop.get(m.shop_id) ?? 0) > 1}
             />
           ))
         )}
