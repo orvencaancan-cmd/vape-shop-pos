@@ -28,7 +28,7 @@ export default async function ShopsSettingsPage() {
       <div className="mt-8">
         <h2 className="text-sm font-medium text-muted">Add another shop</h2>
         <p className="mt-1 text-xs text-muted">
-          Each shop keeps its own subscription, inventory, and staff.
+          Each shop gets its own inventory and staff. Billing setup is coming soon.
         </p>
         <AddShopForm />
       </div>
