@@ -41,7 +41,7 @@ const FEATURES = [
   },
   {
     title: "Your branding",
-    body: "Add your shop's logo and color so the app feels like yours.",
+    body: "Set your shop's accent color so the app feels like yours.",
   },
   {
     title: "Phone or PC",
