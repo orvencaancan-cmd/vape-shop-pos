@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { FeaturePanel } from "@/components/feature-panel";
 import { VapeStockLogo } from "@/components/vapestock-logo";
+import { AuthHashRedirect } from "@/components/auth-hash-redirect";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 
 async function getPriceLabel() {
@@ -48,7 +49,26 @@ const FEATURES = [
   },
 ];
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string; token_hash?: string; type?: string }>;
+}) {
+  const params = await searchParams;
+  // Supabase's default "Site URL" redirect (used whenever an auth email is
+  // sent without an explicit redirectTo, e.g. triggered from the Supabase
+  // dashboard rather than our own /forgot-password form) points here instead
+  // of /auth/callback. Forward any auth params on so the link still works
+  // instead of silently landing on the marketing page.
+  if (params.code || (params.token_hash && params.type)) {
+    const forward = new URLSearchParams();
+    if (params.code) forward.set("code", params.code);
+    if (params.token_hash) forward.set("token_hash", params.token_hash);
+    if (params.type) forward.set("type", params.type);
+    forward.set("next", params.type === "recovery" ? "/reset-password" : "/onboarding");
+    redirect(`/auth/callback?${forward.toString()}`);
+  }
+
   const profile = await getCurrentProfile();
   if (profile) {
     redirect(profile.role === "owner" ? "/dashboard" : "/sell");
@@ -58,6 +78,7 @@ export default async function Home() {
 
   return (
     <div className="flex flex-1 flex-col bg-canvas">
+      <AuthHashRedirect />
       <header className="border-b border-hairline">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <VapeStockLogo className="text-xl" />

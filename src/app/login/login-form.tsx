@@ -8,11 +8,23 @@ import { Button } from "@/components/ui/button";
 
 const initialState: LoginState = {};
 
-export function LoginForm() {
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  otp_expired: "That link has expired. Request a new password reset email and use it within a few minutes.",
+  access_denied: "That link is no longer valid. Request a new password reset email and try again.",
+};
+
+export function LoginForm({ authError }: { authError?: string }) {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      {authError && (
+        <p className="text-sm text-error" role="alert">
+          {AUTH_ERROR_MESSAGES[authError] ??
+            "That link didn't work. Request a new password reset email and try again."}
+        </p>
+      )}
+
       <label className="flex flex-col gap-1.5">
         <Label>Email</Label>
         <Input name="email" type="email" required />

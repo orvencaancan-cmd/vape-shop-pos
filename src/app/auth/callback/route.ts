@@ -10,12 +10,14 @@ export async function GET(request: Request) {
   const next = searchParams.get("next") ?? "/onboarding";
 
   const supabase = await createClient();
+  let reason = "auth";
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
     }
+    reason = error.code ?? reason;
   } else if (tokenHash && type) {
     // Links generated via the admin API (e.g. a manually issued access
     // link) arrive this way instead of as a PKCE `code`, since there's no
@@ -24,7 +26,12 @@ export async function GET(request: Request) {
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
     }
+    reason = error.code ?? reason;
+  } else {
+    // Supabase appends these directly when the link itself was already
+    // invalid (expired, already used) before ever reaching this route.
+    reason = searchParams.get("error_code") ?? searchParams.get("error") ?? reason;
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth`);
+  return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(reason)}`);
 }

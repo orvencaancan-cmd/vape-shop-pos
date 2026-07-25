@@ -10,7 +10,10 @@ export default function AuthConfirmPage() {
     const hash = new URLSearchParams(window.location.hash.slice(1));
     const accessToken = hash.get("access_token");
     const refreshToken = hash.get("refresh_token");
-    const next = new URLSearchParams(window.location.search).get("next") ?? "/onboarding";
+    const type = hash.get("type");
+    const next =
+      new URLSearchParams(window.location.search).get("next") ??
+      (type === "recovery" ? "/reset-password" : "/onboarding");
 
     if (!accessToken || !refreshToken) {
       window.location.replace("/login?error=auth");
