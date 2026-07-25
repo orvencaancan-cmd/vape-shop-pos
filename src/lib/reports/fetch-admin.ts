@@ -3,7 +3,6 @@ import type { ShopMembership } from "@/lib/auth/get-current-profile";
 import type { DateRange } from "./date-range";
 import {
   computeSalesSummary,
-  computePaymentBreakdown,
   computeSalesDetail,
   computeRevenueProfit,
   computeBestSellers,
@@ -34,7 +33,6 @@ export type BranchInventory = {
 
 export type AdminReportData = {
   salesSummary: ReturnType<typeof computeSalesSummary>;
-  paymentBreakdown: ReturnType<typeof computePaymentBreakdown>;
   salesDetail: ReturnType<typeof computeSalesDetail>;
   revenueProfit: ReturnType<typeof computeRevenueProfit>;
   bestSellers: ReturnType<typeof computeBestSellers>;
@@ -159,7 +157,6 @@ export async function fetchAdminReportData(
 
   return {
     salesSummary: computeSalesSummary(sales),
-    paymentBreakdown: computePaymentBreakdown(sales),
     salesDetail: computeSalesDetail(sales, items),
     revenueProfit: computeRevenueProfit(items),
     bestSellers: computeBestSellers(items),

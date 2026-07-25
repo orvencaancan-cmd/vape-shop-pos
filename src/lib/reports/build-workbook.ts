@@ -21,7 +21,6 @@ export type WorkbookContext = {
 type SalesSideReportData = Pick<
   SingleShopReportData,
   | "salesSummary"
-  | "paymentBreakdown"
   | "salesDetail"
   | "revenueProfit"
   | "bestSellers"
@@ -96,8 +95,6 @@ function addSalesSheets(wb: ExcelJS.Workbook, data: SalesSideReportData) {
   addKeyValueSheet(wb, "Sales Summary", [
     ["Sales count", data.salesSummary.count, "int"],
     ["Revenue", data.salesSummary.revenue, "currency"],
-    ["Cash", data.paymentBreakdown.cash, "currency"],
-    ["GCash", data.paymentBreakdown.gcash, "currency"],
   ]);
 
   addKeyValueSheet(wb, "Revenue & Profit", [
