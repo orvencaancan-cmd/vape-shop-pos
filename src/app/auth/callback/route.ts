@@ -30,7 +30,18 @@ export async function GET(request: Request) {
   } else {
     // Supabase appends these directly when the link itself was already
     // invalid (expired, already used) before ever reaching this route.
-    reason = searchParams.get("error_code") ?? searchParams.get("error") ?? reason;
+    const explicitError = searchParams.get("error_code") ?? searchParams.get("error");
+    if (explicitError) {
+      reason = explicitError;
+    } else {
+      // No code/token_hash and no reported error usually means this
+      // project's auth email delivers the session as a URL fragment
+      // (#access_token=...) instead, which never reaches the server. Hand
+      // off to /auth/confirm, which reads the fragment client-side --
+      // browsers reattach the original fragment across this redirect since
+      // our Location header doesn't specify one of its own.
+      return NextResponse.redirect(`${origin}/auth/confirm?next=${encodeURIComponent(next)}`);
+    }
   }
 
   return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(reason)}`);
