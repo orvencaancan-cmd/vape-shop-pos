@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { FeaturePanel } from "@/components/feature-panel";
+import { VapeStockLogo } from "@/components/vapestock-logo";
 
 export function SplitAuthShell({
   heading,
@@ -15,7 +16,7 @@ export function SplitAuthShell({
     <div className="grid min-h-screen lg:grid-cols-[1fr_1.1fr]">
       <div className="flex flex-col px-4 py-6 sm:px-8">
         <div className="flex items-center justify-between">
-          <span className="heading text-sm">VapeStock</span>
+          <VapeStockLogo className="text-base" />
           <ThemeToggle />
         </div>
 

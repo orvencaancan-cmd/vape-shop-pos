@@ -19,6 +19,12 @@
   --color-success: #4d9a5c;
   --color-warning: #b8862e;
   --color-error: #c0503f;
+
+  /* Fixed platform blue for the VapeStock brand mark -- deliberately
+     separate from --color-primary, which a shop's own branding settings
+     can override app-wide. The logo should never shift with a shop's
+     accent color. */
+  --color-brand: #1f5c96;
 }
 
 .dark {
@@ -38,6 +44,8 @@
   --color-success: #6fbb7d;
   --color-warning: #d1a452;
   --color-error: #e0796a;
+
+  --color-brand: #6badf0;
 }
 
 @theme inline {
@@ -55,6 +63,7 @@
   --color-success: var(--color-success);
   --color-warning: var(--color-warning);
   --color-error: var(--color-error);
+  --color-brand: var(--color-brand);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

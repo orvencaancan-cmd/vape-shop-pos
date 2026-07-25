@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { signOutAction, backToAdminAction } from "@/lib/auth/actions";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { AgentOneLogo } from "@/components/agentone-logo";
+import { VapeStockLogo } from "@/components/vapestock-logo";
 
 export default async function AppLayout({
   children,
@@ -54,7 +54,7 @@ export default async function AppLayout({
     >
       <header className="border-b border-hairline bg-canvas">
         <div className="relative flex h-16 items-center justify-center border-b border-hairline bg-canvas-soft px-4 sm:h-20">
-          <AgentOneLogo className="absolute left-4 text-xs sm:text-sm" />
+          <VapeStockLogo className="absolute left-4 text-sm sm:text-base" />
           <span className="max-w-[55%] truncate text-center text-sm font-semibold uppercase tracking-[0.25em] text-ink sm:max-w-[60%] sm:text-lg sm:tracking-[0.35em]">
             {profile.inAdminOverview ? (profile.displayName ?? "Admin") : profile.shop.name}
           </span>

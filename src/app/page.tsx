@@ -5,6 +5,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { FeaturePanel } from "@/components/feature-panel";
+import { VapeStockLogo } from "@/components/vapestock-logo";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 
 async function getPriceLabel() {
@@ -59,7 +60,7 @@ export default async function Home() {
     <div className="flex flex-1 flex-col bg-canvas">
       <header className="border-b border-hairline">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <span className="heading text-lg">VapeStock</span>
+          <VapeStockLogo className="text-xl" />
           <nav className="flex items-center gap-3 text-sm">
             <ThemeToggle />
             <Link href="/login" className="text-body hover:text-ink">
