@@ -2,6 +2,7 @@ import type { createClient } from "@/lib/supabase/server";
 import type { DateRange } from "./date-range";
 import {
   computeSalesSummary,
+  computePaymentBreakdown,
   computeRevenueProfit,
   computeBestSellers,
   computeSalesByCategory,
@@ -16,6 +17,7 @@ import { normalizeSaleItems, normalizeVariants, normalizeReceipts } from "./norm
 
 export type SingleShopReportData = {
   salesSummary: ReturnType<typeof computeSalesSummary>;
+  paymentBreakdown: ReturnType<typeof computePaymentBreakdown>;
   revenueProfit: ReturnType<typeof computeRevenueProfit>;
   bestSellers: ReturnType<typeof computeBestSellers>;
   byCategory: ReturnType<typeof computeSalesByCategory>["byCategory"];
@@ -34,7 +36,7 @@ export async function fetchSingleShopReportData(
 ): Promise<SingleShopReportData> {
   const { data: sales } = await supabase
     .from("sales")
-    .select("id, total, created_at")
+    .select("id, total, payment_method, created_at")
     .eq("shop_id", shopId)
     .gte("created_at", from.toISOString())
     .lt("created_at", to.toISOString())
@@ -90,6 +92,7 @@ export async function fetchSingleShopReportData(
 
   return {
     salesSummary: computeSalesSummary(sales ?? []),
+    paymentBreakdown: computePaymentBreakdown(sales ?? []),
     revenueProfit: computeRevenueProfit(items),
     bestSellers: computeBestSellers(items),
     byCategory,

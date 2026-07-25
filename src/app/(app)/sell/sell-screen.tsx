@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/currency";
 type Variant = {
   id: string;
   productName: string;
+  brand: string | null;
   category: "ejuice" | "accessory";
   label: string;
   price: number;
@@ -17,6 +18,7 @@ type Variant = {
 type RecentSale = {
   id: string;
   total: number;
+  paymentMethod: "cash" | "gcash";
   createdAt: string;
   createdByName: string | null;
   voidedAt: string | null;
@@ -24,6 +26,12 @@ type RecentSale = {
 };
 
 type CartLine = { variantId: string; quantity: number };
+
+type BrandGroup = { brandKey: string; brandLabel: string; variants: Variant[] };
+
+const NO_BRAND = "__no_brand__";
+
+const PAYMENT_LABELS: Record<"cash" | "gcash", string> = { cash: "Cash", gcash: "GCash" };
 
 export function SellScreen({
   variants,
@@ -36,22 +44,53 @@ export function SellScreen({
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<"all" | "ejuice" | "accessory">("all");
   const [cart, setCart] = useState<CartLine[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "gcash">("cash");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(
     null,
   );
   const [pending, startTransition] = useTransition();
   const [voidingId, setVoidingId] = useState<string | null>(null);
+  const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
 
   const variantsById = useMemo(
     () => new Map(variants.map((v) => [v.id, v])),
     [variants],
   );
 
+  const hasActiveFilter = search.trim() !== "" || category !== "all";
+
+  const toggleBrand = (brandKey: string) => {
+    setExpandedBrands((prev) => {
+      const next = new Set(prev);
+      if (next.has(brandKey)) {
+        next.delete(brandKey);
+      } else {
+        next.add(brandKey);
+      }
+      return next;
+    });
+  };
+
   const filtered = variants.filter((v) => {
     if (category !== "all" && v.category !== category) return false;
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return v.productName.toLowerCase().includes(q) || v.label.toLowerCase().includes(q);
+  });
+
+  const brandGroupMap = new Map<string, BrandGroup>();
+  for (const v of filtered) {
+    const brandKey = v.brand ?? NO_BRAND;
+    if (!brandGroupMap.has(brandKey)) {
+      brandGroupMap.set(brandKey, { brandKey, brandLabel: v.brand ?? "No brand", variants: [] });
+    }
+    brandGroupMap.get(brandKey)!.variants.push(v);
+  }
+  const brandGroups = [...brandGroupMap.values()];
+  brandGroups.sort((a, b) => {
+    if (a.brandKey === NO_BRAND) return 1;
+    if (b.brandKey === NO_BRAND) return -1;
+    return a.brandLabel.localeCompare(b.brandLabel);
   });
 
   function addToCart(variantId: string) {
@@ -91,12 +130,13 @@ export function SellScreen({
   function completeSale() {
     setMessage(null);
     startTransition(async () => {
-      const result = await recordSaleAction(cart);
+      const result = await recordSaleAction(cart, paymentMethod);
       if (result.error) {
         setMessage({ type: "error", text: result.error });
       } else {
         setMessage({ type: "success", text: `Sale recorded — ${formatCurrency(total)}` });
         setCart([]);
+        setPaymentMethod("cash");
         router.refresh();
       }
     });
@@ -144,25 +184,55 @@ export function SellScreen({
           ))}
         </div>
 
-        <div className="stagger mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {filtered.map((v) => (
-            <button
-              key={v.id}
-              onClick={() => addToCart(v.id)}
-              disabled={v.stockQty <= 0}
-              className="flex flex-col items-start rounded-lg border border-hairline bg-canvas-soft p-3 text-left transition-shadow hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <span className="text-sm font-medium text-ink">{v.productName}</span>
-              <span className="text-xs text-muted">{v.label}</span>
-              <span className="mt-1 text-sm font-semibold text-ink">
-                {formatCurrency(v.price)}
-              </span>
-              <span className="text-xs text-muted">{v.stockQty} in stock</span>
-            </button>
-          ))}
-          {filtered.length === 0 && (
-            <p className="col-span-full text-sm text-muted">No products match.</p>
-          )}
+        <div className="stagger mt-4 flex flex-col gap-4">
+          {brandGroups.map((group) => {
+            const isExpanded = hasActiveFilter || expandedBrands.has(group.brandKey);
+            return (
+              <section
+                key={group.brandKey}
+                className="rounded-xl border border-hairline bg-canvas-soft px-4 py-3"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleBrand(group.brandKey)}
+                  className="flex w-full items-center justify-between gap-2 text-left"
+                  aria-expanded={isExpanded}
+                >
+                  <h2 className="heading text-base">{group.brandLabel}</h2>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    className={`h-4 w-4 shrink-0 text-muted transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+                {isExpanded && (
+                  <div className="animate-fade-in-up mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {group.variants.map((v) => (
+                      <button
+                        key={v.id}
+                        onClick={() => addToCart(v.id)}
+                        disabled={v.stockQty <= 0}
+                        className="flex flex-col items-start rounded-lg border border-hairline bg-canvas p-3 text-left transition-shadow hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <span className="text-sm font-medium text-ink">{v.productName}</span>
+                        <span className="text-xs text-muted">{v.label}</span>
+                        <span className="mt-1 text-sm font-semibold text-ink">
+                          {formatCurrency(v.price)}
+                        </span>
+                        <span className="text-xs text-muted">{v.stockQty} in stock</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })}
+          {brandGroups.length === 0 && <p className="text-sm text-muted">No products match.</p>}
         </div>
       </div>
 
@@ -211,6 +281,22 @@ export function SellScreen({
             <span>Total</span>
             <span>{formatCurrency(total)}</span>
           </div>
+          <div className="mt-3 flex gap-2">
+            {(["cash", "gcash"] as const).map((method) => (
+              <button
+                key={method}
+                type="button"
+                onClick={() => setPaymentMethod(method)}
+                className={`flex-1 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                  paymentMethod === method
+                    ? "bg-primary text-on-primary"
+                    : "bg-canvas-strong text-body hover:text-ink"
+                }`}
+              >
+                {PAYMENT_LABELS[method]}
+              </button>
+            ))}
+          </div>
           <button
             onClick={completeSale}
             disabled={cart.length === 0 || pending}
@@ -245,6 +331,9 @@ export function SellScreen({
                   <div className="min-w-0">
                     <span className={s.voidedAt ? "text-muted line-through" : "text-ink"}>
                       {new Date(s.createdAt).toLocaleTimeString()} — {formatCurrency(s.total)}
+                    </span>
+                    <span className="ml-2 rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-body">
+                      {PAYMENT_LABELS[s.paymentMethod]}
                     </span>
                     {s.createdByName && (
                       <span className="ml-2 text-xs text-muted">{s.createdByName}</span>

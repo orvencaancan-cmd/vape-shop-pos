@@ -63,6 +63,16 @@ export function computeSalesSummary(sales: { total: number }[]) {
   };
 }
 
+export function computePaymentBreakdown(sales: { total: number; payment_method: string }[]) {
+  let cash = 0;
+  let gcash = 0;
+  for (const s of sales) {
+    if (s.payment_method === "gcash") gcash += Number(s.total);
+    else cash += Number(s.total);
+  }
+  return { cash, gcash };
+}
+
 export function computeRevenueProfit(items: SaleItemRow[]) {
   let revenue = 0;
   let cost = 0;

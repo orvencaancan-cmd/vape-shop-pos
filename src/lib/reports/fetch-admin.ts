@@ -3,6 +3,7 @@ import type { ShopMembership } from "@/lib/auth/get-current-profile";
 import type { DateRange } from "./date-range";
 import {
   computeSalesSummary,
+  computePaymentBreakdown,
   computeRevenueProfit,
   computeBestSellers,
   computeSalesByCategory,
@@ -32,6 +33,7 @@ export type BranchInventory = {
 
 export type AdminReportData = {
   salesSummary: ReturnType<typeof computeSalesSummary>;
+  paymentBreakdown: ReturnType<typeof computePaymentBreakdown>;
   revenueProfit: ReturnType<typeof computeRevenueProfit>;
   bestSellers: ReturnType<typeof computeBestSellers>;
   byCategory: ReturnType<typeof computeSalesByCategory>["byCategory"];
@@ -57,7 +59,7 @@ export async function fetchAdminReportData(
     salesShopIds.map(async (shopId) => {
       const { data: sales } = await supabase
         .from("sales")
-        .select("id, total, created_at")
+        .select("id, total, payment_method, created_at")
         .eq("shop_id", shopId)
         .gte("created_at", from.toISOString())
         .lt("created_at", to.toISOString())
@@ -155,6 +157,7 @@ export async function fetchAdminReportData(
 
   return {
     salesSummary: computeSalesSummary(sales),
+    paymentBreakdown: computePaymentBreakdown(sales),
     revenueProfit: computeRevenueProfit(items),
     bestSellers: computeBestSellers(items),
     byCategory,

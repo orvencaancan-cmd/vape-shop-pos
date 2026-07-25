@@ -20,7 +20,14 @@ export type WorkbookContext = {
  * vs. one per branch). */
 type SalesSideReportData = Pick<
   SingleShopReportData,
-  "salesSummary" | "revenueProfit" | "bestSellers" | "byCategory" | "byNicotine" | "supplierActivity" | "staffActivity"
+  | "salesSummary"
+  | "paymentBreakdown"
+  | "revenueProfit"
+  | "bestSellers"
+  | "byCategory"
+  | "byNicotine"
+  | "supplierActivity"
+  | "staffActivity"
 >;
 
 function formatRangeLabel(from: Date, to: Date): string {
@@ -88,6 +95,8 @@ function addSalesSheets(wb: ExcelJS.Workbook, data: SalesSideReportData) {
   addKeyValueSheet(wb, "Sales Summary", [
     ["Sales count", data.salesSummary.count, "int"],
     ["Revenue", data.salesSummary.revenue, "currency"],
+    ["Cash", data.paymentBreakdown.cash, "currency"],
+    ["GCash", data.paymentBreakdown.gcash, "currency"],
   ]);
 
   addKeyValueSheet(wb, "Revenue & Profit", [

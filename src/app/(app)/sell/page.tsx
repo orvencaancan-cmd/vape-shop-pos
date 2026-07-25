@@ -15,7 +15,7 @@ export default async function SellPage() {
   const { data: variants } = await supabase
     .from("variants")
     .select(
-      "id, flavor, nicotine_mg, size, for_device, ohms, price, stock_qty, products(name, category, archived)",
+      "id, flavor, nicotine_mg, size, for_device, ohms, price, stock_qty, products(name, brand, category, archived)",
     )
     .eq("shop_id", profile.shopId)
     .order("created_at");
@@ -27,6 +27,7 @@ export default async function SellPage() {
       return {
         id: v.id as string,
         productName: product.name as string,
+        brand: (product.brand as string | null) ?? null,
         category: product.category as "ejuice" | "accessory",
         label:
           [
@@ -46,7 +47,9 @@ export default async function SellPage() {
 
   const { data: recentSalesRaw } = await supabase
     .from("sales")
-    .select("id, total, created_at, created_by, voided_at, profiles!sales_created_by_fkey(display_name)")
+    .select(
+      "id, total, payment_method, created_at, created_by, voided_at, profiles!sales_created_by_fkey(display_name)",
+    )
     .eq("shop_id", profile.shopId)
     .order("created_at", { ascending: false })
     .limit(20);
@@ -56,6 +59,7 @@ export default async function SellPage() {
     return {
       id: s.id as string,
       total: Number(s.total),
+      paymentMethod: s.payment_method as "cash" | "gcash",
       createdAt: s.created_at as string,
       createdByName: (creator?.display_name as string | null) ?? null,
       voidedAt: s.voided_at as string | null,
@@ -66,7 +70,7 @@ export default async function SellPage() {
   return (
     <main className="animate-fade-in-up">
       <div className="mx-auto max-w-5xl px-4 pt-6">
-        <h1 className="heading text-2xl">{profile.shop.name} — Sell</h1>
+        <h1 className="heading text-2xl">{profile.shop.name} — Sales</h1>
       </div>
       <SellScreen variants={items} recentSales={recentSales} />
     </main>

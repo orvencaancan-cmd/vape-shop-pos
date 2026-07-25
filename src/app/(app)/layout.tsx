@@ -31,7 +31,7 @@ export default async function AppLayout({
           { href: "/reports", label: "Reports", show: true },
         ].filter((item) => item.show)
       : [
-          { href: "/sell", label: "Sell", show: true },
+          { href: "/sell", label: "Sales", show: true },
           { href: "/inventory", label: "Inventory", show: true },
           { href: "/dashboard", label: "Dashboard", show: profile.role === "owner" },
           { href: "/reports", label: "Reports", show: profile.role === "owner" },
