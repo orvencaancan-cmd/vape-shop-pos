@@ -56,6 +56,28 @@ export function InventoryList({
   const [nicotine, setNicotine] = useState(ALL);
   const [device, setDevice] = useState(ALL);
   const [ohms, setOhms] = useState(ALL);
+  const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
+
+  const hasActiveFilter =
+    search.trim() !== "" ||
+    category !== "all" ||
+    brand !== ALL ||
+    flavor !== ALL ||
+    nicotine !== ALL ||
+    device !== ALL ||
+    ohms !== ALL;
+
+  const toggleBrand = (brandKey: string) => {
+    setExpandedBrands((prev) => {
+      const next = new Set(prev);
+      if (next.has(brandKey)) {
+        next.delete(brandKey);
+      } else {
+        next.add(brandKey);
+      }
+      return next;
+    });
+  };
 
   const brands = useMemo(
     () => [...new Set(variants.map((v) => v.brand).filter(Boolean))].sort() as string[],
@@ -227,13 +249,33 @@ export function InventoryList({
       </div>
 
       <div className="stagger mt-6 flex flex-col gap-6">
-        {brandGroups.map((brandGroup) => (
+        {brandGroups.map((brandGroup) => {
+          const isExpanded = hasActiveFilter || expandedBrands.has(brandGroup.brandKey);
+          return (
           <section
             key={brandGroup.brandKey}
             className="rounded-xl border border-hairline bg-canvas-soft px-5 py-4"
           >
-            <h2 className="heading text-lg">{brandGroup.brandLabel}</h2>
-            <div className="mt-4 flex flex-col gap-5">
+            <button
+              type="button"
+              onClick={() => toggleBrand(brandGroup.brandKey)}
+              className="flex w-full items-center justify-between gap-2 text-left"
+              aria-expanded={isExpanded}
+            >
+              <h2 className="heading text-lg">{brandGroup.brandLabel}</h2>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                className={`h-4 w-4 shrink-0 text-muted transition-transform ${isExpanded ? "rotate-180" : ""}`}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            {isExpanded && (
+            <div className="animate-fade-in-up mt-4 flex flex-col gap-5">
               {brandGroup.products.map((product) => (
                 <div key={product.productId}>
                   <div className="flex items-center justify-between">
@@ -315,8 +357,10 @@ export function InventoryList({
                 </div>
               ))}
             </div>
+            )}
           </section>
-        ))}
+          );
+        })}
 
         {brandGroups.length === 0 && (
           <p className="text-sm text-muted">No products match.</p>
