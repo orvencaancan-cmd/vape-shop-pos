@@ -31,26 +31,51 @@ export default async function DashboardPage({
   const supabase = await createClient();
   const chartWindowStart = new Date(new Date().getTime() - 30 * 86400000).toISOString();
 
-  const [{ data: variants }, { data: recentSales }, { data: chartSales }] = await Promise.all([
-    supabase
-      .from("variants")
-      .select(
-        "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
-      )
-      .eq("shop_id", profile.shopId),
-    supabase
-      .from("sales")
-      .select("id, total, created_at, voided_at")
-      .eq("shop_id", profile.shopId)
-      .order("created_at", { ascending: false })
-      .limit(10),
-    supabase
-      .from("sales")
-      .select("total, created_at")
-      .eq("shop_id", profile.shopId)
-      .gte("created_at", chartWindowStart)
-      .is("voided_at", null),
-  ]);
+  const [{ data: variants }, { data: recentSales }, { data: chartSales }, { data: lastAudit }] =
+    await Promise.all([
+      supabase
+        .from("variants")
+        .select(
+          "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
+        )
+        .eq("shop_id", profile.shopId),
+      supabase
+        .from("sales")
+        .select("id, total, created_at, voided_at")
+        .eq("shop_id", profile.shopId)
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("sales")
+        .select("total, created_at")
+        .eq("shop_id", profile.shopId)
+        .gte("created_at", chartWindowStart)
+        .is("voided_at", null),
+      supabase
+        .from("stock_audits")
+        .select("id, completed_at")
+        .eq("shop_id", profile.shopId)
+        .not("completed_at", "is", null)
+        .order("completed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+  let auditDiscrepancyCount = 0;
+  let auditValueImpact = 0;
+  if (lastAudit) {
+    const { data: auditLines } = await supabase
+      .from("stock_audit_lines")
+      .select("system_qty, counted_qty, variants(cost)")
+      .eq("audit_id", lastAudit.id);
+    for (const l of auditLines ?? []) {
+      if (l.system_qty !== l.counted_qty) {
+        auditDiscrepancyCount++;
+        const variant = Array.isArray(l.variants) ? l.variants[0] : l.variants;
+        auditValueImpact += (l.counted_qty - l.system_qty) * Number(variant?.cost ?? 0);
+      }
+    }
+  }
 
   const lowStock = computeLowStock(
     (variants ?? []).map((v) => ({
@@ -106,6 +131,34 @@ export default async function DashboardPage({
           </ul>
         </Card>
       )}
+
+      <Card
+        padding="sm"
+        className={`mt-6 ${auditDiscrepancyCount > 0 ? "border-warning/40 bg-warning/10" : ""}`}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            {auditDiscrepancyCount > 0 && <span className="text-warning">⚠</span>}
+            <h2
+              className={`text-sm font-medium ${auditDiscrepancyCount > 0 ? "text-warning" : "text-ink"}`}
+            >
+              {lastAudit
+                ? `Last audit ${new Date(lastAudit.completed_at as string).toLocaleDateString()} — ${
+                    auditDiscrepancyCount === 0
+                      ? "no discrepancies"
+                      : `${auditDiscrepancyCount} discrepanc${auditDiscrepancyCount === 1 ? "y" : "ies"} (${formatCurrency(auditValueImpact)})`
+                  }`
+                : "No audits yet"}
+            </h2>
+          </div>
+          <Link
+            href="/audit"
+            className={`text-xs underline underline-offset-2 ${auditDiscrepancyCount > 0 ? "text-warning" : "text-primary"}`}
+          >
+            View recent audit
+          </Link>
+        </div>
+      </Card>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Card padding="sm">

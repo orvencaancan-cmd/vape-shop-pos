@@ -21,7 +21,7 @@ export function BranchRow({
 }) {
   const boundAction = (archived ? reactivateShopAction : archiveShopAction).bind(null, shopId);
   const [state, formAction, pending] = useActionState(boundAction, initialState);
-  const boundEnter = switchShopAction.bind(null, shopId, "owner");
+  const boundEnter = switchShopAction.bind(null, shopId, "owner", undefined);
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-hairline bg-canvas-soft p-3">

@@ -11,7 +11,7 @@ export async function signOutAction() {
   redirect("/login");
 }
 
-export async function switchShopAction(shopId: string, role: "owner" | "staff") {
+export async function switchShopAction(shopId: string, role: "owner" | "staff", next?: string) {
   const cookieStore = await cookies();
   cookieStore.set(ACTIVE_SHOP_COOKIE, shopId, {
     httpOnly: true,
@@ -20,7 +20,7 @@ export async function switchShopAction(shopId: string, role: "owner" | "staff") 
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });
-  redirect(role === "owner" ? "/dashboard" : "/sell");
+  redirect(next ?? (role === "owner" ? "/dashboard" : "/sell"));
 }
 
 export async function backToAdminAction() {

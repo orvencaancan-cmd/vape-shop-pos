@@ -4,6 +4,7 @@ import { computeLowStock, computeDailySeries, type VariantRow } from "@/lib/repo
 import { formatCurrency } from "@/lib/currency";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { switchShopAction } from "@/lib/auth/actions";
 import type { ShopMembership } from "@/lib/auth/get-current-profile";
 
 export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembership[] }) {
@@ -16,21 +17,30 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
 
   const cards = await Promise.all(
     ownedShops.map(async (s) => {
-      const [{ data: variants }, { data: weekSales }, { data: staff }] = await Promise.all([
-        supabase
-          .from("variants")
-          .select(
-            "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
-          )
-          .eq("shop_id", s.shopId),
-        supabase
-          .from("sales")
-          .select("total, created_at")
-          .eq("shop_id", s.shopId)
-          .gte("created_at", chartWindowStart)
-          .is("voided_at", null),
-        supabase.from("profiles").select("user_id, display_name").eq("shop_id", s.shopId),
-      ]);
+      const [{ data: variants }, { data: weekSales }, { data: staff }, { data: lastAudit }] =
+        await Promise.all([
+          supabase
+            .from("variants")
+            .select(
+              "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
+            )
+            .eq("shop_id", s.shopId),
+          supabase
+            .from("sales")
+            .select("total, created_at")
+            .eq("shop_id", s.shopId)
+            .gte("created_at", chartWindowStart)
+            .is("voided_at", null),
+          supabase.from("profiles").select("user_id, display_name").eq("shop_id", s.shopId),
+          supabase
+            .from("stock_audits")
+            .select("id, completed_at")
+            .eq("shop_id", s.shopId)
+            .not("completed_at", "is", null)
+            .order("completed_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ]);
 
       const lowStock = computeLowStock(
         (variants ?? []).map((v) => ({
@@ -45,12 +55,31 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
         (m) => m.display_name || emailByUserId.get(m.user_id) || "Unnamed",
       );
 
+      let auditDiscrepancyCount = 0;
+      let auditValueImpact = 0;
+      if (lastAudit) {
+        const { data: auditLines } = await supabase
+          .from("stock_audit_lines")
+          .select("system_qty, counted_qty, variants(cost)")
+          .eq("audit_id", lastAudit.id);
+        for (const l of auditLines ?? []) {
+          if (l.system_qty !== l.counted_qty) {
+            auditDiscrepancyCount++;
+            const variant = Array.isArray(l.variants) ? l.variants[0] : l.variants;
+            auditValueImpact += (l.counted_qty - l.system_qty) * Number(variant?.cost ?? 0);
+          }
+        }
+      }
+
       return {
         shopId: s.shopId,
         shopName: s.shopName,
         todayRevenue,
         lowStock,
         staffNames,
+        lastAuditCompletedAt: (lastAudit?.completed_at as string | undefined) ?? null,
+        auditDiscrepancyCount,
+        auditValueImpact,
       };
     }),
   );
@@ -97,6 +126,26 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
               ) : (
                 <p className="mt-1 text-sm text-ink">{c.staffNames.join(", ")}</p>
               )}
+            </div>
+
+            <div className="mt-3 flex items-center justify-between gap-2 border-t border-hairline pt-3">
+              <p className="text-xs text-muted">
+                {c.lastAuditCompletedAt
+                  ? `Last audit ${new Date(c.lastAuditCompletedAt).toLocaleDateString()} — ${
+                      c.auditDiscrepancyCount === 0
+                        ? "no discrepancies"
+                        : `${c.auditDiscrepancyCount} discrepanc${c.auditDiscrepancyCount === 1 ? "y" : "ies"} (${formatCurrency(c.auditValueImpact)})`
+                    }`
+                  : "No audits yet"}
+              </p>
+              <form action={switchShopAction.bind(null, c.shopId, "owner", "/audit")}>
+                <button
+                  type="submit"
+                  className="shrink-0 text-xs text-primary underline underline-offset-2"
+                >
+                  View recent audit
+                </button>
+              </form>
             </div>
           </Card>
         ))}
