@@ -22,6 +22,7 @@ type SalesSideReportData = Pick<
   SingleShopReportData,
   | "salesSummary"
   | "paymentBreakdown"
+  | "salesDetail"
   | "revenueProfit"
   | "bestSellers"
   | "byCategory"
@@ -115,6 +116,35 @@ function addSalesSheets(wb: ExcelJS.Workbook, data: SalesSideReportData) {
       { header: "Revenue", width: 16, numFmt: CURRENCY_FMT },
     ],
     data.bestSellers.map((b) => [b.productName, b.label, b.quantity, b.revenue]),
+  );
+
+  addTableSheet(
+    wb,
+    "Sales Detail",
+    [
+      { header: "Date/Time", width: 20 },
+      { header: "Payment Method", width: 14 },
+      { header: "Brand", width: 20 },
+      { header: "Product", width: 26 },
+      { header: "Variant", width: 26 },
+      { header: "Quantity", width: 10, numFmt: INT_FMT },
+      { header: "Unit Price", width: 14, numFmt: CURRENCY_FMT },
+      { header: "Line Total", width: 14, numFmt: CURRENCY_FMT },
+      { header: "Sale Total", width: 14, numFmt: CURRENCY_FMT },
+    ],
+    data.salesDetail.flatMap((s) =>
+      s.lines.map((line) => [
+        new Date(s.createdAt).toLocaleString(),
+        s.paymentMethod,
+        line.brand ?? "",
+        line.productName,
+        line.label,
+        line.quantity,
+        line.unitPrice,
+        line.lineTotal,
+        s.total,
+      ]),
+    ),
   );
 
   addSalesByCategorySheet(wb, data);

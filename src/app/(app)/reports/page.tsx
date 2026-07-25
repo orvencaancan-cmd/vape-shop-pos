@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveRange } from "@/lib/reports/date-range";
 import { fetchSingleShopReportData } from "@/lib/reports/fetch-single-shop";
 import { formatCurrency } from "@/lib/currency";
-import { RangeLink, Section, Stat, Empty, Table } from "./report-ui";
+import { RangeLink, Section, Stat, Empty, Table, SaleDetailList } from "./report-ui";
 import { AdminReportsPage } from "./admin-reports";
 
 export default async function ReportsPage({
@@ -31,6 +31,7 @@ export default async function ReportsPage({
   const {
     salesSummary,
     paymentBreakdown,
+    salesDetail,
     revenueProfit,
     bestSellers,
     byCategory,
@@ -88,6 +89,10 @@ export default async function ReportsPage({
         <Stat label="Revenue" value={formatCurrency(salesSummary.revenue)} />
         <Stat label="Cash" value={formatCurrency(paymentBreakdown.cash)} />
         <Stat label="GCash" value={formatCurrency(paymentBreakdown.gcash)} />
+      </Section>
+
+      <Section title="Sales detail">
+        <SaleDetailList sales={salesDetail} />
       </Section>
 
       <Section title="Revenue & profit">

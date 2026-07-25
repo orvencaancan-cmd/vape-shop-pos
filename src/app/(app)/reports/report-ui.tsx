@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { formatCurrency } from "@/lib/currency";
+import type { SaleDetail } from "@/lib/reports/compute";
 
 export function RangeLink({
   range,
@@ -42,6 +44,42 @@ export function Stat({ label, value }: { label: string; value: string }) {
 
 export function Empty({ text = "No data for this period." }: { text?: string }) {
   return <p className="text-sm text-muted">{text}</p>;
+}
+
+const PAYMENT_LABELS: Record<string, string> = { cash: "Cash", gcash: "GCash" };
+
+export function SaleDetailList({ sales }: { sales: SaleDetail[] }) {
+  if (sales.length === 0) return <Empty />;
+  return (
+    <div className="flex w-full flex-col gap-3">
+      {sales.map((s) => (
+        <div key={s.saleId} className="rounded-xl border border-hairline bg-canvas-soft p-4">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm text-ink">
+              {new Date(s.createdAt).toLocaleString()}
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-body">
+                {PAYMENT_LABELS[s.paymentMethod] ?? s.paymentMethod}
+              </span>
+              <span className="text-sm font-semibold text-ink">{formatCurrency(s.total)}</span>
+            </div>
+          </div>
+          <ul className="mt-2 flex flex-col gap-1 border-t border-hairline pt-2">
+            {s.lines.map((line, i) => (
+              <li key={i} className="flex items-center justify-between gap-2 text-xs text-body">
+                <span>
+                  {line.brand ? `${line.brand} — ` : ""}
+                  {line.productName} — {line.label} × {line.quantity}
+                </span>
+                <span className="shrink-0 text-muted">{formatCurrency(line.lineTotal)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function Table({ rows }: { rows: [string, string, string][] }) {

@@ -3,6 +3,7 @@ import type { DateRange } from "./date-range";
 import {
   computeSalesSummary,
   computePaymentBreakdown,
+  computeSalesDetail,
   computeRevenueProfit,
   computeBestSellers,
   computeSalesByCategory,
@@ -18,6 +19,7 @@ import { normalizeSaleItems, normalizeVariants, normalizeReceipts } from "./norm
 export type SingleShopReportData = {
   salesSummary: ReturnType<typeof computeSalesSummary>;
   paymentBreakdown: ReturnType<typeof computePaymentBreakdown>;
+  salesDetail: ReturnType<typeof computeSalesDetail>;
   revenueProfit: ReturnType<typeof computeRevenueProfit>;
   bestSellers: ReturnType<typeof computeBestSellers>;
   byCategory: ReturnType<typeof computeSalesByCategory>["byCategory"];
@@ -48,7 +50,7 @@ export async function fetchSingleShopReportData(
     ? await supabase
         .from("sale_items")
         .select(
-          "sale_id, variant_id, quantity, unit_price, unit_cost, variants(flavor, nicotine_mg, size, for_device, ohms, product_id, products(name, category))",
+          "sale_id, variant_id, quantity, unit_price, unit_cost, variants(flavor, nicotine_mg, size, for_device, ohms, product_id, products(name, brand, category))",
         )
         .eq("shop_id", shopId)
         .in("sale_id", saleIds)
@@ -93,6 +95,7 @@ export async function fetchSingleShopReportData(
   return {
     salesSummary: computeSalesSummary(sales ?? []),
     paymentBreakdown: computePaymentBreakdown(sales ?? []),
+    salesDetail: computeSalesDetail(sales ?? [], items),
     revenueProfit: computeRevenueProfit(items),
     bestSellers: computeBestSellers(items),
     byCategory,

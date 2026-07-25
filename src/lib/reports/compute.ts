@@ -11,9 +11,11 @@ export type SaleItemRow = {
     for_device: string | null;
     ohms: number | null;
     product_id: string;
-    products: { name: string; category: "ejuice" | "accessory" } | null;
+    products: { name: string; brand: string | null; category: "ejuice" | "accessory" } | null;
   } | null;
 };
+
+export type SaleRow = { id: string; created_at: string; payment_method: string; total: number };
 
 export type VariantRow = {
   id: string;
@@ -71,6 +73,47 @@ export function computePaymentBreakdown(sales: { total: number; payment_method: 
     else cash += Number(s.total);
   }
   return { cash, gcash };
+}
+
+export type SaleDetail = {
+  saleId: string;
+  createdAt: string;
+  paymentMethod: string;
+  total: number;
+  lines: {
+    brand: string | null;
+    productName: string;
+    label: string;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+  }[];
+};
+
+export function computeSalesDetail(sales: SaleRow[], items: SaleItemRow[]): SaleDetail[] {
+  const linesBySale = new Map<string, SaleDetail["lines"]>();
+  for (const item of items) {
+    const product = item.variants?.products;
+    const line = {
+      brand: product?.brand ?? null,
+      productName: product?.name ?? "Unknown product",
+      label: item.variants ? variantLabel(item.variants) : "Unknown",
+      quantity: item.quantity,
+      unitPrice: Number(item.unit_price),
+      lineTotal: Number(item.unit_price) * item.quantity,
+    };
+    if (!linesBySale.has(item.sale_id)) linesBySale.set(item.sale_id, []);
+    linesBySale.get(item.sale_id)!.push(line);
+  }
+  return sales
+    .map((s) => ({
+      saleId: s.id,
+      createdAt: s.created_at,
+      paymentMethod: s.payment_method,
+      total: Number(s.total),
+      lines: linesBySale.get(s.id) ?? [],
+    }))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export function computeRevenueProfit(items: SaleItemRow[]) {

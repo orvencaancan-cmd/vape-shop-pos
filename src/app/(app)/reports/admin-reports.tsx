@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveRange } from "@/lib/reports/date-range";
 import { fetchAdminReportData, resolveSelectedBranch } from "@/lib/reports/fetch-admin";
 import { formatCurrency } from "@/lib/currency";
-import { RangeLink, Section, Stat, Empty, Table } from "./report-ui";
+import { RangeLink, Section, Stat, Empty, Table, SaleDetailList } from "./report-ui";
 import type { ShopMembership } from "@/lib/auth/get-current-profile";
 
 export async function AdminReportsPage({
@@ -23,6 +23,7 @@ export async function AdminReportsPage({
   const {
     salesSummary,
     paymentBreakdown,
+    salesDetail,
     revenueProfit,
     bestSellers,
     byCategory,
@@ -103,6 +104,10 @@ export async function AdminReportsPage({
         <Stat label="Revenue" value={formatCurrency(salesSummary.revenue)} />
         <Stat label="Cash" value={formatCurrency(paymentBreakdown.cash)} />
         <Stat label="GCash" value={formatCurrency(paymentBreakdown.gcash)} />
+      </Section>
+
+      <Section title="Sales detail">
+        <SaleDetailList sales={salesDetail} />
       </Section>
 
       <Section title="Revenue & profit">
