@@ -56,9 +56,19 @@ export default async function AppLayout({
       <header className="border-b border-hairline bg-canvas">
         <div className="relative flex h-16 items-center justify-center border-b border-hairline bg-canvas-soft px-4 sm:h-20">
           <VapeStockLogo className="absolute left-4 text-sm sm:text-base" />
-          <span className="max-w-[55%] truncate text-center text-sm font-semibold uppercase tracking-[0.25em] text-ink sm:max-w-[60%] sm:text-lg sm:tracking-[0.35em]">
-            {profile.inAdminOverview ? (profile.displayName ?? "Admin") : profile.shop.name}
-          </span>
+          <div className="flex max-w-[55%] items-center gap-2 sm:max-w-[60%]">
+            {profile.shop.logoUrl && !profile.inAdminOverview && !profile.shop.isPlatformShop && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.shop.logoUrl}
+                alt={`${profile.shop.name} logo`}
+                className="h-9 w-9 shrink-0 rounded-md border border-hairline bg-canvas object-contain sm:h-11 sm:w-11"
+              />
+            )}
+            <span className="truncate text-center text-sm font-semibold uppercase tracking-[0.25em] text-ink sm:text-lg sm:tracking-[0.35em]">
+              {profile.inAdminOverview ? (profile.displayName ?? "Admin") : profile.shop.name}
+            </span>
+          </div>
           <div className="absolute right-4 flex shrink-0 items-center gap-3">
             {profile.ownedShopCount > 1 && !profile.inAdminOverview && !profile.shop.isPlatformShop && (
               <form action={backToAdminAction}>
@@ -82,14 +92,6 @@ export default async function AppLayout({
           </div>
         </div>
         <nav className="mx-auto flex max-w-5xl items-center gap-4 overflow-x-auto px-4 py-3 text-sm">
-          {profile.shop.logoUrl && !profile.inAdminOverview && !profile.shop.isPlatformShop && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profile.shop.logoUrl}
-              alt={`${profile.shop.name} logo`}
-              className="h-8 w-8 shrink-0 rounded-md border border-hairline bg-canvas-soft object-contain"
-            />
-          )}
           {navItems.map((item) => (
             <Link
               key={item.href}
