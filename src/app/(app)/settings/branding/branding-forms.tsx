@@ -21,6 +21,7 @@ export function ColorForm({ currentColor }: { currentColor: string }) {
         {pending ? "Saving…" : "Save color"}
       </Button>
       {state.error && <span className="text-sm text-error">{state.error}</span>}
+      {state.success && <span className="text-sm text-success">Saved.</span>}
     </form>
   );
 }
@@ -49,6 +50,7 @@ export function LogoForm({ currentLogoUrl }: { currentLogoUrl: string | null }) 
           {pending ? "Uploading…" : "Upload logo"}
         </Button>
         {state.error && <span className="text-sm text-error">{state.error}</span>}
+        {state.success && <span className="text-sm text-success">Logo updated.</span>}
       </div>
       <p className="text-xs text-muted">PNG, JPG, or WebP, up to 2MB. Used for your shop&apos;s home-screen icon.</p>
     </form>

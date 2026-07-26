@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 
-export type ActionState = { error?: string };
+export type ActionState = { error?: string; success?: boolean };
 
 const colorSchema = z.object({
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Pick a valid color"),
@@ -33,7 +33,7 @@ export async function updateColorAction(
   if (error) return { error: error.message };
 
   revalidatePath("/", "layout");
-  return {};
+  return { success: true };
 }
 
 const LOGO_EXT_BY_TYPE: Record<string, string> = {
@@ -84,5 +84,5 @@ export async function updateLogoAction(
   if (updateError) return { error: updateError.message };
 
   revalidatePath("/", "layout");
-  return {};
+  return { success: true };
 }
