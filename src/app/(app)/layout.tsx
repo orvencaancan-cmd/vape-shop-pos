@@ -62,7 +62,7 @@ export default async function AppLayout({
               <img
                 src={profile.shop.logoUrl}
                 alt={`${profile.shop.name} logo`}
-                className="h-9 w-9 shrink-0 rounded-md border border-hairline bg-canvas object-contain sm:h-11 sm:w-11"
+                className="h-9 w-9 shrink-0 bg-canvas-soft object-contain sm:h-11 sm:w-11"
               />
             )}
             <span className="truncate text-center text-sm font-semibold uppercase tracking-[0.25em] text-ink sm:text-lg sm:tracking-[0.35em]">
