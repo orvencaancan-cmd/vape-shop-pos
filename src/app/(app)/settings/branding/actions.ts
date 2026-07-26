@@ -86,3 +86,26 @@ export async function updateLogoAction(
   revalidatePath("/", "layout");
   return { success: true };
 }
+
+// Signature (state, formData) is required by useActionState -- neither is needed here.
+export async function removeLogoAction(): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.role !== "owner") {
+    return { error: "Only the shop owner can update branding" };
+  }
+
+  const supabase = await createClient();
+  const allExts = Object.values(LOGO_EXT_BY_TYPE);
+  await supabase.storage
+    .from("shop-logos")
+    .remove(allExts.map((e) => `${profile.shopId}/logo.${e}`));
+
+  const { error } = await supabase
+    .from("shops")
+    .update({ logo_url: null })
+    .eq("id", profile.shopId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/", "layout");
+  return { success: true };
+}
