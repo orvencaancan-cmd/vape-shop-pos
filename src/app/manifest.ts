@@ -11,10 +11,17 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const name = profile?.shop.name ?? "VapeStock";
   const themeColor = profile?.shop.primaryColor || "#1f5c96";
 
+  const logoType = (() => {
+    const ext = profile?.shop.logoUrl?.split("?")[0].split(".").pop()?.toLowerCase();
+    if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+    if (ext === "webp") return "image/webp";
+    return "image/png";
+  })();
+
   const icons: MetadataRoute.Manifest["icons"] = profile?.shop.logoUrl
     ? [
-        { src: profile.shop.logoUrl, sizes: "192x192", type: "image/png" },
-        { src: profile.shop.logoUrl, sizes: "512x512", type: "image/png" },
+        { src: profile.shop.logoUrl, sizes: "192x192", type: logoType },
+        { src: profile.shop.logoUrl, sizes: "512x512", type: logoType },
       ]
     : [{ src: "/icon-default.svg", sizes: "any", type: "image/svg+xml" }];
 
