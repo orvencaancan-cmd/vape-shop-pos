@@ -81,7 +81,15 @@ export default async function AppLayout({
             </form>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-5xl gap-4 overflow-x-auto px-4 py-3 text-sm">
+        <nav className="mx-auto flex max-w-5xl items-center gap-4 overflow-x-auto px-4 py-3 text-sm">
+          {profile.shop.logoUrl && !profile.inAdminOverview && !profile.shop.isPlatformShop && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profile.shop.logoUrl}
+              alt={`${profile.shop.name} logo`}
+              className="h-8 w-8 shrink-0 rounded-md border border-hairline bg-canvas-soft object-contain"
+            />
+          )}
           {navItems.map((item) => (
             <Link
               key={item.href}
