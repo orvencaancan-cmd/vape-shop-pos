@@ -3,7 +3,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { computeLowStock, computeDailySeries, type VariantRow } from "@/lib/reports/compute";
 import { formatCurrency } from "@/lib/currency";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { SalesChart } from "@/components/sales-chart";
 import { switchShopAction } from "@/lib/auth/actions";
 import type { ShopMembership } from "@/lib/auth/get-current-profile";
@@ -51,6 +50,9 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
       );
       const series = computeDailySeries(weekSales ?? [], 7);
       const todayRevenue = series[series.length - 1]?.revenue ?? 0;
+      const todayCount = (weekSales ?? []).filter(
+        (sale) => sale.created_at.slice(0, 10) === series[series.length - 1]?.date,
+      ).length;
 
       const staffNames = (staff ?? []).map(
         (m) => m.display_name || emailByUserId.get(m.user_id) || "Unnamed",
@@ -76,6 +78,7 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
         shopId: s.shopId,
         shopName: s.shopName,
         todayRevenue,
+        todayCount,
         series,
         lowStock,
         staffNames,
@@ -95,54 +98,28 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
           <Card key={c.shopId} padding="md">
             <form action={switchShopAction.bind(null, c.shopId, "owner", "/dashboard")}>
               <button type="submit" className="block w-full text-left">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-ink">{c.shopName}</h2>
-                  <span className="text-sm text-ink">{formatCurrency(c.todayRevenue)} today</span>
-                </div>
+                <h2 className="text-sm font-semibold text-ink">{c.shopName}</h2>
+
                 <div className="mt-3">
-                  <SalesChart data={c.series} barHeight="h-16" />
+                  <p className="text-xs font-medium uppercase text-muted">Today</p>
+                  <p className="mt-1 text-lg font-semibold text-ink">
+                    {formatCurrency(c.todayRevenue)}
+                  </p>
+                  <p className="text-xs text-muted">
+                    {c.todayCount} sale{c.todayCount === 1 ? "" : "s"}
+                  </p>
+                </div>
+
+                <div className="mt-3">
+                  <p className="text-xs font-medium uppercase text-muted">Last 7 days</p>
+                  <div className="mt-2">
+                    <SalesChart data={c.series} barHeight="h-16" />
+                  </div>
                 </div>
               </button>
             </form>
 
-            <div className="mt-3">
-              <p className="text-xs font-medium uppercase text-muted">Low on stock</p>
-              {c.lowStock.length === 0 ? (
-                <p className="mt-1 text-sm text-ink">Nothing low.</p>
-              ) : (
-                <ul className="mt-1 flex flex-col gap-1">
-                  {c.lowStock.slice(0, 5).map((v) => (
-                    <li key={v.id}>
-                      <form
-                        action={switchShopAction.bind(
-                          null,
-                          c.shopId,
-                          "owner",
-                          `/inventory/${v.productId}`,
-                        )}
-                      >
-                        <button
-                          type="submit"
-                          className="flex w-full items-center justify-between text-sm hover:text-primary"
-                        >
-                          <span className="text-ink">
-                            {v.productName} — {v.label}
-                          </span>
-                          <Badge variant="warning">{v.stockQty} left</Badge>
-                        </button>
-                      </form>
-                    </li>
-                  ))}
-                  {c.lowStock.length > 5 && (
-                    <li className="text-xs text-muted">
-                      +{c.lowStock.length - 5} more
-                    </li>
-                  )}
-                </ul>
-              )}
-            </div>
-
-            <div className="mt-3">
+            <div className="mt-3 border-t border-hairline pt-3">
               <p className="text-xs font-medium uppercase text-muted">Staff assigned</p>
               {c.staffNames.length === 0 ? (
                 <p className="mt-1 text-sm text-ink">No staff yet.</p>
@@ -151,24 +128,48 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
               )}
             </div>
 
-            <div className="mt-3 flex items-center justify-between gap-2 border-t border-hairline pt-3">
-              <p className="text-xs text-muted">
-                {c.lastAuditCompletedAt
-                  ? `Last audit ${new Date(c.lastAuditCompletedAt).toLocaleDateString()} — ${
-                      c.auditDiscrepancyCount === 0
-                        ? "no discrepancies"
-                        : `${c.auditDiscrepancyCount} discrepanc${c.auditDiscrepancyCount === 1 ? "y" : "ies"} (${formatCurrency(c.auditValueImpact)})`
-                    }`
-                  : "No audits yet"}
-              </p>
-              <form action={switchShopAction.bind(null, c.shopId, "owner", "/audit")}>
-                <button
-                  type="submit"
-                  className="shrink-0 text-xs text-primary underline underline-offset-2"
+            <div className="mt-3 border-t border-hairline pt-3">
+              <p className="text-xs font-medium uppercase text-muted">Needs attention</p>
+
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <p className={`text-sm ${c.lowStock.length > 0 ? "text-warning" : "text-ink"}`}>
+                  {c.lowStock.length === 0
+                    ? "Nothing low on stock"
+                    : `${c.lowStock.length} item${c.lowStock.length === 1 ? "" : "s"} low on stock`}
+                </p>
+                {c.lowStock.length > 0 && (
+                  <form action={switchShopAction.bind(null, c.shopId, "owner", "/reports")}>
+                    <button
+                      type="submit"
+                      className="shrink-0 text-xs text-warning underline underline-offset-2"
+                    >
+                      View details
+                    </button>
+                  </form>
+                )}
+              </div>
+
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <p
+                  className={`text-sm ${c.auditDiscrepancyCount > 0 ? "text-warning" : "text-muted"}`}
                 >
-                  View recent audit
-                </button>
-              </form>
+                  {c.lastAuditCompletedAt
+                    ? `Last audit ${new Date(c.lastAuditCompletedAt).toLocaleDateString()} — ${
+                        c.auditDiscrepancyCount === 0
+                          ? "no discrepancies"
+                          : `${c.auditDiscrepancyCount} discrepanc${c.auditDiscrepancyCount === 1 ? "y" : "ies"} (${formatCurrency(c.auditValueImpact)})`
+                      }`
+                    : "No audits yet"}
+                </p>
+                <form action={switchShopAction.bind(null, c.shopId, "owner", "/audit")}>
+                  <button
+                    type="submit"
+                    className={`shrink-0 text-xs underline underline-offset-2 ${c.auditDiscrepancyCount > 0 ? "text-warning" : "text-primary"}`}
+                  >
+                    View recent audit
+                  </button>
+                </form>
+              </div>
             </div>
           </Card>
         ))}
