@@ -4,6 +4,7 @@ import { computeLowStock, computeDailySeries, type VariantRow } from "@/lib/repo
 import { formatCurrency } from "@/lib/currency";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SalesChart } from "@/components/sales-chart";
 import { switchShopAction } from "@/lib/auth/actions";
 import type { ShopMembership } from "@/lib/auth/get-current-profile";
 
@@ -75,6 +76,7 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
         shopId: s.shopId,
         shopName: s.shopName,
         todayRevenue,
+        series,
         lowStock,
         staffNames,
         lastAuditCompletedAt: (lastAudit?.completed_at as string | undefined) ?? null,
@@ -91,10 +93,17 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
       <div className="stagger mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {cards.map((c) => (
           <Card key={c.shopId} padding="md">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-ink">{c.shopName}</h2>
-              <span className="text-sm text-ink">{formatCurrency(c.todayRevenue)} today</span>
-            </div>
+            <form action={switchShopAction.bind(null, c.shopId, "owner", "/dashboard")}>
+              <button type="submit" className="block w-full text-left">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-ink">{c.shopName}</h2>
+                  <span className="text-sm text-ink">{formatCurrency(c.todayRevenue)} today</span>
+                </div>
+                <div className="mt-3">
+                  <SalesChart data={c.series} barHeight="h-16" />
+                </div>
+              </button>
+            </form>
 
             <div className="mt-3">
               <p className="text-xs font-medium uppercase text-muted">Low on stock</p>
@@ -103,11 +112,25 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
               ) : (
                 <ul className="mt-1 flex flex-col gap-1">
                   {c.lowStock.slice(0, 5).map((v) => (
-                    <li key={v.id} className="flex items-center justify-between text-sm">
-                      <span className="text-ink">
-                        {v.productName} — {v.label}
-                      </span>
-                      <Badge variant="warning">{v.stockQty} left</Badge>
+                    <li key={v.id}>
+                      <form
+                        action={switchShopAction.bind(
+                          null,
+                          c.shopId,
+                          "owner",
+                          `/inventory/${v.productId}`,
+                        )}
+                      >
+                        <button
+                          type="submit"
+                          className="flex w-full items-center justify-between text-sm hover:text-primary"
+                        >
+                          <span className="text-ink">
+                            {v.productName} — {v.label}
+                          </span>
+                          <Badge variant="warning">{v.stockQty} left</Badge>
+                        </button>
+                      </form>
                     </li>
                   ))}
                   {c.lowStock.length > 5 && (

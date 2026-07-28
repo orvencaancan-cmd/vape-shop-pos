@@ -162,6 +162,7 @@ export function computeLowStock(variants: VariantRow[]) {
     .filter((v) => !v.products?.archived && v.stock_qty <= v.low_stock_threshold)
     .map((v) => ({
       id: v.id,
+      productId: v.product_id,
       productName: v.products?.name ?? "Unknown product",
       label: variantLabel(v),
       stockQty: v.stock_qty,

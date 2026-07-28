@@ -8,6 +8,7 @@ import { hasBillingAccess, statusLabel } from "@/lib/billing-status";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
+import { SalesChart } from "@/components/sales-chart";
 import { DashboardRecentSales } from "./recent-sales";
 import { AdminDashboardGrid } from "./admin-dashboard-grid";
 
@@ -104,6 +105,53 @@ export default async function DashboardPage({
         Subscription: {statusLabel(profile.shop)}
       </p>
 
+      <Card padding="sm" className="mt-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-muted">Sales</h2>
+          <div className="flex gap-2 text-xs">
+            <Link
+              href="/dashboard?chart=7d"
+              className={chartDays === 7 ? "text-primary underline underline-offset-2" : "text-muted hover:text-ink"}
+            >
+              7 days
+            </Link>
+            <Link
+              href="/dashboard?chart=30d"
+              className={chartDays === 30 ? "text-primary underline underline-offset-2" : "text-muted hover:text-ink"}
+            >
+              30 days
+            </Link>
+          </div>
+        </div>
+        <div className="mt-4">
+          <SalesChart data={series} />
+        </div>
+      </Card>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Link href="/reports?range=today" className="block">
+          <Card padding="sm" className="transition-colors hover:border-primary">
+            <p className="text-xs text-muted">Today</p>
+            <p className="mt-1 text-lg font-semibold text-ink">{formatCurrency(todayRevenue)}</p>
+            <p className="text-xs text-muted">{todayCount} sale{todayCount === 1 ? "" : "s"}</p>
+          </Card>
+        </Link>
+        <Link href="/reports?range=7d" className="block">
+          <Card padding="sm" className="transition-colors hover:border-primary">
+            <p className="text-xs text-muted">Last 7 days</p>
+            <p className="mt-1 text-lg font-semibold text-ink">{formatCurrency(weekRevenue)}</p>
+          </Card>
+        </Link>
+        <Card padding="sm" className="col-span-2 flex flex-col justify-center gap-2 sm:col-span-1">
+          <Link href="/sell" className={buttonClasses("primary", "sm")}>
+            New sale
+          </Link>
+          <Link href="/inventory" className={buttonClasses("secondary", "sm")}>
+            Manage inventory
+          </Link>
+        </Card>
+      </div>
+
       {profile.ownedShopCount === 1 &&
         profile.shop.subscriptionStatus === "trialing" &&
         hasBillingAccess(profile.shop) && (
@@ -141,11 +189,16 @@ export default async function DashboardPage({
           </div>
           <ul className="mt-3 flex flex-col gap-1 text-sm">
             {lowStock.slice(0, 8).map((v) => (
-              <li key={v.id} className="flex justify-between">
-                <span className="text-ink">
-                  {v.productName} — {v.label}
-                </span>
-                <Badge variant="warning">{v.stockQty} left</Badge>
+              <li key={v.id}>
+                <Link
+                  href={`/inventory/${v.productId}`}
+                  className="flex items-center justify-between hover:text-primary"
+                >
+                  <span className="text-ink">
+                    {v.productName} — {v.label}
+                  </span>
+                  <Badge variant="warning">{v.stockQty} left</Badge>
+                </Link>
               </li>
             ))}
           </ul>
@@ -180,49 +233,6 @@ export default async function DashboardPage({
         </div>
       </Card>
 
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Card padding="sm">
-          <p className="text-xs text-muted">Today</p>
-          <p className="mt-1 text-lg font-semibold text-ink">{formatCurrency(todayRevenue)}</p>
-          <p className="text-xs text-muted">{todayCount} sale{todayCount === 1 ? "" : "s"}</p>
-        </Card>
-        <Card padding="sm">
-          <p className="text-xs text-muted">Last 7 days</p>
-          <p className="mt-1 text-lg font-semibold text-ink">{formatCurrency(weekRevenue)}</p>
-        </Card>
-        <Card padding="sm" className="col-span-2 flex flex-col justify-center gap-2 sm:col-span-1">
-          <Link href="/sell" className={buttonClasses("primary", "sm")}>
-            New sale
-          </Link>
-          <Link href="/inventory" className={buttonClasses("secondary", "sm")}>
-            Manage inventory
-          </Link>
-        </Card>
-      </div>
-
-      <Card padding="sm" className="mt-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-muted">Sales</h2>
-          <div className="flex gap-2 text-xs">
-            <Link
-              href="/dashboard?chart=7d"
-              className={chartDays === 7 ? "text-primary underline underline-offset-2" : "text-muted hover:text-ink"}
-            >
-              7 days
-            </Link>
-            <Link
-              href="/dashboard?chart=30d"
-              className={chartDays === 30 ? "text-primary underline underline-offset-2" : "text-muted hover:text-ink"}
-            >
-              30 days
-            </Link>
-          </div>
-        </div>
-        <div className="mt-4">
-          <SalesChart data={series} />
-        </div>
-      </Card>
-
       <Card padding="sm" className="mt-6">
         <h2 className="text-sm font-medium text-muted">Recent sales</h2>
         <DashboardRecentSales
@@ -235,37 +245,5 @@ export default async function DashboardPage({
         />
       </Card>
     </main>
-  );
-}
-
-function SalesChart({ data }: { data: { date: string; revenue: number }[] }) {
-  const max = Math.max(...data.map((d) => d.revenue), 1);
-  const step = data.length > 10 ? Math.ceil(data.length / 6) : 1;
-
-  return (
-    <div className="flex items-end gap-1">
-      {data.map((d, i) => {
-        const showLabel = i % step === 0 || i === data.length - 1;
-        const label =
-          data.length > 10
-            ? new Date(`${d.date}T00:00:00Z`).getUTCDate().toString()
-            : new Date(`${d.date}T00:00:00Z`).toLocaleDateString("en-US", {
-                weekday: "short",
-                timeZone: "UTC",
-              });
-        return (
-          <div key={d.date} className="flex flex-1 flex-col items-center gap-1">
-            <div className="flex h-24 w-full items-end">
-              <div
-                className="w-full rounded-t-sm bg-primary/80 transition-all"
-                style={{ height: `${Math.max((d.revenue / max) * 100, d.revenue > 0 ? 4 : 1)}%` }}
-                title={`${d.date}: ${formatCurrency(d.revenue)}`}
-              />
-            </div>
-            <span className="text-[10px] text-muted">{showLabel ? label : ""}</span>
-          </div>
-        );
-      })}
-    </div>
   );
 }
