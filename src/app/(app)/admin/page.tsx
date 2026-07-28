@@ -3,13 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
-
-const STATUS_LABEL: Record<string, string> = {
-  trialing: "Trial",
-  active: "Active",
-  past_due: "Past due",
-  canceled: "Canceled",
-};
+import { statusLabel, isTrialExpired } from "@/lib/billing-status";
 
 export default async function AdminPage() {
   const profile = await getCurrentProfile();
@@ -19,27 +13,44 @@ export default async function AdminPage() {
   const supabase = await createClient();
   const { data: shops } = await supabase
     .from("shops")
-    .select("id, name, subscription_status, trial_ends_at, suspended_at, created_at")
+    .select(
+      "id, name, subscription_status, trial_ends_at, suspended_at, created_at, billing_tier",
+    )
     .eq("is_platform_shop", false)
     .order("created_at", { ascending: false });
 
-  const counts = { trialing: 0, active: 0, past_due: 0, canceled: 0 };
+  const counts = { trialing: 0, trialExpired: 0, active: 0, past_due: 0, canceled: 0 };
+  const activeByTier = { primary: 0, additional: 0 };
   for (const s of shops ?? []) {
-    counts[s.subscription_status as keyof typeof counts] =
-      (counts[s.subscription_status as keyof typeof counts] ?? 0) + 1;
+    const shopFields = { subscriptionStatus: s.subscription_status, trialEndsAt: s.trial_ends_at };
+    if (s.subscription_status === "trialing" && isTrialExpired(shopFields)) {
+      counts.trialExpired++;
+    } else {
+      counts[s.subscription_status as keyof typeof counts] =
+        (counts[s.subscription_status as keyof typeof counts] ?? 0) + 1;
+    }
+    if (s.subscription_status === "active") {
+      activeByTier[s.billing_tier as "primary" | "additional"]++;
+    }
   }
 
   let mrrLabel = "—";
-  if (process.env.STRIPE_PRICE_ID && counts.active > 0) {
+  const totalActive = activeByTier.primary + activeByTier.additional;
+  if (process.env.STRIPE_PRICE_ID && process.env.STRIPE_PRICE_ID_ADDITIONAL && totalActive > 0) {
     try {
       const stripe = getStripe();
-      const price = await stripe.prices.retrieve(process.env.STRIPE_PRICE_ID);
-      const amount = ((price.unit_amount ?? 0) / 100) * counts.active;
-      mrrLabel = `${amount.toFixed(2)} ${price.currency.toUpperCase()}`;
+      const [primaryPrice, additionalPrice] = await Promise.all([
+        stripe.prices.retrieve(process.env.STRIPE_PRICE_ID),
+        stripe.prices.retrieve(process.env.STRIPE_PRICE_ID_ADDITIONAL),
+      ]);
+      const amount =
+        ((primaryPrice.unit_amount ?? 0) / 100) * activeByTier.primary +
+        ((additionalPrice.unit_amount ?? 0) / 100) * activeByTier.additional;
+      mrrLabel = `${amount.toFixed(2)} ${primaryPrice.currency.toUpperCase()}`;
     } catch {
       mrrLabel = "—";
     }
-  } else if (counts.active === 0) {
+  } else if (totalActive === 0) {
     mrrLabel = "0.00";
   }
 
@@ -55,6 +66,7 @@ export default async function AdminPage() {
       <div className="stagger mt-6 flex flex-wrap gap-4">
         <Stat label="Total shops" value={String(shops?.length ?? 0)} />
         <Stat label="Trialing" value={String(counts.trialing)} />
+        <Stat label="Trial expired" value={String(counts.trialExpired)} />
         <Stat label="Active" value={String(counts.active)} />
         <Stat label="Past due" value={String(counts.past_due)} />
         <Stat label="Canceled" value={String(counts.canceled)} />
@@ -84,7 +96,10 @@ export default async function AdminPage() {
                   </Link>
                 </td>
                 <td className="py-1.5 pr-3 text-body">
-                  {STATUS_LABEL[s.subscription_status] ?? s.subscription_status}
+                  {statusLabel({
+                    subscriptionStatus: s.subscription_status,
+                    trialEndsAt: s.trial_ends_at,
+                  })}
                   {s.suspended_at && <span className="ml-1 text-xs text-error">(suspended)</span>}
                 </td>
                 <td className="py-1.5 pr-3 text-muted">

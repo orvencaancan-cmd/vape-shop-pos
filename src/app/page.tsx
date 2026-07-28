@@ -9,14 +9,23 @@ import { VapeStockLogo } from "@/components/vapestock-logo";
 import { AuthHashRedirect } from "@/components/auth-hash-redirect";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 
-async function getPriceLabel() {
-  const priceId = process.env.STRIPE_PRICE_ID;
-  if (!priceId) return null;
+async function getPriceLabels() {
+  const primaryId = process.env.STRIPE_PRICE_ID;
+  const additionalId = process.env.STRIPE_PRICE_ID_ADDITIONAL;
+  if (!primaryId || !additionalId) return null;
   try {
     const stripe = getStripe();
-    const price = await stripe.prices.retrieve(priceId);
-    const amount = (price.unit_amount ?? 0) / 100;
-    return `${amount.toFixed(2)} ${price.currency.toUpperCase()} / month`;
+    const [primary, additional] = await Promise.all([
+      stripe.prices.retrieve(primaryId),
+      stripe.prices.retrieve(additionalId),
+    ]);
+    const primaryAmount = (primary.unit_amount ?? 0) / 100;
+    const additionalAmount = (additional.unit_amount ?? 0) / 100;
+    const currency = primary.currency.toUpperCase();
+    return {
+      primary: `${primaryAmount.toFixed(2)} ${currency} / month`,
+      additional: `${additionalAmount.toFixed(2)} ${currency} / month`,
+    };
   } catch {
     return null;
   }
@@ -74,7 +83,7 @@ export default async function Home({
     redirect(profile.role === "owner" ? "/dashboard" : "/sell");
   }
 
-  const priceLabel = await getPriceLabel();
+  const priceLabels = await getPriceLabels();
 
   return (
     <div className="flex flex-1 flex-col bg-canvas">
@@ -149,9 +158,14 @@ export default async function Home({
         <section className="border-t border-hairline px-4 py-20 text-center sm:py-28">
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Pricing</p>
           <h2 className="heading mt-3 text-3xl">Simple pricing</h2>
-          <p className="heading mt-2 text-4xl">{priceLabel ?? "One flat monthly price"}</p>
+          <p className="heading mt-2 text-4xl">
+            {priceLabels?.primary ?? "One price"} for your first shop
+          </p>
+          <p className="mt-1 text-lg text-body">
+            {priceLabels?.additional ?? "Half price"} for each shop after that
+          </p>
           <p className="mt-2 text-sm text-body">
-            14-day free trial. No charge until it ends. Cancel anytime.
+            14-day free trial. No card required to start. Cancel anytime.
           </p>
           <Link href="/signup" className={`mt-6 inline-flex ${buttonClasses("primary", "md")}`}>
             Start free trial

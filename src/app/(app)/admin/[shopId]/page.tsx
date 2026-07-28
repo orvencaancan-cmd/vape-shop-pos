@@ -6,13 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card } from "@/components/ui/card";
 import { ShopActions } from "./shop-actions";
-
-const STATUS_LABEL: Record<string, string> = {
-  trialing: "Free trial",
-  active: "Active",
-  past_due: "Payment past due",
-  canceled: "Canceled",
-};
+import { statusLabel } from "@/lib/billing-status";
 
 export default async function AdminShopPage({
   params,
@@ -29,7 +23,7 @@ export default async function AdminShopPage({
   const { data: shop } = await supabase
     .from("shops")
     .select(
-      "id, name, subscription_status, trial_ends_at, current_period_end, suspended_at, created_at",
+      "id, name, subscription_status, trial_ends_at, current_period_end, suspended_at, created_at, billing_tier",
     )
     .eq("id", shopId)
     .maybeSingle();
@@ -60,8 +54,14 @@ export default async function AdminShopPage({
       <Card padding="sm" className="mt-4">
         <p className="text-sm text-muted">Subscription status</p>
         <p className="text-lg font-semibold text-ink">
-          {STATUS_LABEL[shop.subscription_status] ?? shop.subscription_status}
+          {statusLabel({
+            subscriptionStatus: shop.subscription_status,
+            trialEndsAt: shop.trial_ends_at,
+          })}
           {suspended && <span className="ml-2 text-sm font-normal text-error">(suspended)</span>}
+        </p>
+        <p className="mt-1 text-xs text-muted">
+          {shop.billing_tier === "additional" ? "Additional-shop price" : "Primary-shop price"}
         </p>
         {shop.subscription_status === "trialing" && shop.trial_ends_at && (
           <p className="mt-1 text-xs text-muted">

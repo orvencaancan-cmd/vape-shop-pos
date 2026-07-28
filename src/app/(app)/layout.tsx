@@ -4,6 +4,8 @@ import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { signOutAction, backToAdminAction } from "@/lib/auth/actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { VapeStockLogo } from "@/components/vapestock-logo";
+import { Card } from "@/components/ui/card";
+import { hasBillingAccess, daysUntilTrialEnd } from "@/lib/billing-status";
 
 export default async function AppLayout({
   children,
@@ -15,7 +17,17 @@ export default async function AppLayout({
   if (!profile.platformAdmin) {
     if (profile.shop.suspended) redirect("/shop-suspended");
     if (profile.shop.archived && profile.role !== "owner") redirect("/shop-suspended");
+    if (!hasBillingAccess(profile.shop)) redirect("/billing-required");
   }
+
+  const trialDaysLeft = daysUntilTrialEnd(profile.shop.trialEndsAt);
+  const showTrialReminder =
+    !profile.platformAdmin &&
+    profile.role === "owner" &&
+    profile.shop.subscriptionStatus === "trialing" &&
+    trialDaysLeft !== null &&
+    trialDaysLeft >= 0 &&
+    trialDaysLeft <= 3;
 
   const navItems = profile.shop.isPlatformShop
     ? [
@@ -103,6 +115,28 @@ export default async function AppLayout({
           ))}
         </nav>
       </header>
+      {showTrialReminder && (
+        <div className="mx-auto max-w-5xl px-4 pt-4">
+          <Card padding="sm" className="border-warning/40 bg-warning/10">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-warning">⚠</span>
+                <h2 className="text-sm font-medium text-warning">
+                  {trialDaysLeft === 0
+                    ? "Your free trial ends today"
+                    : `Your free trial ends in ${trialDaysLeft} day${trialDaysLeft === 1 ? "" : "s"}`}
+                </h2>
+              </div>
+              <Link
+                href="/settings/billing"
+                className="text-xs text-warning underline underline-offset-2"
+              >
+                Subscribe
+              </Link>
+            </div>
+          </Card>
+        </div>
+      )}
       <div className="animate-fade-in-up">{children}</div>
     </div>
   );

@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { computeLowStock, computeDailySeries, type VariantRow } from "@/lib/reports/compute";
 import { formatCurrency } from "@/lib/currency";
+import { hasBillingAccess, statusLabel } from "@/lib/billing-status";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
@@ -100,8 +101,27 @@ export default async function DashboardPage({
         {profile.shop.name} — Dashboard
       </h1>
       <p className="mt-1 text-sm text-muted">
-        Subscription: {profile.shop.subscriptionStatus}
+        Subscription: {statusLabel(profile.shop)}
       </p>
+
+      {profile.ownedShopCount === 1 &&
+        profile.shop.subscriptionStatus === "trialing" &&
+        hasBillingAccess(profile.shop) && (
+          <Card padding="sm" className="mt-6">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm text-ink">
+                Running more than one location? Add your other shops now to see VapeStock
+                across your whole business before your trial ends.
+              </p>
+              <Link
+                href="/branches"
+                className="shrink-0 text-xs text-primary underline underline-offset-2"
+              >
+                Add a shop
+              </Link>
+            </div>
+          </Card>
+        )}
 
       {lowStock.length > 0 && (
         <Card

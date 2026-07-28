@@ -20,12 +20,12 @@ export default async function OnboardingPage() {
   return (
     <AuthCardShell
       heading={`Set up ${shopName}`}
-      subtitle="Next you'll add a payment method to start your 14-day free trial — you won't be charged until it ends."
+      subtitle="Start your 14-day free trial — no card required."
       showThemeToggle={false}
     >
       <form action={completeOnboarding}>
         <Button type="submit" className="w-full">
-          Continue to billing
+          Enter your shop
         </Button>
       </form>
     </AuthCardShell>

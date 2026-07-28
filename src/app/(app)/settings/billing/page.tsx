@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
-import { openBillingPortalAction } from "./actions";
-import { STATUS_LABEL } from "./billing-ui";
+import { openBillingPortalAction, startSubscriptionAction } from "./actions";
+import { statusLabel } from "@/lib/billing-status";
 import { AdminBillingList } from "./admin-billing-list";
 
 export default async function BillingPage() {
@@ -24,6 +24,13 @@ export default async function BillingPage() {
     .single();
 
   const boundOpenPortal = openBillingPortalAction.bind(null, profile.shopId);
+  const boundStartSubscription = startSubscriptionAction.bind(null, profile.shopId);
+  // A shop that subscribed once and later canceled keeps its
+  // stripe_customer_id forever, so gating the button on that alone would
+  // route a resubscribing owner into the billing portal, which can't
+  // restart a fully-canceled subscription — decide by state instead.
+  const needsSubscribe =
+    shop?.subscription_status === "trialing" || shop?.subscription_status === "canceled";
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-md px-4 py-8">
@@ -32,7 +39,12 @@ export default async function BillingPage() {
       <div className="mt-6 rounded-xl border border-hairline bg-canvas-soft p-4">
         <p className="text-sm text-muted">Subscription status</p>
         <p className="text-lg font-semibold text-ink">
-          {STATUS_LABEL[shop?.subscription_status ?? ""] ?? shop?.subscription_status}
+          {shop
+            ? statusLabel({
+                subscriptionStatus: shop.subscription_status,
+                trialEndsAt: shop.trial_ends_at,
+              })
+            : "—"}
         </p>
         {shop?.subscription_status === "trialing" && shop.trial_ends_at && (
           <p className="mt-1 text-xs text-muted">
@@ -47,7 +59,16 @@ export default async function BillingPage() {
           )}
       </div>
 
-      {shop?.stripe_customer_id ? (
+      {needsSubscribe ? (
+        <form action={boundStartSubscription} className="mt-4">
+          <button
+            type="submit"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
+          >
+            Subscribe
+          </button>
+        </form>
+      ) : (
         <form action={boundOpenPortal} className="mt-4">
           <button
             type="submit"
@@ -56,11 +77,6 @@ export default async function BillingPage() {
             Manage billing
           </button>
         </form>
-      ) : (
-        <p className="mt-4 text-sm text-muted">
-          No billing account on file yet — this shows up once your subscription
-          checkout is complete.
-        </p>
       )}
     </main>
   );

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { openBillingPortalAction } from "./actions";
-import { STATUS_LABEL } from "./billing-ui";
+import { openBillingPortalAction, startSubscriptionAction } from "./actions";
+import { statusLabel } from "@/lib/billing-status";
 import type { ShopMembership } from "@/lib/auth/get-current-profile";
 
 export async function AdminBillingList({ ownedShops }: { ownedShops: ShopMembership[] }) {
@@ -24,6 +24,9 @@ export async function AdminBillingList({ ownedShops }: { ownedShops: ShopMembers
         {ownedShops.map((s) => {
           const shop = shopById.get(s.shopId);
           const boundOpenPortal = openBillingPortalAction.bind(null, s.shopId);
+          const boundStartSubscription = startSubscriptionAction.bind(null, s.shopId);
+          const needsSubscribe =
+            shop?.subscription_status === "trialing" || shop?.subscription_status === "canceled";
           return (
             <div
               key={s.shopId}
@@ -32,7 +35,12 @@ export async function AdminBillingList({ ownedShops }: { ownedShops: ShopMembers
               <div>
                 <p className="text-sm font-medium text-ink">{s.shopName}</p>
                 <p className="text-xs text-muted">
-                  {STATUS_LABEL[shop?.subscription_status ?? ""] ?? shop?.subscription_status ?? "—"}
+                  {shop
+                    ? statusLabel({
+                        subscriptionStatus: shop.subscription_status,
+                        trialEndsAt: shop.trial_ends_at,
+                      })
+                    : "—"}
                   {shop?.subscription_status === "trialing" && shop.trial_ends_at && (
                     <> · trial ends {new Date(shop.trial_ends_at).toLocaleDateString()}</>
                   )}
@@ -42,18 +50,14 @@ export async function AdminBillingList({ ownedShops }: { ownedShops: ShopMembers
                     )}
                 </p>
               </div>
-              {shop?.stripe_customer_id ? (
-                <form action={boundOpenPortal}>
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-on-primary transition-colors hover:bg-primary-active"
-                  >
-                    Manage billing
-                  </button>
-                </form>
-              ) : (
-                <span className="text-xs text-muted">No billing account on file yet</span>
-              )}
+              <form action={needsSubscribe ? boundStartSubscription : boundOpenPortal}>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-on-primary transition-colors hover:bg-primary-active"
+                >
+                  {needsSubscribe ? "Subscribe" : "Manage billing"}
+                </button>
+              </form>
             </div>
           );
         })}
