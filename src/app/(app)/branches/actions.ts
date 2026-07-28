@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile, ACTIVE_SHOP_COOKIE } from "@/lib/auth/get-current-profile";
+import { startSubscriptionAction } from "@/app/(app)/settings/billing/actions";
 
 export type ActionState = { error?: string; success?: string };
 
@@ -25,11 +26,31 @@ export async function addShopAction(
   if (profile.role !== "owner") return { error: "Only shop owners can add another shop" };
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("create_shop", {
+
+  // Someone who's already proven they'll pay (an active subscription on
+  // another shop) doesn't need another free trial to decide -- skip
+  // straight to checkout for the new branch. A first-time owner still
+  // gets the normal card-less trial on every new shop, including this one.
+  const ownedShopIds = profile.shops.filter((s) => s.role === "owner").map((s) => s.shopId);
+  const { data: activeShopsElsewhere } = await supabase
+    .from("shops")
+    .select("id")
+    .in("id", ownedShopIds)
+    .eq("subscription_status", "active")
+    .limit(1);
+  const alreadySubscribed = (activeShopsElsewhere?.length ?? 0) > 0;
+
+  const { data: newShopId, error } = await supabase.rpc("create_shop", {
     shop_name: parsed.data.shopName,
     owner_display_name: profile.displayName,
   });
   if (error) return { error: error.message };
+
+  if (alreadySubscribed && newShopId) {
+    // Always redirects (to Stripe Checkout, or back to /branches on
+    // failure) -- never returns normally.
+    await startSubscriptionAction(newShopId as string);
+  }
 
   redirect("/branches");
 }
