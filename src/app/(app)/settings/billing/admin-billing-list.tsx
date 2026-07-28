@@ -1,21 +1,29 @@
 import { createClient } from "@/lib/supabase/server";
 import { openBillingPortalAction, startSubscriptionAction } from "./actions";
 import { statusLabel } from "@/lib/billing-status";
+import { getPriceLabels } from "@/lib/stripe-prices";
+import { RatesPopup } from "@/components/rates-popup";
 import type { ShopMembership } from "@/lib/auth/get-current-profile";
 
 export async function AdminBillingList({ ownedShops }: { ownedShops: ShopMembership[] }) {
   const supabase = await createClient();
   const shopIds = ownedShops.map((s) => s.shopId);
-  const { data: shops } = await supabase
-    .from("shops")
-    .select("id, subscription_status, trial_ends_at, current_period_end, stripe_customer_id")
-    .in("id", shopIds);
+  const [{ data: shops }, prices] = await Promise.all([
+    supabase
+      .from("shops")
+      .select("id, subscription_status, trial_ends_at, current_period_end, stripe_customer_id")
+      .in("id", shopIds),
+    getPriceLabels(),
+  ]);
 
   const shopById = new Map((shops ?? []).map((s) => [s.id, s]));
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
-      <h1 className="heading text-2xl">Billing</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="heading text-2xl">Billing</h1>
+        <RatesPopup prices={prices} />
+      </div>
       <p className="mt-1 text-sm text-muted">
         Each branch keeps its own subscription. Bundled multi-branch pricing is coming soon.
       </p>

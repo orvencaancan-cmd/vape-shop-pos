@@ -3,6 +3,8 @@ import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { openBillingPortalAction, startSubscriptionAction } from "./actions";
 import { statusLabel } from "@/lib/billing-status";
+import { getPriceLabels } from "@/lib/stripe-prices";
+import { RatesPopup } from "@/components/rates-popup";
 import { AdminBillingList } from "./admin-billing-list";
 
 export default async function BillingPage() {
@@ -31,10 +33,17 @@ export default async function BillingPage() {
   // restart a fully-canceled subscription — decide by state instead.
   const needsSubscribe =
     shop?.subscription_status === "trialing" || shop?.subscription_status === "canceled";
+  const prices = await getPriceLabels();
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-md px-4 py-8">
-      <h1 className="heading text-2xl">Billing</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="heading text-2xl">Billing</h1>
+        <RatesPopup
+          prices={prices}
+          subscribeAction={needsSubscribe ? boundStartSubscription : undefined}
+        />
+      </div>
 
       <div className="mt-6 rounded-xl border border-hairline bg-canvas-soft p-4">
         <p className="text-sm text-muted">Subscription status</p>

@@ -1,26 +1,10 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { hasBillingAccess } from "@/lib/billing-status";
-import { getStripe } from "@/lib/stripe";
+import { getPriceLabels } from "@/lib/stripe-prices";
 import { AuthCardShell } from "@/components/auth-card-shell";
 import { buttonClasses } from "@/components/ui/button";
 import { startSubscriptionAction } from "@/app/(app)/settings/billing/actions";
-
-async function getPriceLabel(billingTier: "primary" | "additional") {
-  const priceId =
-    billingTier === "additional"
-      ? process.env.STRIPE_PRICE_ID_ADDITIONAL
-      : process.env.STRIPE_PRICE_ID;
-  if (!priceId) return null;
-  try {
-    const stripe = getStripe();
-    const price = await stripe.prices.retrieve(priceId);
-    const amount = (price.unit_amount ?? 0) / 100;
-    return `${amount.toFixed(2)} ${price.currency.toUpperCase()} / month`;
-  } catch {
-    return null;
-  }
-}
 
 export default async function BillingRequiredPage() {
   const profile = await getCurrentProfile();
@@ -43,7 +27,8 @@ export default async function BillingRequiredPage() {
     profile.shop.subscriptionStatus === "trialing"
       ? "Your trial has ended"
       : "Payment needs attention";
-  const priceLabel = await getPriceLabel(profile.shop.billingTier);
+  const prices = await getPriceLabels();
+  const priceLabel = profile.shop.billingTier === "additional" ? prices?.additional : prices?.primary;
   const boundStartSubscription = startSubscriptionAction.bind(null, profile.shopId);
 
   return (

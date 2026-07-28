@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getStripe } from "@/lib/stripe";
+import { getPriceLabels } from "@/lib/stripe-prices";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -8,28 +8,6 @@ import { FeaturePanel } from "@/components/feature-panel";
 import { VapeStockLogo } from "@/components/vapestock-logo";
 import { AuthHashRedirect } from "@/components/auth-hash-redirect";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
-
-async function getPriceLabels() {
-  const primaryId = process.env.STRIPE_PRICE_ID;
-  const additionalId = process.env.STRIPE_PRICE_ID_ADDITIONAL;
-  if (!primaryId || !additionalId) return null;
-  try {
-    const stripe = getStripe();
-    const [primary, additional] = await Promise.all([
-      stripe.prices.retrieve(primaryId),
-      stripe.prices.retrieve(additionalId),
-    ]);
-    const primaryAmount = (primary.unit_amount ?? 0) / 100;
-    const additionalAmount = (additional.unit_amount ?? 0) / 100;
-    const currency = primary.currency.toUpperCase();
-    return {
-      primary: `${primaryAmount.toFixed(2)} ${currency} / month`,
-      additional: `${additionalAmount.toFixed(2)} ${currency} / month`,
-    };
-  } catch {
-    return null;
-  }
-}
 
 const FEATURES = [
   {
