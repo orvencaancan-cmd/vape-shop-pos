@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeLowStock, computeDailySeries, type VariantRow } from "@/lib/reports/compute";
@@ -124,7 +125,19 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
               {c.staffNames.length === 0 ? (
                 <p className="mt-1 text-sm text-ink">No staff yet.</p>
               ) : (
-                <p className="mt-1 text-sm text-ink">{c.staffNames.join(", ")}</p>
+                <p className="mt-1 text-sm text-ink">
+                  {c.staffNames.map((name, i) => (
+                    <span key={`${name}-${i}`}>
+                      <Link
+                        href="/settings/staff"
+                        className="hover:text-primary hover:underline"
+                      >
+                        {name}
+                      </Link>
+                      {i < c.staffNames.length - 1 ? ", " : ""}
+                    </span>
+                  ))}
+                </p>
               )}
             </div>
 

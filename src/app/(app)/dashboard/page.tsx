@@ -2,11 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { computeLowStock, computeDailySeries, type VariantRow } from "@/lib/reports/compute";
 import { formatCurrency } from "@/lib/currency";
 import { hasBillingAccess, statusLabel } from "@/lib/billing-status";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { SalesChart } from "@/components/sales-chart";
 import { DashboardRecentSales } from "./recent-sales";
@@ -33,7 +33,7 @@ export default async function DashboardPage({
   const supabase = await createClient();
   const chartWindowStart = new Date(new Date().getTime() - 30 * 86400000).toISOString();
 
-  const [{ data: variants }, { data: recentSales }, { data: chartSales }, { data: lastAudit }] =
+  const [{ data: variants }, { data: recentSales }, { data: chartSales }, { data: lastAudit }, { data: staff }] =
     await Promise.all([
       supabase
         .from("variants")
@@ -61,7 +61,15 @@ export default async function DashboardPage({
         .order("completed_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      supabase.from("profiles").select("user_id, display_name").eq("shop_id", profile.shopId),
     ]);
+
+  const admin = createAdminClient();
+  const { data: userList } = await admin.auth.admin.listUsers();
+  const emailByUserId = new Map(userList?.users.map((u) => [u.id, u.email ?? ""]));
+  const staffNames = (staff ?? []).map(
+    (m) => m.display_name || emailByUserId.get(m.user_id) || "Unnamed",
+  );
 
   let auditDiscrepancyCount = 0;
   let auditValueImpact = 0;
@@ -171,62 +179,56 @@ export default async function DashboardPage({
           </Card>
         )}
 
-      {lowStock.length > 0 && (
-        <Card
-          padding="sm"
-          className="mt-6 border-warning/40 bg-warning/10"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-warning">⚠</span>
-              <h2 className="text-sm font-medium text-warning">
-                {lowStock.length} item{lowStock.length === 1 ? "" : "s"} low on stock
-              </h2>
-            </div>
-            <Link href="/reports" className="text-xs text-warning underline underline-offset-2">
-              Full reports
-            </Link>
-          </div>
-          <ul className="mt-3 flex flex-col gap-1 text-sm">
-            {lowStock.slice(0, 8).map((v) => (
-              <li key={v.id}>
-                <Link
-                  href={`/inventory/${v.productId}`}
-                  className="flex items-center justify-between hover:text-primary"
-                >
-                  <span className="text-ink">
-                    {v.productName} — {v.label}
-                  </span>
-                  <Badge variant="warning">{v.stockQty} left</Badge>
+      <Card padding="sm" className="mt-6">
+        <p className="text-xs font-medium uppercase text-muted">Staff assigned</p>
+        {staffNames.length === 0 ? (
+          <p className="mt-1 text-sm text-ink">No staff yet.</p>
+        ) : (
+          <p className="mt-1 text-sm text-ink">
+            {staffNames.map((name, i) => (
+              <span key={`${name}-${i}`}>
+                <Link href="/settings/staff" className="hover:text-primary hover:underline">
+                  {name}
                 </Link>
-              </li>
+                {i < staffNames.length - 1 ? ", " : ""}
+              </span>
             ))}
-          </ul>
-        </Card>
-      )}
+          </p>
+        )}
+      </Card>
 
-      <Card
-        padding="sm"
-        className={`mt-6 ${auditDiscrepancyCount > 0 ? "border-warning/40 bg-warning/10" : ""}`}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            {auditDiscrepancyCount > 0 && <span className="text-warning">⚠</span>}
-            <h2
-              className={`text-sm font-medium ${auditDiscrepancyCount > 0 ? "text-warning" : "text-ink"}`}
+      <Card padding="sm" className="mt-6">
+        <p className="text-xs font-medium uppercase text-muted">Needs attention</p>
+
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <p className={`text-sm ${lowStock.length > 0 ? "text-warning" : "text-ink"}`}>
+            {lowStock.length === 0
+              ? "Nothing low on stock"
+              : `${lowStock.length} item${lowStock.length === 1 ? "" : "s"} low on stock`}
+          </p>
+          {lowStock.length > 0 && (
+            <Link
+              href="/reports"
+              className="shrink-0 text-xs text-warning underline underline-offset-2"
             >
-              {lastAudit
-                ? `Last audit ${new Date(lastAudit.completed_at as string).toLocaleDateString()} — ${
-                    auditDiscrepancyCount === 0
-                      ? "no discrepancies"
-                      : `${auditDiscrepancyCount} discrepanc${auditDiscrepancyCount === 1 ? "y" : "ies"} (${formatCurrency(auditValueImpact)})`
-                  }`
-                : "No audits yet"}
-            </h2>
-          </div>
+              View details
+            </Link>
+          )}
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <p className={`text-sm ${auditDiscrepancyCount > 0 ? "text-warning" : "text-muted"}`}>
+            {lastAudit
+              ? `Last audit ${new Date(lastAudit.completed_at as string).toLocaleDateString()} — ${
+                  auditDiscrepancyCount === 0
+                    ? "no discrepancies"
+                    : `${auditDiscrepancyCount} discrepanc${auditDiscrepancyCount === 1 ? "y" : "ies"} (${formatCurrency(auditValueImpact)})`
+                }`
+              : "No audits yet"}
+          </p>
           <Link
             href="/audit"
-            className={`text-xs underline underline-offset-2 ${auditDiscrepancyCount > 0 ? "text-warning" : "text-primary"}`}
+            className={`shrink-0 text-xs underline underline-offset-2 ${auditDiscrepancyCount > 0 ? "text-warning" : "text-primary"}`}
           >
             View recent audit
           </Link>
