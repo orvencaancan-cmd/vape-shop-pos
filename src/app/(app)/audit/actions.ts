@@ -91,6 +91,28 @@ export async function discardAuditAction(auditId: string): Promise<DiscardAuditR
   return {};
 }
 
+export type RemoveCompletedAuditResult = { error?: string };
+
+export async function removeCompletedAuditAction(
+  auditId: string,
+): Promise<RemoveCompletedAuditResult> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+  if (profile.role !== "owner") return { error: "Only the shop owner can remove an audit" };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("stock_audits")
+    .delete()
+    .eq("id", auditId)
+    .eq("shop_id", profile.shopId)
+    .not("completed_at", "is", null);
+  if (error) return { error: error.message };
+
+  revalidatePath("/audit");
+  return {};
+}
+
 export type ConfirmAuditResult = { error?: string };
 
 export async function confirmAuditAction(auditId: string): Promise<ConfirmAuditResult> {

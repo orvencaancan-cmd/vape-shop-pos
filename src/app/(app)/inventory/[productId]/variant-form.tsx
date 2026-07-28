@@ -91,6 +91,14 @@ export function VariantForm({
                 list={dimensionSuggestions.length > 0 ? "dimension-suggestions" : undefined}
               />
             )}
+            {dimension?.field === "flavor" && (
+              <Field
+                label={dimension.label}
+                name="flavor"
+                defaultValue={values?.flavor ?? ""}
+                list={dimensionSuggestions.length > 0 ? "dimension-suggestions" : undefined}
+              />
+            )}
           </>
         )}
         <Field label="SKU" name="sku" defaultValue={values?.sku ?? ""} />

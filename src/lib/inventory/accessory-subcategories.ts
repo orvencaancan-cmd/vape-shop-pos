@@ -8,7 +8,7 @@ export type AccessorySubcategoryKey =
 
 type ChecklistDimension = {
   label: string;
-  field: "ohms" | "size";
+  field: "ohms" | "size" | "flavor";
   inputType: "checklist";
   options: { value: string; label: string }[];
   formatValue?: (raw: string) => string;
@@ -16,7 +16,7 @@ type ChecklistDimension = {
 
 type FreeTextDimension = {
   label: string;
-  field: "ohms" | "size";
+  field: "ohms" | "size" | "flavor";
   inputType: "freeText";
   placeholder: string;
   formatValue?: (raw: string) => string;
@@ -57,6 +57,12 @@ export const ACCESSORY_SUBCATEGORIES: AccessorySubcategoryConfig[] = [
     listHelp: "One device per line — each becomes its own product.",
     nameTemplate: (device) => `${device} Flavor Pod`,
     setForDevice: true,
+    variantDimension: {
+      label: "Flavor",
+      field: "flavor",
+      inputType: "freeText",
+      placeholder: "e.g. Mango Ice, Mint, Watermelon",
+    },
   },
   {
     key: "device",

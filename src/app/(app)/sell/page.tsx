@@ -45,14 +45,60 @@ export default async function SellPage() {
     })
     .filter((v): v is NonNullable<typeof v> => v !== null);
 
+  // "Today" only, calendar-day aligned (matches the same boundary logic used
+  // for Reports/Dashboard) -- previous days' sales don't belong on this
+  // screen, which is for what's happening at the register right now.
+  const now = new Date();
+  const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const todayEnd = new Date(todayStart.getTime() + 86400000);
+
   const { data: recentSalesRaw } = await supabase
     .from("sales")
     .select(
       "id, total, payment_method, created_at, created_by, voided_at, profiles!sales_created_by_fkey(display_name)",
     )
     .eq("shop_id", profile.shopId)
-    .order("created_at", { ascending: false })
-    .limit(20);
+    .gte("created_at", todayStart.toISOString())
+    .lt("created_at", todayEnd.toISOString())
+    .order("created_at", { ascending: false });
+
+  const saleIds = (recentSalesRaw ?? []).map((s) => s.id);
+  const { data: saleItemsRaw } = saleIds.length
+    ? await supabase
+        .from("sale_items")
+        .select(
+          "sale_id, variant_id, quantity, unit_price, variants(flavor, nicotine_mg, size, for_device, ohms, products(name, brand))",
+        )
+        .eq("shop_id", profile.shopId)
+        .in("sale_id", saleIds)
+    : { data: [] };
+
+  const linesBySaleId = new Map<
+    string,
+    { item: string; quantity: number; price: number }[]
+  >();
+  for (const row of saleItemsRaw ?? []) {
+    const variant = Array.isArray(row.variants) ? row.variants[0] : row.variants;
+    const product = variant ? (Array.isArray(variant.products) ? variant.products[0] : variant.products) : null;
+    const label =
+      [
+        variant?.flavor,
+        variant?.nicotine_mg != null ? `${variant.nicotine_mg}mg` : null,
+        variant?.size,
+        variant?.for_device ? `For ${variant.for_device}` : null,
+        variant?.ohms != null ? `${variant.ohms}Ω` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ") || "Default";
+    const line = {
+      item: `${product?.brand ? `${product.brand} — ` : ""}${product?.name ?? "Unknown product"} — ${label}`,
+      quantity: row.quantity as number,
+      price: Number(row.unit_price) * (row.quantity as number),
+    };
+    const saleId = row.sale_id as string;
+    if (!linesBySaleId.has(saleId)) linesBySaleId.set(saleId, []);
+    linesBySaleId.get(saleId)!.push(line);
+  }
 
   const recentSales = (recentSalesRaw ?? []).map((s) => {
     const creator = Array.isArray(s.profiles) ? s.profiles[0] : s.profiles;
@@ -64,6 +110,7 @@ export default async function SellPage() {
       createdByName: (creator?.display_name as string | null) ?? null,
       voidedAt: s.voided_at as string | null,
       canVoid: !s.voided_at && (profile.role === "owner" || s.created_by === profile.id),
+      lines: linesBySaleId.get(s.id as string) ?? [],
     };
   });
 

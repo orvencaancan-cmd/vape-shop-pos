@@ -7,6 +7,7 @@ import {
   saveCountAction,
   confirmAuditAction,
   discardAuditAction,
+  removeCompletedAuditAction,
 } from "./actions";
 import { formatCurrency } from "@/lib/currency";
 
@@ -68,11 +69,13 @@ export function AuditScreen({
   openAuditId,
   existingCounts,
   history,
+  isOwner,
 }: {
   variants: AuditVariant[];
   openAuditId: string | null;
   existingCounts: { variantId: string; countedQty: number }[];
   history: AuditHistoryEntry[];
+  isOwner: boolean;
 }) {
   const router = useRouter();
   const [auditId, setAuditId] = useState(openAuditId);
@@ -203,7 +206,7 @@ export function AuditScreen({
             Done
           </button>
         </div>
-        <HistorySection history={history} />
+        <HistorySection history={history} isOwner={isOwner} />
       </div>
     );
   }
@@ -223,7 +226,7 @@ export function AuditScreen({
             {message.text}
           </p>
         )}
-        <HistorySection history={history} />
+        <HistorySection history={history} isOwner={isOwner} />
       </div>
     );
   }
@@ -397,8 +400,29 @@ function DiscrepancyTable({ rows }: { rows: AuditDiscrepancy[] }) {
   );
 }
 
-function HistorySection({ history }: { history: AuditHistoryEntry[] }) {
+function HistorySection({
+  history,
+  isOwner,
+}: {
+  history: AuditHistoryEntry[];
+  isOwner: boolean;
+}) {
+  const router = useRouter();
   const [openId, setOpenId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function handleRemove(auditId: string) {
+    if (!confirm("Remove this audit from history? This only deletes the record — it won't undo any stock changes it already made.")) {
+      return;
+    }
+    setRemovingId(auditId);
+    startTransition(async () => {
+      const result = await removeCompletedAuditAction(auditId);
+      setRemovingId(null);
+      if (!result.error) router.refresh();
+    });
+  }
 
   if (history.length === 0) {
     return (
@@ -418,24 +442,36 @@ function HistorySection({ history }: { history: AuditHistoryEntry[] }) {
           const totalValue = a.discrepancies.reduce((sum, d) => sum + d.valueImpact, 0);
           return (
             <div key={a.id} className="px-4 py-3">
-              <button
-                type="button"
-                onClick={() => setOpenId(isOpen ? null : a.id)}
-                className="flex w-full flex-wrap items-center justify-between gap-2 text-left"
-              >
-                <div>
-                  <span className="text-sm text-ink">{new Date(a.completedAt).toLocaleString()}</span>
-                  {a.completedByName && (
-                    <span className="ml-2 text-xs text-muted">{a.completedByName}</span>
-                  )}
-                </div>
-                <span className="text-xs text-muted">
-                  {a.itemsCounted} counted ·{" "}
-                  {a.discrepancies.length === 0
-                    ? "no discrepancies"
-                    : `${a.discrepancies.length} discrepanc${a.discrepancies.length === 1 ? "y" : "ies"} (${formatCurrency(totalValue)})`}
-                </span>
-              </button>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOpenId(isOpen ? null : a.id)}
+                  className="flex flex-1 flex-wrap items-center justify-between gap-2 text-left"
+                >
+                  <div>
+                    <span className="text-sm text-ink">{new Date(a.completedAt).toLocaleString()}</span>
+                    {a.completedByName && (
+                      <span className="ml-2 text-xs text-muted">{a.completedByName}</span>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted">
+                    {a.itemsCounted} counted ·{" "}
+                    {a.discrepancies.length === 0
+                      ? "no discrepancies"
+                      : `${a.discrepancies.length} discrepanc${a.discrepancies.length === 1 ? "y" : "ies"} (${formatCurrency(totalValue)})`}
+                  </span>
+                </button>
+                {isOwner && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemove(a.id)}
+                    disabled={pending && removingId === a.id}
+                    className="shrink-0 text-xs text-error underline underline-offset-2 disabled:opacity-50"
+                  >
+                    {pending && removingId === a.id ? "Removing…" : "Remove"}
+                  </button>
+                )}
+              </div>
               {isOpen && a.discrepancies.length > 0 && <DiscrepancyTable rows={a.discrepancies} />}
             </div>
           );

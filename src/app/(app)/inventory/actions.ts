@@ -93,6 +93,21 @@ export async function createProductAction(
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in" };
 
+  let existingQuery = supabase
+    .from("products")
+    .select("id")
+    .eq("shop_id", profile.shopId)
+    .eq("category", parsed.data.category)
+    .eq("archived", false)
+    .ilike("name", parsed.data.name.trim());
+  existingQuery = parsed.data.brand
+    ? existingQuery.eq("brand", parsed.data.brand)
+    : existingQuery.is("brand", null);
+  const { data: existing } = await existingQuery.maybeSingle();
+  if (existing) {
+    return { error: `"${parsed.data.name}" already exists for this brand — edit that one instead.` };
+  }
+
   const { data: product, error } = await supabase
     .from("products")
     .insert({
@@ -208,33 +223,80 @@ export async function createFlavorBatchAction(
   const shopId = profile.shopId;
   const effectiveCost = profile.role === "owner" ? cost : 0;
 
-  const { data: products, error: productsError } = await supabase
+  // Reuse an existing product for any flavor name that already exists under this
+  // brand, instead of creating a second, visually-duplicate product card.
+  let existingQuery = supabase
     .from("products")
-    .insert(
-      flavors.map((name) => ({
-        shop_id: shopId,
-        name,
-        brand: brand || null,
-        category: "ejuice" as const,
-      })),
-    )
-    .select("id");
-  if (productsError) return { error: productsError.message };
-
-  const variantRows = products.flatMap((product, i) =>
-    nicotineLevels.map((mg) => ({
-      shop_id: shopId,
-      product_id: product.id,
-      flavor: flavors[i],
-      nicotine_mg: mg,
-      size: size || null,
-      cost: effectiveCost,
-      price,
-      low_stock_threshold: lowStockThreshold,
-    })),
+    .select("id, name")
+    .eq("shop_id", shopId)
+    .eq("category", "ejuice")
+    .eq("archived", false);
+  existingQuery = brand ? existingQuery.eq("brand", brand) : existingQuery.is("brand", null);
+  const { data: existingProducts } = await existingQuery;
+  const productIdByName = new Map(
+    (existingProducts ?? []).map((p) => [p.name.trim().toLowerCase(), p.id as string]),
   );
-  const { error: variantsError } = await supabase.from("variants").insert(variantRows);
-  if (variantsError) return { error: variantsError.message };
+
+  const newNames = [...new Set(
+    flavors.filter((name) => !productIdByName.has(name.trim().toLowerCase())),
+  )];
+  if (newNames.length > 0) {
+    const { data: inserted, error: productsError } = await supabase
+      .from("products")
+      .insert(
+        newNames.map((name) => ({
+          shop_id: shopId,
+          name,
+          brand: brand || null,
+          category: "ejuice" as const,
+        })),
+      )
+      .select("id");
+    if (productsError) return { error: productsError.message };
+    newNames.forEach((name, i) => productIdByName.set(name.trim().toLowerCase(), inserted[i].id));
+  }
+
+  const productIds = [...new Set(flavors.map((name) => productIdByName.get(name.trim().toLowerCase())!))];
+  const { data: existingVariants } = productIds.length
+    ? await supabase.from("variants").select("product_id, nicotine_mg, size").in("product_id", productIds)
+    : { data: [] as { product_id: string; nicotine_mg: number | null; size: string | null }[] };
+  const seenVariantKeys = new Set(
+    (existingVariants ?? []).map((v) => `${v.product_id}|${v.nicotine_mg}|${v.size ?? ""}`),
+  );
+
+  const variantRows: {
+    shop_id: string;
+    product_id: string;
+    flavor: string;
+    nicotine_mg: number;
+    size: string | null;
+    cost: number;
+    price: number;
+    low_stock_threshold: number;
+  }[] = [];
+  for (const name of flavors) {
+    const productId = productIdByName.get(name.trim().toLowerCase())!;
+    for (const mg of nicotineLevels) {
+      const key = `${productId}|${mg}|${size || ""}`;
+      if (seenVariantKeys.has(key)) continue;
+      seenVariantKeys.add(key);
+      variantRows.push({
+        shop_id: shopId,
+        product_id: productId,
+        flavor: name,
+        nicotine_mg: mg,
+        size: size || null,
+        cost: effectiveCost,
+        price,
+        low_stock_threshold: lowStockThreshold,
+      });
+    }
+  }
+
+  if (variantRows.length > 0) {
+    const { error: variantsError } = await supabase.from("variants").insert(variantRows);
+    if (variantsError) return { error: variantsError.message };
+  }
 
   revalidatePath("/inventory");
   redirect("/inventory");
@@ -293,19 +355,42 @@ export async function createAccessoryBatchAction(
   const shopId = profile.shopId;
   const effectiveCost = profile.role === "owner" ? cost : 0;
 
-  const { data: products, error: productsError } = await supabase
+  const productNames = items.map((item) => subcategory.nameTemplate(item));
+
+  // Reuse an existing product for any item name that already exists under this
+  // brand/subcategory, instead of creating a second, visually-duplicate card.
+  let existingQuery = supabase
     .from("products")
-    .insert(
-      items.map((item) => ({
-        shop_id: shopId,
-        name: subcategory.nameTemplate(item),
-        brand: brand || null,
-        category: "accessory" as const,
-        subcategory: subcategory.dbSubcategory,
-      })),
-    )
-    .select("id");
-  if (productsError) return { error: productsError.message };
+    .select("id, name")
+    .eq("shop_id", shopId)
+    .eq("category", "accessory")
+    .eq("subcategory", subcategory.dbSubcategory)
+    .eq("archived", false);
+  existingQuery = brand ? existingQuery.eq("brand", brand) : existingQuery.is("brand", null);
+  const { data: existingProducts } = await existingQuery;
+  const productIdByName = new Map(
+    (existingProducts ?? []).map((p) => [p.name.trim().toLowerCase(), p.id as string]),
+  );
+
+  const newNames = [...new Set(
+    productNames.filter((name) => !productIdByName.has(name.trim().toLowerCase())),
+  )];
+  if (newNames.length > 0) {
+    const { data: inserted, error: productsError } = await supabase
+      .from("products")
+      .insert(
+        newNames.map((name) => ({
+          shop_id: shopId,
+          name,
+          brand: brand || null,
+          category: "accessory" as const,
+          subcategory: subcategory.dbSubcategory,
+        })),
+      )
+      .select("id");
+    if (productsError) return { error: productsError.message };
+    newNames.forEach((name, i) => productIdByName.set(name.trim().toLowerCase(), inserted[i].id));
+  }
 
   let levels: (string | null)[];
   if (subcategory.variantDimension?.inputType === "freeText") {
@@ -320,23 +405,61 @@ export async function createAccessoryBatchAction(
     return { error: `${verb} at least one ${subcategory.variantDimension.label.toLowerCase()}` };
   }
 
-  const variantRows = products.flatMap((product, i) =>
-    levels.map((level) => ({
-      shop_id: shopId,
-      product_id: product.id,
-      for_device: subcategory.setForDevice ? items[i] : null,
-      ohms: subcategory.variantDimension?.field === "ohms" && level ? Number(level) : null,
-      size:
+  const productIds = [...new Set(productNames.map((name) => productIdByName.get(name.trim().toLowerCase())!))];
+  const { data: existingVariants } = productIds.length
+    ? await supabase.from("variants").select("product_id, ohms, size, flavor").in("product_id", productIds)
+    : {
+        data: [] as { product_id: string; ohms: number | null; size: string | null; flavor: string | null }[],
+      };
+  const seenVariantKeys = new Set(
+    (existingVariants ?? []).map((v) => `${v.product_id}|${v.ohms ?? ""}|${v.size ?? ""}|${v.flavor ?? ""}`),
+  );
+
+  const variantRows: {
+    shop_id: string;
+    product_id: string;
+    for_device: string | null;
+    ohms: number | null;
+    size: string | null;
+    flavor: string | null;
+    cost: number;
+    price: number;
+    low_stock_threshold: number;
+  }[] = [];
+  items.forEach((item, i) => {
+    const productId = productIdByName.get(productNames[i].trim().toLowerCase())!;
+    const forDevice = subcategory.setForDevice ? item : null;
+    for (const level of levels) {
+      const ohms = subcategory.variantDimension?.field === "ohms" && level ? Number(level) : null;
+      const size =
         subcategory.variantDimension?.field === "size" && level
           ? (subcategory.variantDimension.formatValue?.(level) ?? level)
-          : null,
-      cost: effectiveCost,
-      price,
-      low_stock_threshold: lowStockThreshold,
-    })),
-  );
-  const { error: variantsError } = await supabase.from("variants").insert(variantRows);
-  if (variantsError) return { error: variantsError.message };
+          : null;
+      const flavor =
+        subcategory.variantDimension?.field === "flavor" && level
+          ? (subcategory.variantDimension.formatValue?.(level) ?? level)
+          : null;
+      const key = `${productId}|${ohms ?? ""}|${size ?? ""}|${flavor ?? ""}`;
+      if (seenVariantKeys.has(key)) continue;
+      seenVariantKeys.add(key);
+      variantRows.push({
+        shop_id: shopId,
+        product_id: productId,
+        for_device: forDevice,
+        ohms,
+        size,
+        flavor,
+        cost: effectiveCost,
+        price,
+        low_stock_threshold: lowStockThreshold,
+      });
+    }
+  });
+
+  if (variantRows.length > 0) {
+    const { error: variantsError } = await supabase.from("variants").insert(variantRows);
+    if (variantsError) return { error: variantsError.message };
+  }
 
   revalidatePath("/inventory");
   redirect("/inventory");

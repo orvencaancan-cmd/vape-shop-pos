@@ -127,6 +127,7 @@ export default async function AuditPage() {
         openAuditId={(openAudit?.id as string) ?? null}
         existingCounts={existingCounts}
         history={history}
+        isOwner={profile.role === "owner"}
       />
     </main>
   );

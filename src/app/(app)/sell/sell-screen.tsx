@@ -23,6 +23,7 @@ type RecentSale = {
   createdByName: string | null;
   voidedAt: string | null;
   canVoid: boolean;
+  lines: { item: string; quantity: number; price: number }[];
 };
 
 type CartLine = { variantId: string; quantity: number };
@@ -318,43 +319,57 @@ export function SellScreen({
 
       <div className="md:col-span-3">
         <div className="rounded-xl border border-hairline bg-canvas-soft p-4">
-          <h2 className="text-sm font-medium text-muted">Recent sales</h2>
+          <h2 className="text-sm font-medium text-muted">Today&apos;s sales</h2>
           {recentSales.length === 0 ? (
-            <p className="mt-2 text-sm text-muted">No sales yet.</p>
+            <p className="mt-2 text-sm text-muted">No sales yet today.</p>
           ) : (
-            <ul className="mt-2 flex flex-col divide-y divide-hairline">
+            <div className="mt-2 flex flex-col divide-y divide-hairline">
               {recentSales.map((s) => (
-                <li
-                  key={s.id}
-                  className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
-                >
-                  <div className="min-w-0">
-                    <span className={s.voidedAt ? "text-muted line-through" : "text-ink"}>
-                      {new Date(s.createdAt).toLocaleTimeString()} — {formatCurrency(s.total)}
-                    </span>
-                    <span className="ml-2 rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-body">
-                      {PAYMENT_LABELS[s.paymentMethod]}
-                    </span>
-                    {s.createdByName && (
-                      <span className="ml-2 text-xs text-muted">{s.createdByName}</span>
-                    )}
+                <div key={s.id} className="py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <div className="min-w-0">
+                      <span className={s.voidedAt ? "text-muted line-through" : "text-ink"}>
+                        {new Date(s.createdAt).toLocaleString()} — {formatCurrency(s.total)}
+                      </span>
+                      <span className="ml-2 rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-body">
+                        {PAYMENT_LABELS[s.paymentMethod]}
+                      </span>
+                      {s.createdByName && (
+                        <span className="ml-2 text-xs text-muted">{s.createdByName}</span>
+                      )}
+                    </div>
+                    {s.voidedAt ? (
+                      <span className="rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-muted">
+                        Voided
+                      </span>
+                    ) : s.canVoid ? (
+                      <button
+                        onClick={() => voidSale(s.id, s.total)}
+                        disabled={voidingId === s.id}
+                        className="text-xs text-error underline underline-offset-2 disabled:opacity-50"
+                      >
+                        {voidingId === s.id ? "Voiding…" : "Void"}
+                      </button>
+                    ) : null}
                   </div>
-                  {s.voidedAt ? (
-                    <span className="rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-muted">
-                      Voided
-                    </span>
-                  ) : s.canVoid ? (
-                    <button
-                      onClick={() => voidSale(s.id, s.total)}
-                      disabled={voidingId === s.id}
-                      className="text-xs text-error underline underline-offset-2 disabled:opacity-50"
-                    >
-                      {voidingId === s.id ? "Voiding…" : "Void"}
-                    </button>
-                  ) : null}
-                </li>
+                  {s.lines.length > 0 && (
+                    <ul className="mt-1.5 flex flex-col gap-0.5 pl-1">
+                      {s.lines.map((line, i) => (
+                        <li
+                          key={i}
+                          className="flex items-center justify-between gap-2 text-xs text-muted"
+                        >
+                          <span>
+                            {line.item} × {line.quantity}
+                          </span>
+                          <span className="shrink-0">{formatCurrency(line.price)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </div>
       </div>
