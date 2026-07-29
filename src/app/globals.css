@@ -69,6 +69,22 @@
   --font-mono: var(--font-geist-mono);
 }
 
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-hairline) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--color-hairline);
+    border-radius: 9999px;
+  }
+}
+
 @utility heading {
   font-family: var(--font-sans);
   font-weight: 700;

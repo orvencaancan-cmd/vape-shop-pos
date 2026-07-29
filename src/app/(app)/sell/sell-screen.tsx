@@ -239,7 +239,7 @@ export function SellScreen({
 
       <div className="flex flex-col rounded-xl border border-hairline bg-canvas-soft p-4">
         <h2 className="text-sm font-medium text-muted">Cart</h2>
-        <div className="mt-3 flex max-h-56 flex-col gap-3 overflow-y-auto">
+        <div className="scrollbar-thin mt-3 flex max-h-56 flex-col gap-3 overflow-y-auto pr-2">
           {cart.length === 0 && <p className="text-sm text-muted">No items yet.</p>}
           {cart.map((l) => {
             const v = variantsById.get(l.variantId);
