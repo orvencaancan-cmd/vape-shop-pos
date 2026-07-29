@@ -13,6 +13,7 @@ import { formatCurrency } from "@/lib/currency";
 import { hasBillingAccess, statusLabel } from "@/lib/billing-status";
 import { Card } from "@/components/ui/card";
 import { buttonClasses } from "@/components/ui/button";
+import { Stat } from "@/components/ui/stat";
 import { SalesChart } from "@/components/sales-chart";
 import { DashboardRecentSales } from "./recent-sales";
 import { AdminDashboardGrid } from "./admin-dashboard-grid";
@@ -101,10 +102,7 @@ export default async function DashboardPage({
 
   const series = computeDailySeries(chartSales ?? [], chartDays);
   const todayRevenue = series[series.length - 1]?.revenue ?? 0;
-  const weekRevenue = computeDailySeries(chartSales ?? [], 7).reduce(
-    (sum, d) => sum + d.revenue,
-    0,
-  );
+  const rangeRevenue = series.reduce((sum, d) => sum + d.revenue, 0);
   const todaySales = (chartSales ?? []).filter(
     (s) => s.created_at.slice(0, 10) === series[series.length - 1]?.date,
   );
@@ -121,8 +119,16 @@ export default async function DashboardPage({
       </p>
 
       <Card padding="sm" className="mt-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-muted">Sales</h2>
+        <h2 className="text-sm font-medium text-muted">Today</h2>
+        <div className="mt-2 flex flex-wrap gap-4">
+          <Stat label="Sales" value={todayCount.toString()} />
+          <Stat label="Cash" value={formatCurrency(todayBreakdown.cash)} />
+          <Stat label="GCash" value={formatCurrency(todayBreakdown.gcash)} />
+          <Stat label="Total" value={formatCurrency(todayRevenue)} />
+        </div>
+
+        <div className="mt-6 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-muted">Last {chartDays} days</h2>
           <div className="flex gap-2 text-xs">
             <Link
               href="/dashboard?chart=7d"
@@ -138,36 +144,22 @@ export default async function DashboardPage({
             </Link>
           </div>
         </div>
-        <div className="mt-4">
+        <div className="mt-2 flex flex-wrap gap-4">
+          <Stat label="Total" value={formatCurrency(rangeRevenue)} />
+        </div>
+
+        <div className="mt-6">
           <SalesChart data={series} />
         </div>
       </Card>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Link href="/reports?range=today" className="block">
-          <Card padding="sm" className="transition-colors hover:border-primary">
-            <p className="text-xs text-muted">Today</p>
-            <p className="mt-1 text-lg font-semibold text-ink">{formatCurrency(todayRevenue)}</p>
-            <p className="text-xs text-muted">{todayCount} sale{todayCount === 1 ? "" : "s"}</p>
-            <p className="text-xs text-muted">
-              Cash {formatCurrency(todayBreakdown.cash)} · GCash {formatCurrency(todayBreakdown.gcash)}
-            </p>
-          </Card>
+      <div className="mt-4 flex gap-3">
+        <Link href="/sell" className={buttonClasses("primary", "sm")}>
+          New sale
         </Link>
-        <Link href="/reports?range=7d" className="block">
-          <Card padding="sm" className="transition-colors hover:border-primary">
-            <p className="text-xs text-muted">Last 7 days</p>
-            <p className="mt-1 text-lg font-semibold text-ink">{formatCurrency(weekRevenue)}</p>
-          </Card>
+        <Link href="/inventory" className={buttonClasses("secondary", "sm")}>
+          Manage inventory
         </Link>
-        <Card padding="sm" className="col-span-2 flex flex-col justify-center gap-2 sm:col-span-1">
-          <Link href="/sell" className={buttonClasses("primary", "sm")}>
-            New sale
-          </Link>
-          <Link href="/inventory" className={buttonClasses("secondary", "sm")}>
-            Manage inventory
-          </Link>
-        </Card>
       </div>
 
       {profile.ownedShopCount === 1 &&

@@ -37,11 +37,9 @@ const PAYMENT_LABELS: Record<"cash" | "gcash", string> = { cash: "Cash", gcash: 
 export function SellScreen({
   variants,
   recentSales,
-  paymentBreakdown,
 }: {
   variants: Variant[];
   recentSales: RecentSale[];
-  paymentBreakdown: { cash: number; gcash: number; total: number };
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -321,16 +319,7 @@ export function SellScreen({
 
       <div className="md:col-span-3">
         <div className="rounded-xl border border-hairline bg-canvas-soft p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-medium text-muted">Today&apos;s sales</h2>
-            {recentSales.length > 0 && (
-              <p className="text-xs text-muted">
-                Cash {formatCurrency(paymentBreakdown.cash)} · GCash{" "}
-                {formatCurrency(paymentBreakdown.gcash)} · Total{" "}
-                {formatCurrency(paymentBreakdown.total)}
-              </p>
-            )}
-          </div>
+          <h2 className="text-sm font-medium text-muted">Today&apos;s sales</h2>
           {recentSales.length === 0 ? (
             <p className="mt-2 text-sm text-muted">No sales yet today.</p>
           ) : (
