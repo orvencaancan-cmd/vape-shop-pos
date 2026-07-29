@@ -22,6 +22,7 @@ export async function AdminReportsPage({
 
   const {
     salesSummary,
+    paymentBreakdown,
     salesDetail,
     revenueProfit,
     bestSellers,
@@ -100,7 +101,9 @@ export async function AdminReportsPage({
 
       <Section title="Sales summary">
         <Stat label="Sales" value={salesSummary.count.toString()} />
-        <Stat label="Revenue" value={formatCurrency(salesSummary.revenue)} />
+        <Stat label="Cash" value={formatCurrency(paymentBreakdown.cash)} />
+        <Stat label="GCash" value={formatCurrency(paymentBreakdown.gcash)} />
+        <Stat label="Total" value={formatCurrency(salesSummary.revenue)} />
       </Section>
 
       <Section title="Sales detail">

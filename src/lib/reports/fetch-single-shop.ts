@@ -11,12 +11,14 @@ import {
   computeInventoryValue,
   computeSupplierActivity,
   computeStaffActivity,
+  computePaymentBreakdown,
   type SaleItemRow,
 } from "./compute";
 import { normalizeSaleItems, normalizeVariants, normalizeReceipts } from "./normalize";
 
 export type SingleShopReportData = {
   salesSummary: ReturnType<typeof computeSalesSummary>;
+  paymentBreakdown: ReturnType<typeof computePaymentBreakdown>;
   salesDetail: ReturnType<typeof computeSalesDetail>;
   revenueProfit: ReturnType<typeof computeRevenueProfit>;
   bestSellers: ReturnType<typeof computeBestSellers>;
@@ -92,6 +94,7 @@ export async function fetchSingleShopReportData(
 
   return {
     salesSummary: computeSalesSummary(sales ?? []),
+    paymentBreakdown: computePaymentBreakdown(sales ?? []),
     salesDetail: computeSalesDetail(sales ?? [], items),
     revenueProfit: computeRevenueProfit(items),
     bestSellers: computeBestSellers(items),

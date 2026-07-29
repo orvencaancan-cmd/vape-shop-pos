@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { computeLowStock, computeDailySeries, type VariantRow } from "@/lib/reports/compute";
+import {
+  computeLowStock,
+  computeDailySeries,
+  computePaymentBreakdown,
+  type VariantRow,
+} from "@/lib/reports/compute";
 import { formatCurrency } from "@/lib/currency";
 import { Card } from "@/components/ui/card";
 import { SalesChart } from "@/components/sales-chart";
@@ -28,7 +33,7 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
             .eq("shop_id", s.shopId),
           supabase
             .from("sales")
-            .select("total, created_at")
+            .select("total, payment_method, created_at")
             .eq("shop_id", s.shopId)
             .gte("created_at", chartWindowStart)
             .is("voided_at", null),
@@ -51,9 +56,11 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
       );
       const series = computeDailySeries(weekSales ?? [], 7);
       const todayRevenue = series[series.length - 1]?.revenue ?? 0;
-      const todayCount = (weekSales ?? []).filter(
+      const todaySales = (weekSales ?? []).filter(
         (sale) => sale.created_at.slice(0, 10) === series[series.length - 1]?.date,
-      ).length;
+      );
+      const todayCount = todaySales.length;
+      const todayBreakdown = computePaymentBreakdown(todaySales);
 
       const staffNames = (staff ?? []).map(
         (m) => m.display_name || emailByUserId.get(m.user_id) || "Unnamed",
@@ -81,6 +88,7 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
         todayRevenue,
         todayCount,
         series,
+        todayBreakdown,
         lowStock,
         staffNames,
         lastAuditCompletedAt: (lastAudit?.completed_at as string | undefined) ?? null,
@@ -108,6 +116,10 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
                   </p>
                   <p className="text-xs text-muted">
                     {c.todayCount} sale{c.todayCount === 1 ? "" : "s"}
+                  </p>
+                  <p className="text-xs text-muted">
+                    Cash {formatCurrency(c.todayBreakdown.cash)} · GCash{" "}
+                    {formatCurrency(c.todayBreakdown.gcash)}
                   </p>
                 </div>
 

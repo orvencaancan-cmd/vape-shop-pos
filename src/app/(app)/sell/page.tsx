@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
+import { computePaymentBreakdown } from "@/lib/reports/compute";
 import { SellScreen } from "./sell-screen";
 
 export default async function SellPage() {
@@ -114,12 +115,18 @@ export default async function SellPage() {
     };
   });
 
+  const paymentBreakdown = computePaymentBreakdown(
+    recentSales
+      .filter((s) => !s.voidedAt)
+      .map((s) => ({ total: s.total, payment_method: s.paymentMethod })),
+  );
+
   return (
     <main className="animate-fade-in-up">
       <div className="mx-auto max-w-5xl px-4 pt-6">
         <h1 className="heading text-2xl">{profile.shop.name} — Sales</h1>
       </div>
-      <SellScreen variants={items} recentSales={recentSales} />
+      <SellScreen variants={items} recentSales={recentSales} paymentBreakdown={paymentBreakdown} />
     </main>
   );
 }

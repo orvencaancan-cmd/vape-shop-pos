@@ -3,7 +3,12 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { computeLowStock, computeDailySeries, type VariantRow } from "@/lib/reports/compute";
+import {
+  computeLowStock,
+  computeDailySeries,
+  computePaymentBreakdown,
+  type VariantRow,
+} from "@/lib/reports/compute";
 import { formatCurrency } from "@/lib/currency";
 import { hasBillingAccess, statusLabel } from "@/lib/billing-status";
 import { Card } from "@/components/ui/card";
@@ -49,7 +54,7 @@ export default async function DashboardPage({
         .limit(10),
       supabase
         .from("sales")
-        .select("total, created_at")
+        .select("total, payment_method, created_at")
         .eq("shop_id", profile.shopId)
         .gte("created_at", chartWindowStart)
         .is("voided_at", null),
@@ -100,9 +105,11 @@ export default async function DashboardPage({
     (sum, d) => sum + d.revenue,
     0,
   );
-  const todayCount = (chartSales ?? []).filter(
+  const todaySales = (chartSales ?? []).filter(
     (s) => s.created_at.slice(0, 10) === series[series.length - 1]?.date,
-  ).length;
+  );
+  const todayCount = todaySales.length;
+  const todayBreakdown = computePaymentBreakdown(todaySales);
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
@@ -142,6 +149,9 @@ export default async function DashboardPage({
             <p className="text-xs text-muted">Today</p>
             <p className="mt-1 text-lg font-semibold text-ink">{formatCurrency(todayRevenue)}</p>
             <p className="text-xs text-muted">{todayCount} sale{todayCount === 1 ? "" : "s"}</p>
+            <p className="text-xs text-muted">
+              Cash {formatCurrency(todayBreakdown.cash)} · GCash {formatCurrency(todayBreakdown.gcash)}
+            </p>
           </Card>
         </Link>
         <Link href="/reports?range=7d" className="block">
