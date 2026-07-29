@@ -66,9 +66,9 @@ export default async function AppLayout({
       }
     >
       <header className="border-b border-hairline bg-canvas">
-        <div className="relative flex h-16 items-center justify-center border-b border-hairline bg-canvas-soft px-4 sm:h-20">
-          <VapeStockLogo className="absolute left-4 text-sm sm:text-base" />
-          <div className="flex max-w-[55%] items-center gap-2 sm:max-w-[60%]">
+        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-hairline bg-canvas-soft px-4 py-3 sm:py-4">
+          <VapeStockLogo className="text-sm sm:text-base" />
+          <div className="flex min-w-0 items-center justify-center gap-2">
             {profile.shop.logoUrl && !profile.inAdminOverview && !profile.shop.isPlatformShop && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -81,14 +81,14 @@ export default async function AppLayout({
               {profile.inAdminOverview ? (profile.displayName ?? "Admin") : profile.shop.name}
             </span>
           </div>
-          <div className="absolute right-4 flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {profile.ownedShopCount > 1 && !profile.inAdminOverview && !profile.shop.isPlatformShop && (
               <form action={backToAdminAction}>
                 <button
                   type="submit"
-                  className="text-sm text-muted transition-colors hover:text-ink"
+                  className="whitespace-nowrap text-sm text-muted transition-colors hover:text-ink"
                 >
-                  ← Back to Admin
+                  <span className="hidden sm:inline">← Back to </span>Admin
                 </button>
               </form>
             )}
@@ -96,7 +96,7 @@ export default async function AppLayout({
             <form action={signOutAction}>
               <button
                 type="submit"
-                className="text-sm text-muted transition-colors hover:text-ink"
+                className="whitespace-nowrap text-sm text-muted transition-colors hover:text-ink"
               >
                 Log out
               </button>

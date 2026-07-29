@@ -18,12 +18,25 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     return "image/png";
   })();
 
+  // Chrome's Android installability check requires an actual raster icon
+  // (PNG/JPG/WebP) with explicit "192x192" and "512x512" sizes -- an
+  // SVG-only icon with sizes="any" doesn't satisfy it, which silently
+  // blocks "Add to Home Screen" from producing a real installed app.
   const icons: MetadataRoute.Manifest["icons"] = profile?.shop.logoUrl
     ? [
         { src: profile.shop.logoUrl, sizes: "192x192", type: logoType },
         { src: profile.shop.logoUrl, sizes: "512x512", type: logoType },
       ]
-    : [{ src: "/icon-default.svg", sizes: "any", type: "image/svg+xml" }];
+    : [
+        { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+        {
+          src: "/icon-512-maskable.png",
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "maskable",
+        },
+      ];
 
   return {
     name: `${name} — POS & Inventory`,
