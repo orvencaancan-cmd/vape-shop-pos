@@ -5,7 +5,7 @@ export default function SignUpPage() {
   return (
     <SplitAuthShell
       heading="Start your free trial"
-      subtitle="14 days free, no charge until it ends."
+      subtitle="14 days free, no card required to start."
     >
       <SignUpForm />
     </SplitAuthShell>

@@ -42,6 +42,18 @@ export function SignUpForm() {
         {pending ? "Creating account…" : "Start free trial"}
       </Button>
 
+      <p className="text-center text-xs text-muted">
+        By creating an account, you agree to our{" "}
+        <Link href="/terms" className="text-primary underline underline-offset-2">
+          Terms of Service
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="text-primary underline underline-offset-2">
+          Privacy Policy
+        </Link>
+        .
+      </p>
+
       <p className="text-sm text-muted">
         Already have an account?{" "}
         <Link href="/login" className="text-primary underline underline-offset-2">
