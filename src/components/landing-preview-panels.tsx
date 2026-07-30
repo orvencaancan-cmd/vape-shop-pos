@@ -1,19 +1,32 @@
-"use client";
-
-import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { Stat } from "@/components/ui/stat";
 import { SalesChart } from "@/components/sales-chart";
 import { formatCurrency } from "@/lib/currency";
 
-const TABS = ["sell", "dashboard", "reports", "inventory"] as const;
-type Tab = (typeof TABS)[number];
+export type SlideKey = "sell" | "inventory" | "reports" | "staff" | "dashboard";
 
-const TAB_LABELS: Record<Tab, string> = {
-  sell: "Sales",
-  dashboard: "Dashboard",
-  reports: "Reports",
-  inventory: "Inventory",
-};
+export const SLIDES: { key: SlideKey; tabLabel: string; word: string; headline2: string }[] = [
+  { key: "sell", tabLabel: "Sales", word: "sales.", headline2: "Ring up sales in seconds." },
+  {
+    key: "inventory",
+    tabLabel: "Inventory",
+    word: "stock.",
+    headline2: "See what's low before you run out.",
+  },
+  {
+    key: "reports",
+    tabLabel: "Reports",
+    word: "profit.",
+    headline2: "Know your best sellers, instantly.",
+  },
+  { key: "staff", tabLabel: "Staff", word: "team.", headline2: "Give staff safe, limited access." },
+  {
+    key: "dashboard",
+    tabLabel: "Dashboard",
+    word: "business.",
+    headline2: "Everything at a glance, every day.",
+  },
+];
 
 const WEEK_DATA = [
   { date: "2026-07-23", revenue: 3200 },
@@ -25,19 +38,17 @@ const WEEK_DATA = [
   { date: "2026-07-29", revenue: 6200 },
 ];
 
-export function LandingPreview() {
-  const [tab, setTab] = useState<Tab>("sell");
-  const [userSelected, setUserSelected] = useState(false);
-
-  useEffect(() => {
-    if (userSelected) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const id = setInterval(() => {
-      setTab((current) => TABS[(TABS.indexOf(current) + 1) % TABS.length]);
-    }, 4200);
-    return () => clearInterval(id);
-  }, [userSelected]);
-
+export function PreviewShell({
+  tabs,
+  activeKey,
+  onSelect,
+  children,
+}: {
+  tabs: { key: SlideKey; tabLabel: string }[];
+  activeKey: SlideKey;
+  onSelect: (key: SlideKey) => void;
+  children: ReactNode;
+}) {
   return (
     <div className="overflow-hidden rounded-2xl border border-hairline bg-canvas-soft shadow-sm">
       <div className="flex items-center gap-2 border-b border-hairline bg-canvas-strong px-3.5 py-2.5">
@@ -49,35 +60,27 @@ export function LandingPreview() {
         </span>
       </div>
 
-      <div className="flex gap-1 bg-canvas-soft px-3 pt-2.5">
-        {TABS.map((t) => (
+      <div className="flex gap-1 overflow-x-auto bg-canvas-soft px-3 pt-2.5">
+        {tabs.map((t) => (
           <button
-            key={t}
+            key={t.key}
             type="button"
-            onClick={() => {
-              setTab(t);
-              setUserSelected(true);
-            }}
-            className={`rounded-t-lg px-3.5 py-2 text-sm font-semibold transition-colors ${
-              tab === t ? "bg-canvas text-primary" : "text-muted hover:text-ink"
+            onClick={() => onSelect(t.key)}
+            className={`shrink-0 rounded-t-lg px-3.5 py-2 text-sm font-semibold transition-colors ${
+              activeKey === t.key ? "bg-canvas text-primary" : "text-muted hover:text-ink"
             }`}
           >
-            {TAB_LABELS[t]}
+            {t.tabLabel}
           </button>
         ))}
       </div>
 
-      <div className="min-h-[380px] bg-canvas p-5">
-        {tab === "sell" && <SellPreview />}
-        {tab === "dashboard" && <DashboardPreview />}
-        {tab === "reports" && <ReportsPreview />}
-        {tab === "inventory" && <InventoryPreview />}
-      </div>
+      <div className="min-h-[380px] bg-canvas p-5">{children}</div>
     </div>
   );
 }
 
-function SellPreview() {
+export function SellPreview() {
   return (
     <div className="animate-fade-in-up">
       <div className="rounded-lg border border-hairline bg-canvas-soft px-3 py-2 text-sm text-muted">
@@ -123,7 +126,7 @@ function SellPreview() {
   );
 }
 
-function DashboardPreview() {
+export function DashboardPreview() {
   const weekTotal = WEEK_DATA.reduce((sum, d) => sum + d.revenue, 0);
   return (
     <div className="animate-fade-in-up">
@@ -152,7 +155,7 @@ function DashboardPreview() {
   );
 }
 
-function ReportsPreview() {
+export function ReportsPreview() {
   const rows: [string, string, string][] = [
     ["Blue Razz — Blue Razz Ice", "24 sold", formatCurrency(360)],
     ["Lava Flow — 3mg · 60ml", "19 sold", formatCurrency(418)],
@@ -184,7 +187,7 @@ function ReportsPreview() {
   );
 }
 
-function InventoryPreview() {
+export function InventoryPreview() {
   return (
     <div className="animate-fade-in-up flex flex-col gap-3">
       <div className="rounded-xl border border-hairline bg-canvas-soft p-4">
@@ -214,3 +217,47 @@ function InventoryPreview() {
     </div>
   );
 }
+
+export function StaffPreview() {
+  return (
+    <div className="animate-fade-in-up flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-ink">Staff</p>
+        <span className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-on-primary">
+          Invite staff
+        </span>
+      </div>
+      <div className="rounded-xl border border-hairline bg-canvas-soft p-4">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-ink">Jamie Rivera</span>
+          <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
+            Owner
+          </span>
+        </div>
+        <div className="mt-2 flex items-center justify-between border-t border-hairline pt-2 text-sm">
+          <span className="text-ink">Alex Cruz</span>
+          <span className="rounded-full bg-canvas-strong px-2 py-0.5 text-xs font-medium text-body">
+            Staff
+          </span>
+        </div>
+        <div className="mt-2 flex items-center justify-between border-t border-hairline pt-2 text-sm">
+          <span className="text-ink">Sam Torres</span>
+          <span className="rounded-full bg-canvas-strong px-2 py-0.5 text-xs font-medium text-body">
+            Staff
+          </span>
+        </div>
+      </div>
+      <div className="rounded-xl border border-hairline bg-canvas-soft p-4 text-xs text-muted">
+        Staff can sell and restock — they can&apos;t see prices, reports, or billing.
+      </div>
+    </div>
+  );
+}
+
+export const PANEL_COMPONENTS: Record<SlideKey, () => React.JSX.Element> = {
+  sell: SellPreview,
+  inventory: InventoryPreview,
+  reports: ReportsPreview,
+  staff: StaffPreview,
+  dashboard: DashboardPreview,
+};

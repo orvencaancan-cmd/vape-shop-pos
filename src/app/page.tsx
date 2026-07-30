@@ -4,8 +4,7 @@ import { getPriceLabels } from "@/lib/stripe-prices";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { LandingPreview } from "@/components/landing-preview";
-import { RotatingWord } from "@/components/rotating-word";
+import { HeroSection } from "@/components/hero-section";
 import { VapeStockLogo } from "@/components/vapestock-logo";
 import { AuthHashRedirect } from "@/components/auth-hash-redirect";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
@@ -86,45 +85,7 @@ export default async function Home({
       </header>
 
       <main className="flex-1">
-        <section className="mx-auto grid max-w-5xl gap-10 px-4 py-16 sm:py-24 lg:grid-cols-[1.1fr_1fr] lg:items-center">
-          <div>
-            <p className="animate-fade-in-up flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-              <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
-              Built for vape shops
-            </p>
-            <h1 className="animate-fade-in-up heading mt-3 text-4xl sm:text-6xl">
-              Track your <RotatingWord words={["sales.", "stock.", "profit."]} />
-              <br />
-              Ring up sales in seconds.
-            </h1>
-            <p
-              className="animate-fade-in-up mt-5 max-w-xl text-lg text-body"
-              style={{ animationDelay: "80ms" }}
-            >
-              Track e-juice flavors, nicotine strengths, and sizes, ring up sales
-              that deduct stock automatically, and see what&apos;s low — from
-              your phone or your computer.
-            </p>
-            <div
-              className="animate-fade-in-up mt-8 flex gap-3"
-              style={{ animationDelay: "160ms" }}
-            >
-              <Link href="/signup" className={buttonClasses("primary", "md")}>
-                Start your free trial
-              </Link>
-              <Link href="/login" className={buttonClasses("secondary", "md")}>
-                Log in
-              </Link>
-            </div>
-            <p className="animate-fade-in-up mt-4 text-sm text-muted" style={{ animationDelay: "160ms" }}>
-              14 days free · no card required to start
-            </p>
-          </div>
-
-          <div className="animate-fade-in-up" style={{ animationDelay: "120ms" }}>
-            <LandingPreview />
-          </div>
-        </section>
+        <HeroSection />
 
         <section className="border-t border-hairline bg-canvas-soft px-4 py-20 sm:py-28">
           <div className="mx-auto max-w-5xl">
