@@ -9,6 +9,8 @@ export type SaleResult = { error?: string; saleId?: string };
 export async function recordSaleAction(
   cart: { variantId: string; quantity: number }[],
   paymentMethod: "cash" | "gcash",
+  discountAmount: number,
+  discountReason: string | null,
 ): Promise<SaleResult> {
   if (cart.length === 0) {
     return { error: "Cart is empty" };
@@ -25,6 +27,8 @@ export async function recordSaleAction(
       quantity: item.quantity,
     })),
     p_payment_method: paymentMethod,
+    p_discount_amount: discountAmount,
+    p_discount_reason: discountReason,
   });
   if (error) return { error: error.message };
 

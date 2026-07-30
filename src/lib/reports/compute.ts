@@ -75,6 +75,25 @@ export function computePaymentBreakdown(sales: { total: number; payment_method: 
   return { cash, gcash, total: cash + gcash };
 }
 
+export function computeDiscounts(sales: { discount_amount: number }[]) {
+  return { total: sales.reduce((sum, s) => sum + Number(s.discount_amount), 0) };
+}
+
+export function computeExpenseSummary(expenses: { amount: number }[]) {
+  return {
+    total: expenses.reduce((sum, e) => sum + Number(e.amount), 0),
+    count: expenses.length,
+  };
+}
+
+export type ExpenseRow = {
+  id: string;
+  amount: number;
+  category: string;
+  note: string | null;
+  createdAt: string;
+};
+
 export type SaleDetail = {
   saleId: string;
   createdAt: string;

@@ -22,6 +22,7 @@ type SalesSideReportData = Pick<
   SingleShopReportData,
   | "salesSummary"
   | "paymentBreakdown"
+  | "discounts"
   | "salesDetail"
   | "revenueProfit"
   | "bestSellers"
@@ -29,6 +30,8 @@ type SalesSideReportData = Pick<
   | "byNicotine"
   | "supplierActivity"
   | "staffActivity"
+  | "expenses"
+  | "expenseSummary"
 >;
 
 function formatRangeLabel(from: Date, to: Date): string {
@@ -102,8 +105,17 @@ function addSalesSheets(wb: ExcelJS.Workbook, data: SalesSideReportData) {
 
   addKeyValueSheet(wb, "Revenue & Profit", [
     ["Revenue", data.revenueProfit.revenue, "currency"],
+    ["Discounts", data.discounts.total, "currency"],
     ["Cost of goods", data.revenueProfit.cost, "currency"],
-    ["Profit", data.revenueProfit.profit, "currency"],
+    ["Expenses", data.expenseSummary.total, "currency"],
+    [
+      "Profit",
+      data.revenueProfit.revenue -
+        data.discounts.total -
+        data.revenueProfit.cost -
+        data.expenseSummary.total,
+      "currency",
+    ],
   ]);
 
   addTableSheet(
@@ -158,6 +170,23 @@ function addSalesSheets(wb: ExcelJS.Workbook, data: SalesSideReportData) {
       { header: "Cost", width: 16, numFmt: CURRENCY_FMT },
     ],
     data.supplierActivity.map((s) => [s.name, s.quantity, s.cost]),
+  );
+
+  addTableSheet(
+    wb,
+    "Expenses",
+    [
+      { header: "Date", width: 14 },
+      { header: "Category", width: 22 },
+      { header: "Note", width: 30 },
+      { header: "Amount", width: 16, numFmt: CURRENCY_FMT },
+    ],
+    data.expenses.map((e) => [
+      new Date(e.createdAt).toLocaleDateString(),
+      e.category,
+      e.note ?? "",
+      e.amount,
+    ]),
   );
 
   addTableSheet(

@@ -23,6 +23,7 @@ export async function AdminReportsPage({
   const {
     salesSummary,
     paymentBreakdown,
+    discounts,
     salesDetail,
     revenueProfit,
     bestSellers,
@@ -31,6 +32,8 @@ export async function AdminReportsPage({
     supplierActivity,
     staffActivity,
     inventoryPerBranch,
+    expenses,
+    expenseSummary,
   } = await fetchAdminReportData(supabase, ownedShops, selectedBranch, range);
 
   const exportQuery = new URLSearchParams(
@@ -112,8 +115,15 @@ export async function AdminReportsPage({
 
       <Section title="Revenue & profit">
         <Stat label="Revenue" value={formatCurrency(revenueProfit.revenue)} />
+        <Stat label="Discounts" value={formatCurrency(discounts.total)} />
         <Stat label="Cost of goods" value={formatCurrency(revenueProfit.cost)} />
-        <Stat label="Profit" value={formatCurrency(revenueProfit.profit)} />
+        <Stat label="Expenses" value={formatCurrency(expenseSummary.total)} />
+        <Stat
+          label="Profit"
+          value={formatCurrency(
+            revenueProfit.revenue - discounts.total - revenueProfit.cost - expenseSummary.total,
+          )}
+        />
       </Section>
 
       <Section title="Best sellers">
@@ -151,6 +161,20 @@ export async function AdminReportsPage({
               s.name,
               `${s.quantity} received`,
               formatCurrency(s.cost),
+            ])}
+          />
+        )}
+      </Section>
+
+      <Section title="Expenses">
+        {expenses.length === 0 ? (
+          <Empty />
+        ) : (
+          <Table
+            rows={expenses.map((e) => [
+              new Date(e.createdAt).toLocaleDateString(),
+              e.category + (e.note ? ` — ${e.note}` : ""),
+              formatCurrency(e.amount),
             ])}
           />
         )}

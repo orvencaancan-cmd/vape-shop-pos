@@ -19,6 +19,8 @@ type RecentSale = {
   id: string;
   total: number;
   paymentMethod: "cash" | "gcash";
+  discountAmount: number;
+  discountReason: string | null;
   createdAt: string;
   createdByName: string | null;
   voidedAt: string | null;
@@ -46,6 +48,9 @@ export function SellScreen({
   const [category, setCategory] = useState<"all" | "ejuice" | "accessory">("all");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "gcash">("cash");
+  const [discountMode, setDiscountMode] = useState<"amount" | "percent">("amount");
+  const [discountValue, setDiscountValue] = useState("");
+  const [discountReason, setDiscountReason] = useState("");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(
     null,
   );
@@ -123,21 +128,35 @@ export function SellScreen({
     setCart((prev) => prev.filter((l) => l.variantId !== variantId));
   }
 
-  const total = cart.reduce((sum, l) => {
+  const subtotal = cart.reduce((sum, l) => {
     const v = variantsById.get(l.variantId);
     return sum + (v ? v.price * l.quantity : 0);
   }, 0);
 
+  const discountValueNum = Number(discountValue) || 0;
+  const discountAmount =
+    discountMode === "percent"
+      ? Math.min(subtotal, Math.round(subtotal * (discountValueNum / 100) * 100) / 100)
+      : Math.min(subtotal, discountValueNum);
+  const total = Math.max(0, subtotal - discountAmount);
+
   function completeSale() {
     setMessage(null);
     startTransition(async () => {
-      const result = await recordSaleAction(cart, paymentMethod);
+      const result = await recordSaleAction(
+        cart,
+        paymentMethod,
+        discountAmount,
+        discountReason.trim() || null,
+      );
       if (result.error) {
         setMessage({ type: "error", text: result.error });
       } else {
         setMessage({ type: "success", text: `Sale recorded — ${formatCurrency(total)}` });
         setCart([]);
         setPaymentMethod("cash");
+        setDiscountValue("");
+        setDiscountReason("");
         router.refresh();
       }
     });
@@ -278,7 +297,55 @@ export function SellScreen({
         </div>
 
         <div className="mt-4 border-t border-hairline pt-3">
-          <div className="flex items-center justify-between text-sm font-medium text-ink">
+          <div className="flex items-center justify-between text-sm text-body">
+            <span>Subtotal</span>
+            <span>{formatCurrency(subtotal)}</span>
+          </div>
+
+          <div className="mt-2 flex items-center gap-2">
+            {(["amount", "percent"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setDiscountMode(mode)}
+                className={`rounded-lg px-2.5 py-1 text-xs transition-colors ${
+                  discountMode === mode
+                    ? "bg-primary text-on-primary"
+                    : "bg-canvas-strong text-body hover:text-ink"
+                }`}
+              >
+                {mode === "amount" ? "₱" : "%"}
+              </button>
+            ))}
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              max={discountMode === "percent" ? 100 : undefined}
+              placeholder="Discount"
+              value={discountValue}
+              onChange={(e) => setDiscountValue(e.target.value)}
+              className="w-24 rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+            />
+          </div>
+
+          {discountAmount > 0 && (
+            <>
+              <div className="mt-2 flex items-center justify-between text-sm text-warning">
+                <span>Discount</span>
+                <span>−{formatCurrency(discountAmount)}</span>
+              </div>
+              <input
+                type="text"
+                placeholder="Reason (optional)"
+                value={discountReason}
+                onChange={(e) => setDiscountReason(e.target.value)}
+                className="mt-2 w-full rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+              />
+            </>
+          )}
+
+          <div className="mt-3 flex items-center justify-between border-t border-hairline pt-3 text-sm font-medium text-ink">
             <span>Total</span>
             <span>{formatCurrency(total)}</span>
           </div>
@@ -334,6 +401,14 @@ export function SellScreen({
                       <span className="ml-2 rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-body">
                         {PAYMENT_LABELS[s.paymentMethod]}
                       </span>
+                      {s.discountAmount > 0 && (
+                        <span
+                          className="ml-2 rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-warning"
+                          title={s.discountReason ?? undefined}
+                        >
+                          −{formatCurrency(s.discountAmount)} off
+                        </span>
+                      )}
                       {s.createdByName && (
                         <span className="ml-2 text-xs text-muted">{s.createdByName}</span>
                       )}

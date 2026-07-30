@@ -13,7 +13,10 @@ import {
   computeSupplierActivity,
   computeStaffActivity,
   computePaymentBreakdown,
+  computeDiscounts,
+  computeExpenseSummary,
   type SaleItemRow,
+  type ExpenseRow,
 } from "./compute";
 import { normalizeSaleItems, normalizeVariants, normalizeReceipts } from "./normalize";
 
@@ -35,6 +38,7 @@ export type BranchInventory = {
 export type AdminReportData = {
   salesSummary: ReturnType<typeof computeSalesSummary>;
   paymentBreakdown: ReturnType<typeof computePaymentBreakdown>;
+  discounts: ReturnType<typeof computeDiscounts>;
   salesDetail: ReturnType<typeof computeSalesDetail>;
   revenueProfit: ReturnType<typeof computeRevenueProfit>;
   bestSellers: ReturnType<typeof computeBestSellers>;
@@ -43,6 +47,8 @@ export type AdminReportData = {
   supplierActivity: ReturnType<typeof computeSupplierActivity>;
   staffActivity: ReturnType<typeof computeStaffActivity>;
   inventoryPerBranch: BranchInventory[];
+  expenses: ExpenseRow[];
+  expenseSummary: ReturnType<typeof computeExpenseSummary>;
 };
 
 export async function fetchAdminReportData(
@@ -61,7 +67,7 @@ export async function fetchAdminReportData(
     salesShopIds.map(async (shopId) => {
       const { data: sales } = await supabase
         .from("sales")
-        .select("id, total, payment_method, created_at")
+        .select("id, total, payment_method, discount_amount, created_at")
         .eq("shop_id", shopId)
         .gte("created_at", from.toISOString())
         .lt("created_at", to.toISOString())
@@ -90,11 +96,19 @@ export async function fetchAdminReportData(
         .eq("shop_id", shopId)
         .gte("created_at", from.toISOString())
         .lt("created_at", to.toISOString());
+      const { data: expenseRows } = await supabase
+        .from("expenses")
+        .select("id, amount, category, note, created_at")
+        .eq("shop_id", shopId)
+        .gte("created_at", from.toISOString())
+        .lt("created_at", to.toISOString())
+        .order("created_at", { ascending: false });
       return {
         sales: sales ?? [],
         saleItems: saleItems ?? [],
         receipts: receipts ?? [],
         staffSales: staffSales ?? [],
+        expenses: expenseRows ?? [],
       };
     }),
   );
@@ -103,6 +117,15 @@ export async function fetchAdminReportData(
   const items = normalizeSaleItems(salesPerShop.flatMap((r) => r.saleItems));
   const receiptRows = normalizeReceipts(salesPerShop.flatMap((r) => r.receipts));
   const staffSales = salesPerShop.flatMap((r) => r.staffSales);
+  const expenses: ExpenseRow[] = salesPerShop.flatMap((r) =>
+    r.expenses.map((e) => ({
+      id: e.id,
+      amount: Number(e.amount),
+      category: e.category,
+      note: e.note,
+      createdAt: e.created_at,
+    })),
+  );
 
   const { data: staffProfiles } = await supabase
     .from("profiles")
@@ -160,6 +183,7 @@ export async function fetchAdminReportData(
   return {
     salesSummary: computeSalesSummary(sales),
     paymentBreakdown: computePaymentBreakdown(sales),
+    discounts: computeDiscounts(sales),
     salesDetail: computeSalesDetail(sales, items),
     revenueProfit: computeRevenueProfit(items),
     bestSellers: computeBestSellers(items),
@@ -168,5 +192,7 @@ export async function fetchAdminReportData(
     supplierActivity: computeSupplierActivity(receiptRows),
     staffActivity: computeStaffActivity(staffSales, staffProfiles ?? []),
     inventoryPerBranch,
+    expenses,
+    expenseSummary: computeExpenseSummary(expenses),
   };
 }

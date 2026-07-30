@@ -31,6 +31,7 @@ export default async function ReportsPage({
   const {
     salesSummary,
     paymentBreakdown,
+    discounts,
     salesDetail,
     revenueProfit,
     bestSellers,
@@ -41,6 +42,8 @@ export default async function ReportsPage({
     inventoryValue,
     supplierActivity,
     staffActivity,
+    expenses,
+    expenseSummary,
   } = await fetchSingleShopReportData(supabase, profile.shopId, range);
 
   const exportQuery = new URLSearchParams(
@@ -97,8 +100,15 @@ export default async function ReportsPage({
 
       <Section title="Revenue & profit">
         <Stat label="Revenue" value={formatCurrency(revenueProfit.revenue)} />
+        <Stat label="Discounts" value={formatCurrency(discounts.total)} />
         <Stat label="Cost of goods" value={formatCurrency(revenueProfit.cost)} />
-        <Stat label="Profit" value={formatCurrency(revenueProfit.profit)} />
+        <Stat label="Expenses" value={formatCurrency(expenseSummary.total)} />
+        <Stat
+          label="Profit"
+          value={formatCurrency(
+            revenueProfit.revenue - discounts.total - revenueProfit.cost - expenseSummary.total,
+          )}
+        />
       </Section>
 
       <Section title="Best sellers">
@@ -171,6 +181,20 @@ export default async function ReportsPage({
               s.name,
               `${s.quantity} received`,
               formatCurrency(s.cost),
+            ])}
+          />
+        )}
+      </Section>
+
+      <Section title="Expenses">
+        {expenses.length === 0 ? (
+          <Empty />
+        ) : (
+          <Table
+            rows={expenses.map((e) => [
+              new Date(e.createdAt).toLocaleDateString(),
+              e.category + (e.note ? ` — ${e.note}` : ""),
+              formatCurrency(e.amount),
             ])}
           />
         )}

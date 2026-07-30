@@ -58,7 +58,7 @@ export default async function SellPage() {
   const { data: recentSalesRaw } = await supabase
     .from("sales")
     .select(
-      "id, total, payment_method, created_at, created_by, voided_at, profiles!sales_created_by_fkey(display_name)",
+      "id, total, payment_method, discount_amount, discount_reason, created_at, created_by, voided_at, profiles!sales_created_by_fkey(display_name)",
     )
     .eq("shop_id", profile.shopId)
     .gte("created_at", todayStart.toISOString())
@@ -109,6 +109,8 @@ export default async function SellPage() {
       id: s.id as string,
       total: Number(s.total),
       paymentMethod: s.payment_method as "cash" | "gcash",
+      discountAmount: Number(s.discount_amount),
+      discountReason: s.discount_reason as string | null,
       createdAt: s.created_at as string,
       createdByName: (creator?.display_name as string | null) ?? null,
       voidedAt: s.voided_at as string | null,

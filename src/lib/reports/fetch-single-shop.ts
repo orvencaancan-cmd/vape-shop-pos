@@ -12,13 +12,17 @@ import {
   computeSupplierActivity,
   computeStaffActivity,
   computePaymentBreakdown,
+  computeDiscounts,
+  computeExpenseSummary,
   type SaleItemRow,
+  type ExpenseRow,
 } from "./compute";
 import { normalizeSaleItems, normalizeVariants, normalizeReceipts } from "./normalize";
 
 export type SingleShopReportData = {
   salesSummary: ReturnType<typeof computeSalesSummary>;
   paymentBreakdown: ReturnType<typeof computePaymentBreakdown>;
+  discounts: ReturnType<typeof computeDiscounts>;
   salesDetail: ReturnType<typeof computeSalesDetail>;
   revenueProfit: ReturnType<typeof computeRevenueProfit>;
   bestSellers: ReturnType<typeof computeBestSellers>;
@@ -29,6 +33,8 @@ export type SingleShopReportData = {
   inventoryValue: ReturnType<typeof computeInventoryValue>;
   supplierActivity: ReturnType<typeof computeSupplierActivity>;
   staffActivity: ReturnType<typeof computeStaffActivity>;
+  expenses: ExpenseRow[];
+  expenseSummary: ReturnType<typeof computeExpenseSummary>;
 };
 
 export async function fetchSingleShopReportData(
@@ -38,7 +44,7 @@ export async function fetchSingleShopReportData(
 ): Promise<SingleShopReportData> {
   const { data: sales } = await supabase
     .from("sales")
-    .select("id, total, payment_method, created_at")
+    .select("id, total, payment_method, discount_amount, created_at")
     .eq("shop_id", shopId)
     .gte("created_at", from.toISOString())
     .lt("created_at", to.toISOString())
@@ -86,6 +92,22 @@ export async function fetchSingleShopReportData(
   // to, so no cross-tenant data is exposed by dropping the filter.
   const { data: staffProfiles } = await supabase.from("profiles").select("id, display_name");
 
+  const { data: expenseRows } = await supabase
+    .from("expenses")
+    .select("id, amount, category, note, created_at")
+    .eq("shop_id", shopId)
+    .gte("created_at", from.toISOString())
+    .lt("created_at", to.toISOString())
+    .order("created_at", { ascending: false });
+
+  const expenses: ExpenseRow[] = (expenseRows ?? []).map((e) => ({
+    id: e.id,
+    amount: Number(e.amount),
+    category: e.category,
+    note: e.note,
+    createdAt: e.created_at,
+  }));
+
   const items = normalizeSaleItems(saleItems ?? []);
   const variantRows = normalizeVariants(variants ?? []);
   const receiptRows = normalizeReceipts(receipts ?? []);
@@ -95,6 +117,7 @@ export async function fetchSingleShopReportData(
   return {
     salesSummary: computeSalesSummary(sales ?? []),
     paymentBreakdown: computePaymentBreakdown(sales ?? []),
+    discounts: computeDiscounts(sales ?? []),
     salesDetail: computeSalesDetail(sales ?? [], items),
     revenueProfit: computeRevenueProfit(items),
     bestSellers: computeBestSellers(items),
@@ -105,5 +128,7 @@ export async function fetchSingleShopReportData(
     inventoryValue: computeInventoryValue(variantRows),
     supplierActivity: computeSupplierActivity(receiptRows),
     staffActivity: computeStaffActivity(staffSales ?? [], staffProfiles ?? []),
+    expenses,
+    expenseSummary: computeExpenseSummary(expenses),
   };
 }
