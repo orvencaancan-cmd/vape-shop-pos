@@ -156,9 +156,17 @@ export default async function Home({
 
       <footer className="border-t border-hairline bg-canvas-soft py-6 text-center text-xs text-muted">
         <p>VapeStock</p>
-        <Link href="/contact" className="mt-1 inline-block hover:text-ink">
-          Contact us
-        </Link>
+        <div className="mt-1 flex items-center justify-center gap-3">
+          <Link href="/contact" className="hover:text-ink">
+            Contact us
+          </Link>
+          <Link href="/terms" className="hover:text-ink">
+            Terms of Service
+          </Link>
+          <Link href="/privacy" className="hover:text-ink">
+            Privacy Policy
+          </Link>
+        </div>
       </footer>
     </div>
   );
