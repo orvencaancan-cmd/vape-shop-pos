@@ -4,7 +4,8 @@ import { getPriceLabels } from "@/lib/stripe-prices";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { FeaturePanel } from "@/components/feature-panel";
+import { LandingPreview } from "@/components/landing-preview";
+import { RotatingWord } from "@/components/rotating-word";
 import { VapeStockLogo } from "@/components/vapestock-logo";
 import { AuthHashRedirect } from "@/components/auth-hash-redirect";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
@@ -87,8 +88,14 @@ export default async function Home({
       <main className="flex-1">
         <section className="mx-auto grid max-w-5xl gap-10 px-4 py-16 sm:py-24 lg:grid-cols-[1.1fr_1fr] lg:items-center">
           <div>
-            <h1 className="animate-fade-in-up heading text-4xl sm:text-6xl">
-              POS &amp; inventory built for vape shops
+            <p className="animate-fade-in-up flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+              <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
+              Built for vape shops
+            </p>
+            <h1 className="animate-fade-in-up heading mt-3 text-4xl sm:text-6xl">
+              Track your <RotatingWord words={["sales.", "stock.", "profit."]} />
+              <br />
+              Ring up sales in seconds.
             </h1>
             <p
               className="animate-fade-in-up mt-5 max-w-xl text-lg text-body"
@@ -109,11 +116,13 @@ export default async function Home({
                 Log in
               </Link>
             </div>
+            <p className="animate-fade-in-up mt-4 text-sm text-muted" style={{ animationDelay: "160ms" }}>
+              14 days free · no card required to start
+            </p>
           </div>
 
           <div className="animate-fade-in-up" style={{ animationDelay: "120ms" }}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">What it does</p>
-            <FeaturePanel className="mt-4" />
+            <LandingPreview />
           </div>
         </section>
 
