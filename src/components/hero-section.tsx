@@ -14,7 +14,7 @@ import {
 // swap content while invisible, fade the new slide in over the second half
 // -- so headline word, headline second line, and the preview panel all
 // cross-fade in sync since they share one state.
-const TRANSITION_MS = 1500;
+const TRANSITION_MS = 1200;
 const DWELL_MS = 5500;
 
 export function HeroSection() {
@@ -74,7 +74,10 @@ export function HeroSection() {
               {slide.word}
             </span>
           </span>
-          <span className="block transition-opacity ease-in-out" style={fadeStyle}>
+          <span
+            className="mt-1 block text-2xl font-semibold text-body transition-opacity ease-in-out sm:text-3xl"
+            style={fadeStyle}
+          >
             {slide.headline2}
           </span>
         </h1>
