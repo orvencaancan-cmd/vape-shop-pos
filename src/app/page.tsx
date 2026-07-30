@@ -152,7 +152,10 @@ export default async function Home({
       </main>
 
       <footer className="border-t border-hairline bg-canvas-soft py-6 text-center text-xs text-muted">
-        VapeStock
+        <p>VapeStock</p>
+        <Link href="/contact" className="mt-1 inline-block hover:text-ink">
+          Contact us
+        </Link>
       </footer>
     </div>
   );
