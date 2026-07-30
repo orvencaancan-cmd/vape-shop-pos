@@ -71,6 +71,9 @@ export default async function Home({
           <VapeStockLogo className="text-xl" />
           <nav className="flex items-center gap-3 text-sm">
             <ThemeToggle />
+            <Link href="/contact" className="text-body hover:text-ink">
+              Contact
+            </Link>
             <Link href="/login" className="text-body hover:text-ink">
               Log in
             </Link>
