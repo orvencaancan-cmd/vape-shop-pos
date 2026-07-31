@@ -30,6 +30,7 @@ export type CurrentProfile = {
     name: string;
     subscriptionStatus: "trialing" | "active" | "past_due" | "canceled";
     trialEndsAt: string | null;
+    currentPeriodEnd: string | null;
     billingTier: "primary" | "additional";
     logoUrl: string | null;
     primaryColor: string | null;
@@ -58,7 +59,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   const { data: memberships } = await supabase
     .from("profiles")
     .select(
-      "id, shop_id, role, platform_admin, display_name, shops(id, name, subscription_status, trial_ends_at, billing_tier, logo_url, primary_color, suspended_at, archived_at, is_platform_shop)",
+      "id, shop_id, role, platform_admin, display_name, shops(id, name, subscription_status, trial_ends_at, current_period_end, billing_tier, logo_url, primary_color, suspended_at, archived_at, is_platform_shop)",
     )
     .eq("user_id", user.id)
     .order("created_at");
@@ -102,6 +103,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
       name: activeShop.name,
       subscriptionStatus: activeShop.subscription_status,
       trialEndsAt: activeShop.trial_ends_at,
+      currentPeriodEnd: activeShop.current_period_end,
       billingTier: activeShop.billing_tier,
       logoUrl: activeShop.logo_url,
       primaryColor: activeShop.primary_color,

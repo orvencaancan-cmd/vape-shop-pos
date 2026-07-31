@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { hasBillingAccess } from "@/lib/billing-status";
-import { getPriceLabels } from "@/lib/stripe-prices";
+import { TIER_AMOUNTS } from "@/lib/manual-payment";
 import { AuthCardShell } from "@/components/auth-card-shell";
 import { buttonClasses } from "@/components/ui/button";
-import { startSubscriptionAction } from "@/app/(app)/settings/billing/actions";
 
 export default async function BillingRequiredPage() {
   const profile = await getCurrentProfile();
@@ -27,9 +27,7 @@ export default async function BillingRequiredPage() {
     profile.shop.subscriptionStatus === "trialing"
       ? "Your trial has ended"
       : "Payment needs attention";
-  const prices = await getPriceLabels();
-  const priceLabel = profile.shop.billingTier === "additional" ? prices?.additional : prices?.primary;
-  const boundStartSubscription = startSubscriptionAction.bind(null, profile.shopId);
+  const amount = TIER_AMOUNTS[profile.shop.billingTier];
 
   return (
     <AuthCardShell
@@ -37,17 +35,14 @@ export default async function BillingRequiredPage() {
       subtitle={
         <>
           {profile.shop.name}&apos;s data is safe and waiting — you just need an active
-          subscription to keep using it.
-          {priceLabel && <> {priceLabel}.</>}
+          subscription to keep using it. ₱{amount.toFixed(2)} PHP / month.
         </>
       }
       showLogout
     >
-      <form action={boundStartSubscription}>
-        <button type="submit" className={`w-full ${buttonClasses("primary", "md")}`}>
-          Subscribe
-        </button>
-      </form>
+      <Link href="/settings/billing" className={`block w-full text-center ${buttonClasses("primary", "md")}`}>
+        Go to Billing
+      </Link>
     </AuthCardShell>
   );
 }

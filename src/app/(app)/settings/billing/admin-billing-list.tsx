@@ -1,28 +1,33 @@
 import { createClient } from "@/lib/supabase/server";
-import { openBillingPortalAction, startSubscriptionAction } from "./actions";
 import { statusLabel } from "@/lib/billing-status";
-import { getPriceLabels } from "@/lib/stripe-prices";
+import { TIER_AMOUNTS } from "@/lib/manual-payment";
 import { RatesPopup } from "@/components/rates-popup";
+import { ManualPaymentPanel } from "./manual-payment-panel";
 import type { ShopMembership } from "@/lib/auth/get-current-profile";
 
 export async function AdminBillingList({ ownedShops }: { ownedShops: ShopMembership[] }) {
   const supabase = await createClient();
   const shopIds = ownedShops.map((s) => s.shopId);
-  const [{ data: shops }, prices] = await Promise.all([
+  const [{ data: shops }, { data: pendingRequests }] = await Promise.all([
     supabase
       .from("shops")
-      .select("id, subscription_status, trial_ends_at, current_period_end, stripe_customer_id")
+      .select("id, subscription_status, trial_ends_at, current_period_end, billing_tier")
       .in("id", shopIds),
-    getPriceLabels(),
+    supabase
+      .from("manual_payment_requests")
+      .select("shop_id")
+      .in("shop_id", shopIds)
+      .eq("status", "pending"),
   ]);
 
   const shopById = new Map((shops ?? []).map((s) => [s.id, s]));
+  const pendingShopIds = new Set((pendingRequests ?? []).map((r) => r.shop_id));
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
       <div className="flex items-center justify-between gap-2">
         <h1 className="heading text-2xl">Billing</h1>
-        <RatesPopup prices={prices} />
+        <RatesPopup amounts={TIER_AMOUNTS} />
       </div>
       <p className="mt-1 text-sm text-muted">
         Each branch keeps its own subscription. Bundled multi-branch pricing is coming soon.
@@ -31,14 +36,11 @@ export async function AdminBillingList({ ownedShops }: { ownedShops: ShopMembers
       <div className="stagger mt-6 flex flex-col gap-3">
         {ownedShops.map((s) => {
           const shop = shopById.get(s.shopId);
-          const boundOpenPortal = openBillingPortalAction.bind(null, s.shopId);
-          const boundStartSubscription = startSubscriptionAction.bind(null, s.shopId);
-          const needsSubscribe =
-            shop?.subscription_status === "trialing" || shop?.subscription_status === "canceled";
+          const amount = TIER_AMOUNTS[(shop?.billing_tier as "primary" | "additional") ?? "primary"];
           return (
             <div
               key={s.shopId}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-hairline bg-canvas-soft p-4"
+              className="rounded-lg border border-hairline bg-canvas-soft p-4"
             >
               <div>
                 <p className="text-sm font-medium text-ink">{s.shopName}</p>
@@ -47,25 +49,22 @@ export async function AdminBillingList({ ownedShops }: { ownedShops: ShopMembers
                     ? statusLabel({
                         subscriptionStatus: shop.subscription_status,
                         trialEndsAt: shop.trial_ends_at,
+                        currentPeriodEnd: shop.current_period_end,
                       })
                     : "—"}
                   {shop?.subscription_status === "trialing" && shop.trial_ends_at && (
                     <> · trial ends {new Date(shop.trial_ends_at).toLocaleDateString()}</>
                   )}
-                  {(shop?.subscription_status === "active" || shop?.subscription_status === "past_due") &&
-                    shop?.current_period_end && (
-                      <> · renews {new Date(shop.current_period_end).toLocaleDateString()}</>
-                    )}
+                  {shop?.subscription_status === "active" && shop?.current_period_end && (
+                    <> · paid through {new Date(shop.current_period_end).toLocaleDateString()}</>
+                  )}
                 </p>
               </div>
-              <form action={needsSubscribe ? boundStartSubscription : boundOpenPortal}>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-on-primary transition-colors hover:bg-primary-active"
-                >
-                  {needsSubscribe ? "Subscribe" : "Manage billing"}
-                </button>
-              </form>
+              <ManualPaymentPanel
+                shopId={s.shopId}
+                amount={amount}
+                hasPending={pendingShopIds.has(s.shopId)}
+              />
             </div>
           );
         })}

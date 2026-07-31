@@ -2,8 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
-import { getStripe } from "@/lib/stripe";
-import { statusLabel, isTrialExpired } from "@/lib/billing-status";
+import { statusLabel, isTrialExpired, isPeriodExpired } from "@/lib/billing-status";
+import { TIER_AMOUNTS } from "@/lib/manual-payment";
 
 export default async function AdminPage() {
   const profile = await getCurrentProfile();
@@ -11,56 +11,59 @@ export default async function AdminPage() {
   if (!profile.platformAdmin) redirect("/dashboard");
 
   const supabase = await createClient();
-  const { data: shops } = await supabase
-    .from("shops")
-    .select(
-      "id, name, subscription_status, trial_ends_at, suspended_at, created_at, billing_tier",
-    )
-    .eq("is_platform_shop", false)
-    .order("created_at", { ascending: false });
+  const [{ data: shops }, { count: pendingPaymentCount }] = await Promise.all([
+    supabase
+      .from("shops")
+      .select(
+        "id, name, subscription_status, trial_ends_at, current_period_end, suspended_at, created_at, billing_tier",
+      )
+      .eq("is_platform_shop", false)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("manual_payment_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
+  ]);
 
-  const counts = { trialing: 0, trialExpired: 0, active: 0, past_due: 0, canceled: 0 };
+  const counts = { trialing: 0, trialExpired: 0, active: 0, paymentDue: 0, past_due: 0, canceled: 0 };
   const activeByTier = { primary: 0, additional: 0 };
   for (const s of shops ?? []) {
-    const shopFields = { subscriptionStatus: s.subscription_status, trialEndsAt: s.trial_ends_at };
+    const shopFields = {
+      subscriptionStatus: s.subscription_status,
+      trialEndsAt: s.trial_ends_at,
+      currentPeriodEnd: s.current_period_end,
+    };
     if (s.subscription_status === "trialing" && isTrialExpired(shopFields)) {
       counts.trialExpired++;
+    } else if (s.subscription_status === "active" && isPeriodExpired(shopFields)) {
+      counts.paymentDue++;
     } else {
       counts[s.subscription_status as keyof typeof counts] =
         (counts[s.subscription_status as keyof typeof counts] ?? 0) + 1;
     }
-    if (s.subscription_status === "active") {
+    if (s.subscription_status === "active" && !isPeriodExpired(shopFields)) {
       activeByTier[s.billing_tier as "primary" | "additional"]++;
     }
   }
 
-  let mrrLabel = "—";
-  const totalActive = activeByTier.primary + activeByTier.additional;
-  if (process.env.STRIPE_PRICE_ID && process.env.STRIPE_PRICE_ID_ADDITIONAL && totalActive > 0) {
-    try {
-      const stripe = getStripe();
-      const [primaryPrice, additionalPrice] = await Promise.all([
-        stripe.prices.retrieve(process.env.STRIPE_PRICE_ID),
-        stripe.prices.retrieve(process.env.STRIPE_PRICE_ID_ADDITIONAL),
-      ]);
-      const amount =
-        ((primaryPrice.unit_amount ?? 0) / 100) * activeByTier.primary +
-        ((additionalPrice.unit_amount ?? 0) / 100) * activeByTier.additional;
-      mrrLabel = `${amount.toFixed(2)} ${primaryPrice.currency.toUpperCase()}`;
-    } catch {
-      mrrLabel = "—";
-    }
-  } else if (totalActive === 0) {
-    mrrLabel = "0.00";
-  }
+  const mrr = activeByTier.primary * TIER_AMOUNTS.primary + activeByTier.additional * TIER_AMOUNTS.additional;
+  const mrrLabel = `${mrr.toFixed(2)} PHP`;
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-3xl px-4 py-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="heading text-2xl">Platform admin</h1>
-        <Link href="/admin/reports" className="text-xs text-primary underline underline-offset-2">
-          View reports
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/payments"
+            className="text-xs text-primary underline underline-offset-2"
+          >
+            Pending payments{pendingPaymentCount ? ` (${pendingPaymentCount})` : ""}
+          </Link>
+          <Link href="/admin/reports" className="text-xs text-primary underline underline-offset-2">
+            View reports
+          </Link>
+        </div>
       </div>
 
       <div className="stagger mt-6 flex flex-wrap gap-4">
@@ -68,6 +71,7 @@ export default async function AdminPage() {
         <Stat label="Trialing" value={String(counts.trialing)} />
         <Stat label="Trial expired" value={String(counts.trialExpired)} />
         <Stat label="Active" value={String(counts.active)} />
+        <Stat label="Payment due" value={String(counts.paymentDue)} />
         <Stat label="Past due" value={String(counts.past_due)} />
         <Stat label="Canceled" value={String(counts.canceled)} />
         <Stat label="MRR (from active)" value={mrrLabel} />
@@ -99,6 +103,7 @@ export default async function AdminPage() {
                   {statusLabel({
                     subscriptionStatus: s.subscription_status,
                     trialEndsAt: s.trial_ends_at,
+                    currentPeriodEnd: s.current_period_end,
                   })}
                   {s.suspended_at && <span className="ml-1 text-xs text-error">(suspended)</span>}
                 </td>

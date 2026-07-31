@@ -57,6 +57,7 @@ export default async function AdminShopPage({
           {statusLabel({
             subscriptionStatus: shop.subscription_status,
             trialEndsAt: shop.trial_ends_at,
+            currentPeriodEnd: shop.current_period_end,
           })}
           {suspended && <span className="ml-2 text-sm font-normal text-error">(suspended)</span>}
         </p>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getPriceLabels } from "@/lib/stripe-prices";
+import { TIER_AMOUNTS } from "@/lib/manual-payment";
 import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -61,7 +61,6 @@ export default async function Home({
     redirect(profile.role === "owner" ? "/dashboard" : "/sell");
   }
 
-  const priceLabels = await getPriceLabels();
 
   return (
     <div className="flex flex-1 flex-col bg-canvas">
@@ -110,10 +109,10 @@ export default async function Home({
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Pricing</p>
           <h2 className="heading mt-3 text-3xl">Simple pricing</h2>
           <p className="heading mt-2 text-4xl">
-            {priceLabels?.primary ?? "One price"} for your first shop
+            ₱{TIER_AMOUNTS.primary.toFixed(2)} PHP / month for your first shop
           </p>
           <p className="mt-1 text-lg text-body">
-            {priceLabels?.additional ?? "Half price"} for each shop after that
+            ₱{TIER_AMOUNTS.additional.toFixed(2)} PHP / month for each shop after that
           </p>
           <p className="mt-2 text-sm text-body">
             14-day free trial. No card required to start. Cancel anytime.

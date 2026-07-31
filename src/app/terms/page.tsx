@@ -73,20 +73,18 @@ export default function TermsPage() {
 
           <Section title="5. Subscriptions and billing">
             <p>
-              After the trial, continued access requires a paid subscription, billed
-              monthly through our payment processor, Stripe. Pricing is shown on our
-              website and in your Billing settings and may include a different rate for a
-              shop owner&apos;s first location versus additional locations. Subscriptions renew
-              automatically each billing period until cancelled. You can cancel anytime
-              from your Billing settings; cancelling stops future charges but doesn&apos;t
-              refund amounts already billed for the current period, and you&apos;ll keep access
-              through the end of the period you&apos;ve already paid for. We may change pricing
-              with reasonable advance notice; continued use after a price change takes
-              effect means you accept the new price.
-            </p>
-            <p className="mt-3">
-              We don&apos;t store your card details ourselves — payment information is handled
-              entirely by Stripe under its own terms and privacy policy.
+              VapeStock doesn&apos;t currently support automated recurring billing, since
+              payment providers generally treat vape shop businesses as high-risk. Instead,
+              after the trial, you pay manually each month via GCash or Maya using the QR
+              codes shown in your Billing settings, and submit the payment reference number
+              there. We confirm the payment by hand and activate your subscription — this is
+              usually quick, but isn&apos;t instant. Pricing is shown on our website and in your
+              Billing settings and may include a different rate for a shop owner&apos;s first
+              location versus additional locations. Because renewal isn&apos;t automatic, access
+              is locked if a payment isn&apos;t submitted and confirmed before the current paid
+              period ends; your data is not deleted and becomes available again as soon as a
+              new payment is confirmed. We may change pricing with reasonable advance notice;
+              continued use after a price change takes effect means you accept the new price.
             </p>
           </Section>
 

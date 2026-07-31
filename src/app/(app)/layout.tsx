@@ -32,6 +32,7 @@ export default async function AppLayout({
   const navItems = profile.shop.isPlatformShop
     ? [
         { href: "/admin", label: "Admin", show: true },
+        { href: "/admin/payments", label: "Payments", show: true },
         { href: "/admin/reports", label: "Reports", show: true },
       ].filter((item) => item.show)
     : profile.inAdminOverview

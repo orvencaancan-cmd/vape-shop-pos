@@ -14,8 +14,8 @@ import {
 // swap content while invisible, fade the new slide in over the second half
 // -- so headline word, headline second line, and the preview panel all
 // cross-fade in sync since they share one state.
-const TRANSITION_MS = 1200;
-const DWELL_MS = 5500;
+const TRANSITION_MS = 500;
+const DWELL_MS = 4000;
 
 export function HeroSection() {
   const [index, setIndex] = useState(0);
