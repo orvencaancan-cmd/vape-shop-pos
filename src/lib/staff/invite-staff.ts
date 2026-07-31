@@ -66,6 +66,13 @@ export async function inviteStaffToShop(input: {
   if (profileError) return { error: profileError.message };
 
   if (needsFreshLink) {
+    // Supabase won't re-send an invite email to an already-registered (but
+    // never-confirmed) address, so a recovery email is reused as the
+    // resend mechanism instead -- it works for any existing user
+    // regardless of confirmation status. Flagging it in user_metadata lets
+    // /reset-password/confirm route this person to the "welcome aboard"
+    // screen instead of "choose a new password" once they click through.
+    await admin.auth.admin.updateUserById(userId, { user_metadata: { pending_invite: true } });
     const supabase = await createClient();
     await supabase.auth.resetPasswordForEmail(email, { redirectTo });
   }

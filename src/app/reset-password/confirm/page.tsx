@@ -28,7 +28,7 @@ export default function ResetPasswordConfirmPage() {
 
     setStatus("loading");
     const supabase = createClient();
-    const { error: verifyError } = await supabase.auth.verifyOtp({
+    const { data, error: verifyError } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
       type: "recovery",
     });
@@ -37,6 +37,16 @@ export default function ResetPasswordConfirmPage() {
       setError(
         "That link has expired or was already used. Request a new password reset email.",
       );
+      return;
+    }
+
+    // A staff member re-invited after never completing their first invite
+    // arrives here too (see invite-staff.ts) -- send them to the "welcome
+    // aboard" screen instead of "choose a new password", which would be a
+    // confusing thing to see before they've ever had a password.
+    if (data.user?.user_metadata?.pending_invite) {
+      await supabase.auth.updateUser({ data: { pending_invite: null } });
+      window.location.replace("/accept-invite");
       return;
     }
     window.location.replace("/reset-password");
