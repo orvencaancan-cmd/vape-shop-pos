@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
+import { isSaleActive } from "@/lib/sale-status";
 import { SellScreen } from "./sell-screen";
 
 export default async function SellPage() {
@@ -14,14 +15,16 @@ export default async function SellPage() {
   const supabase = await createClient();
   const { data: shop } = await supabase
     .from("shops")
-    .select("loyalty_earn_enabled, loyalty_redeem_enabled, loyalty_reward_percent")
+    .select(
+      "loyalty_earn_enabled, loyalty_redeem_enabled, loyalty_reward_percent, sale_enabled, sale_percent, sale_scope, sale_starts_at, sale_ends_at",
+    )
     .eq("id", profile.shopId)
     .single();
 
   const { data: variants } = await supabase
     .from("variants")
     .select(
-      "id, flavor, nicotine_mg, size, for_device, ohms, price, stock_qty, products(name, brand, category, archived)",
+      "id, product_id, flavor, nicotine_mg, size, for_device, ohms, price, stock_qty, products(name, brand, category, archived)",
     )
     .eq("shop_id", profile.shopId)
     .order("created_at");
@@ -32,6 +35,7 @@ export default async function SellPage() {
       if (!product || product.archived) return null;
       return {
         id: v.id as string,
+        productId: v.product_id as string,
         productName: product.name as string,
         brand: (product.brand as string | null) ?? null,
         category: product.category as "ejuice" | "accessory",
@@ -51,6 +55,21 @@ export default async function SellPage() {
     })
     .filter((v): v is NonNullable<typeof v> => v !== null);
 
+  const saleActive = isSaleActive({
+    saleEnabled: shop?.sale_enabled ?? false,
+    saleStartsAt: shop?.sale_starts_at ?? null,
+    saleEndsAt: shop?.sale_ends_at ?? null,
+  });
+
+  let saleProductIds: string[] = [];
+  if (shop?.sale_scope === "items") {
+    const { data: saleProductRows } = await supabase
+      .from("sale_promo_products")
+      .select("product_id")
+      .eq("shop_id", profile.shopId);
+    saleProductIds = (saleProductRows ?? []).map((r) => r.product_id as string);
+  }
+
   // "Today" only, calendar-day aligned (matches the same boundary logic used
   // for Reports/Dashboard) -- previous days' sales don't belong on this
   // screen, which is for what's happening at the register right now.
@@ -61,7 +80,7 @@ export default async function SellPage() {
   const { data: recentSalesRaw } = await supabase
     .from("sales")
     .select(
-      "id, total, payment_method, discount_amount, discount_reason, created_at, created_by, voided_at, profiles!sales_created_by_fkey(display_name)",
+      "id, total, payment_method, discount_amount, discount_reason, sale_discount_amount, created_at, created_by, voided_at, profiles!sales_created_by_fkey(display_name)",
     )
     .eq("shop_id", profile.shopId)
     .gte("created_at", todayStart.toISOString())
@@ -114,6 +133,7 @@ export default async function SellPage() {
       paymentMethod: s.payment_method as "cash" | "gcash",
       discountAmount: Number(s.discount_amount),
       discountReason: s.discount_reason as string | null,
+      saleDiscountAmount: Number(s.sale_discount_amount),
       createdAt: s.created_at as string,
       createdByName: (creator?.display_name as string | null) ?? null,
       voidedAt: s.voided_at as string | null,
@@ -132,6 +152,10 @@ export default async function SellPage() {
         loyaltyEarnEnabled={shop?.loyalty_earn_enabled ?? false}
         loyaltyRedeemEnabled={shop?.loyalty_redeem_enabled ?? false}
         loyaltyRewardPercent={Number(shop?.loyalty_reward_percent ?? 0)}
+        saleActive={saleActive}
+        salePercent={Number(shop?.sale_percent ?? 0)}
+        saleScope={(shop?.sale_scope as "branch" | "items") ?? "branch"}
+        saleProductIds={saleProductIds}
       />
     </main>
   );

@@ -24,6 +24,7 @@ export async function AdminReportsPage({
     salesSummary,
     paymentBreakdown,
     discounts,
+    saleDiscounts,
     loyaltySummary,
     salesDetail,
     revenueProfit,
@@ -123,12 +124,17 @@ export async function AdminReportsPage({
       <Section title="Revenue & profit">
         <Stat label="Revenue" value={formatCurrency(revenueProfit.revenue)} />
         <Stat label="Discounts" value={formatCurrency(discounts.total)} />
+        <Stat label="Sale discounts" value={formatCurrency(saleDiscounts.total)} />
         <Stat label="Cost of goods" value={formatCurrency(revenueProfit.cost)} />
         <Stat label="Expenses" value={formatCurrency(expenseSummary.total)} />
         <Stat
           label="Profit"
           value={formatCurrency(
-            revenueProfit.revenue - discounts.total - revenueProfit.cost - expenseSummary.total,
+            revenueProfit.revenue -
+              discounts.total -
+              saleDiscounts.total -
+              revenueProfit.cost -
+              expenseSummary.total,
           )}
         />
       </Section>

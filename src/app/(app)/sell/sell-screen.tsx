@@ -15,6 +15,7 @@ import { Stat } from "@/components/ui/stat";
 
 type Variant = {
   id: string;
+  productId: string;
   productName: string;
   brand: string | null;
   category: "ejuice" | "accessory";
@@ -29,6 +30,7 @@ type RecentSale = {
   paymentMethod: "cash" | "gcash";
   discountAmount: number;
   discountReason: string | null;
+  saleDiscountAmount: number;
   createdAt: string;
   createdByName: string | null;
   voidedAt: string | null;
@@ -52,6 +54,10 @@ export function SellScreen({
   loyaltyEarnEnabled,
   loyaltyRedeemEnabled,
   loyaltyRewardPercent,
+  saleActive,
+  salePercent,
+  saleScope,
+  saleProductIds,
 }: {
   shopName: string;
   variants: Variant[];
@@ -60,6 +66,10 @@ export function SellScreen({
   loyaltyEarnEnabled: boolean;
   loyaltyRedeemEnabled: boolean;
   loyaltyRewardPercent: number;
+  saleActive: boolean;
+  salePercent: number;
+  saleScope: "branch" | "items";
+  saleProductIds: string[];
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -173,20 +183,43 @@ export function SellScreen({
     return sum + (v ? v.price * l.quantity : 0);
   }, 0);
 
+  // Rounded per line, matching exactly how record_sale accumulates the
+  // discount server-side (summing first and rounding once can differ by a
+  // cent from what actually gets charged).
+  const saleProductIdSet = useMemo(() => new Set(saleProductIds), [saleProductIds]);
+  function lineSaleDiscount(v: Variant, quantity: number): number {
+    if (!saleActive) return 0;
+    if (saleScope === "items" && !saleProductIdSet.has(v.productId)) return 0;
+    return Math.round(v.price * quantity * (salePercent / 100) * 100) / 100;
+  }
+  const saleDiscount = cart.reduce((sum, l) => {
+    const v = variantsById.get(l.variantId);
+    return v ? sum + lineSaleDiscount(v, l.quantity) : sum;
+  }, 0);
+  const isSaleTransaction = saleActive && saleDiscount > 0;
+
   const discountValueNum = Number(discountValue) || 0;
-  const discountAmount =
-    discountMode === "percent"
+  const discountAmount = isSaleTransaction
+    ? 0
+    : discountMode === "percent"
       ? Math.min(subtotal, Math.round(subtotal * (discountValueNum / 100) * 100) / 100)
       : Math.min(subtotal, discountValueNum);
-  const afterDiscount = Math.max(0, subtotal - discountAmount);
+  const afterDiscount = isSaleTransaction
+    ? Math.max(0, subtotal - saleDiscount)
+    : Math.max(0, subtotal - discountAmount);
+
+  // Sale, manual Discount, and Loyalty are mutually exclusive -- at most
+  // one ever reduces the total, matching record_sale's precedence.
+  const loyaltySectionVisible =
+    (loyaltyEarnEnabled || loyaltyRedeemEnabled) && !isSaleTransaction && discountAmount === 0;
 
   const loyaltyRedeemAmount =
-    loyaltyCustomer?.redeemEnabled && loyaltyUseCredit
+    loyaltySectionVisible && loyaltyCustomer?.redeemEnabled && loyaltyUseCredit
       ? Math.min(afterDiscount, loyaltyCustomer.creditBalance)
       : 0;
   const total = Math.max(0, afterDiscount - loyaltyRedeemAmount);
   const loyaltyEarnPreview =
-    loyaltyEarnEnabled && !loyaltyUseCredit
+    loyaltySectionVisible && loyaltyEarnEnabled && !loyaltyUseCredit
       ? Math.round(total * (loyaltyRewardPercent / 100) * 100) / 100
       : 0;
 
@@ -267,15 +300,23 @@ export function SellScreen({
     setLoyaltyUseCredit(false);
   }
 
+  useEffect(() => {
+    if (!loyaltySectionVisible) {
+      const timer = setTimeout(() => resetLoyalty(), 0);
+      return () => clearTimeout(timer);
+    }
+  }, [loyaltySectionVisible]);
+
   function completeSale() {
     setMessage(null);
     const soldCart = cart;
-    const soldDiscountAmount = discountAmount;
-    const soldDiscountReason = discountReason.trim() || null;
+    const soldDiscountAmount = isSaleTransaction ? 0 : discountAmount;
+    const soldDiscountReason = isSaleTransaction ? null : discountReason.trim() || null;
+    const soldSaleDiscountAmount = isSaleTransaction ? saleDiscount : 0;
     const soldPaymentMethod = paymentMethod;
-    const soldLoyaltyPhone = loyaltyCustomer?.phone ?? null;
-    const soldLoyaltyName = loyaltyCustomer?.name ?? null;
-    const soldLoyaltyUseCredit = loyaltyRedeemAmount > 0;
+    const soldLoyaltyPhone = loyaltySectionVisible ? (loyaltyCustomer?.phone ?? null) : null;
+    const soldLoyaltyName = loyaltySectionVisible ? (loyaltyCustomer?.name ?? null) : null;
+    const soldLoyaltyUseCredit = loyaltySectionVisible && loyaltyRedeemAmount > 0;
     startTransition(async () => {
       const result = await recordSaleAction(
         soldCart,
@@ -314,6 +355,7 @@ export function SellScreen({
           paymentMethod: soldPaymentMethod,
           discountAmount: soldDiscountAmount,
           discountReason: soldDiscountReason,
+          saleDiscountAmount: soldSaleDiscountAmount,
           createdAt: new Date().toISOString(),
           createdByName: currentUserName,
           voidedAt: null,
@@ -484,32 +526,46 @@ export function SellScreen({
             <span>{formatCurrency(subtotal)}</span>
           </div>
 
-          <div className="mt-2 flex items-center gap-2">
-            {(["amount", "percent"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setDiscountMode(mode)}
-                className={`rounded-lg px-2.5 py-1 text-xs transition-colors ${
-                  discountMode === mode
-                    ? "bg-primary text-on-primary"
-                    : "bg-canvas-strong text-body hover:text-ink"
-                }`}
-              >
-                {mode === "amount" ? "₱" : "%"}
-              </button>
-            ))}
-            <input
-              type="number"
-              inputMode="decimal"
-              min={0}
-              max={discountMode === "percent" ? 100 : undefined}
-              placeholder="Discount"
-              value={discountValue}
-              onChange={(e) => setDiscountValue(e.target.value)}
-              className="w-24 rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
-            />
-          </div>
+          {isSaleTransaction ? (
+            <div className="mt-2 flex items-center justify-between text-sm text-success">
+              <span>Sale: {salePercent}% off</span>
+              <span>−{formatCurrency(saleDiscount)}</span>
+            </div>
+          ) : (
+            <>
+              <div className="mt-2 flex items-center gap-2">
+                {(["amount", "percent"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setDiscountMode(mode)}
+                    disabled={loyaltyUseCredit}
+                    className={`rounded-lg px-2.5 py-1 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                      discountMode === mode
+                        ? "bg-primary text-on-primary"
+                        : "bg-canvas-strong text-body hover:text-ink"
+                    }`}
+                  >
+                    {mode === "amount" ? "₱" : "%"}
+                  </button>
+                ))}
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  max={discountMode === "percent" ? 100 : undefined}
+                  placeholder="Discount"
+                  value={discountValue}
+                  disabled={loyaltyUseCredit}
+                  onChange={(e) => setDiscountValue(e.target.value)}
+                  className="w-24 rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+              {loyaltyUseCredit && (
+                <p className="mt-1 text-xs text-muted">Discount unavailable while using loyalty credit.</p>
+              )}
+            </>
+          )}
 
           {discountAmount > 0 && (
             <>
@@ -527,7 +583,15 @@ export function SellScreen({
             </>
           )}
 
-          {(loyaltyEarnEnabled || loyaltyRedeemEnabled) && (
+          {(loyaltyEarnEnabled || loyaltyRedeemEnabled) && !loyaltySectionVisible && (
+            <p className="mt-3 border-t border-hairline pt-3 text-xs text-muted">
+              {isSaleTransaction
+                ? "Loyalty paused during Sale."
+                : "Loyalty paused — a discount is applied to this sale."}
+            </p>
+          )}
+
+          {loyaltySectionVisible && (
             <div className="mt-3 border-t border-hairline pt-3">
               <p className="text-xs font-medium uppercase text-muted">Loyalty</p>
 
@@ -758,6 +822,11 @@ export function SellScreen({
                           title={s.discountReason ?? undefined}
                         >
                           −{formatCurrency(s.discountAmount)} off
+                        </span>
+                      )}
+                      {s.saleDiscountAmount > 0 && (
+                        <span className="ml-2 rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-success">
+                          −{formatCurrency(s.saleDiscountAmount)} sale
                         </span>
                       )}
                       {s.createdByName && (

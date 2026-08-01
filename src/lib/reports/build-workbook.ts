@@ -23,6 +23,7 @@ type SalesSideReportData = Pick<
   | "salesSummary"
   | "paymentBreakdown"
   | "discounts"
+  | "saleDiscounts"
   | "loyaltySummary"
   | "salesDetail"
   | "revenueProfit"
@@ -107,12 +108,14 @@ function addSalesSheets(wb: ExcelJS.Workbook, data: SalesSideReportData) {
   addKeyValueSheet(wb, "Revenue & Profit", [
     ["Revenue", data.revenueProfit.revenue, "currency"],
     ["Discounts", data.discounts.total, "currency"],
+    ["Sale discounts", data.saleDiscounts.total, "currency"],
     ["Cost of goods", data.revenueProfit.cost, "currency"],
     ["Expenses", data.expenseSummary.total, "currency"],
     [
       "Profit",
       data.revenueProfit.revenue -
         data.discounts.total -
+        data.saleDiscounts.total -
         data.revenueProfit.cost -
         data.expenseSummary.total,
       "currency",

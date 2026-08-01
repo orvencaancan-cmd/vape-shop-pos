@@ -22,6 +22,7 @@ export type SaleRow = {
   total: number;
   discount_amount: number;
   discount_reason: string | null;
+  sale_discount_amount: number;
   loyalty_credit_redeemed: number;
 };
 
@@ -87,6 +88,10 @@ export function computeDiscounts(sales: { discount_amount: number }[]) {
   return { total: sales.reduce((sum, s) => sum + Number(s.discount_amount), 0) };
 }
 
+export function computeSaleDiscounts(sales: { sale_discount_amount: number }[]) {
+  return { total: sales.reduce((sum, s) => sum + Number(s.sale_discount_amount), 0) };
+}
+
 export function computeLoyaltySummary(
   sales: {
     loyalty_credit_earned: number;
@@ -126,6 +131,7 @@ export type SaleDetail = {
   paymentMethod: string;
   total: number;
   discountAmount: number;
+  saleDiscountAmount: number;
   loyaltyCreditRedeemed: number;
   note: string;
   lines: {
@@ -138,12 +144,19 @@ export type SaleDetail = {
   }[];
 };
 
+// Sale, manual Discount, and Loyalty redemption are mutually exclusive per
+// record_sale (supabase/migrations/0031_sale_promo.sql), so at most one of
+// these three branches ever fires for a given sale.
 function buildSaleNote(
   discountAmount: number,
   discountReason: string | null,
+  saleDiscountAmount: number,
   loyaltyCreditRedeemed: number,
 ): string {
   const parts: string[] = [];
+  if (saleDiscountAmount > 0) {
+    parts.push("Sale");
+  }
   if (discountAmount > 0) {
     parts.push(discountReason ? `Discount: ${discountReason}` : "Discount");
   }
@@ -175,10 +188,12 @@ export function computeSalesDetail(sales: SaleRow[], items: SaleItemRow[]): Sale
       paymentMethod: s.payment_method,
       total: Number(s.total),
       discountAmount: Number(s.discount_amount),
+      saleDiscountAmount: Number(s.sale_discount_amount),
       loyaltyCreditRedeemed: Number(s.loyalty_credit_redeemed),
       note: buildSaleNote(
         Number(s.discount_amount),
         s.discount_reason,
+        Number(s.sale_discount_amount),
         Number(s.loyalty_credit_redeemed),
       ),
       lines: linesBySale.get(s.id) ?? [],

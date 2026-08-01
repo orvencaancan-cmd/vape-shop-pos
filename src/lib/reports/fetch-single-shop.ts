@@ -13,6 +13,7 @@ import {
   computeStaffActivity,
   computePaymentBreakdown,
   computeDiscounts,
+  computeSaleDiscounts,
   computeLoyaltySummary,
   computeExpenseSummary,
   type SaleItemRow,
@@ -24,6 +25,7 @@ export type SingleShopReportData = {
   salesSummary: ReturnType<typeof computeSalesSummary>;
   paymentBreakdown: ReturnType<typeof computePaymentBreakdown>;
   discounts: ReturnType<typeof computeDiscounts>;
+  saleDiscounts: ReturnType<typeof computeSaleDiscounts>;
   loyaltySummary: ReturnType<typeof computeLoyaltySummary>;
   salesDetail: ReturnType<typeof computeSalesDetail>;
   revenueProfit: ReturnType<typeof computeRevenueProfit>;
@@ -47,7 +49,7 @@ export async function fetchSingleShopReportData(
   const { data: sales } = await supabase
     .from("sales")
     .select(
-      "id, total, payment_method, discount_amount, discount_reason, loyalty_credit_earned, loyalty_credit_redeemed, loyalty_credit_forfeited, created_at",
+      "id, total, payment_method, discount_amount, discount_reason, sale_discount_amount, loyalty_credit_earned, loyalty_credit_redeemed, loyalty_credit_forfeited, created_at",
     )
     .eq("shop_id", shopId)
     .gte("created_at", from.toISOString())
@@ -122,6 +124,7 @@ export async function fetchSingleShopReportData(
     salesSummary: computeSalesSummary(sales ?? []),
     paymentBreakdown: computePaymentBreakdown(sales ?? []),
     discounts: computeDiscounts(sales ?? []),
+    saleDiscounts: computeSaleDiscounts(sales ?? []),
     loyaltySummary: computeLoyaltySummary(sales ?? []),
     salesDetail: computeSalesDetail(sales ?? [], items),
     revenueProfit: computeRevenueProfit(items),
