@@ -150,6 +150,7 @@ function addSalesSheets(wb: ExcelJS.Workbook, data: SalesSideReportData) {
       { header: "Unit Price", width: 14, numFmt: CURRENCY_FMT },
       { header: "Line Total", width: 14, numFmt: CURRENCY_FMT },
       { header: "Sale Total", width: 14, numFmt: CURRENCY_FMT },
+      { header: "Notes", width: 30 },
     ],
     data.salesDetail.flatMap((s) =>
       s.lines.map((line) => [
@@ -162,6 +163,7 @@ function addSalesSheets(wb: ExcelJS.Workbook, data: SalesSideReportData) {
         line.unitPrice,
         line.lineTotal,
         s.total,
+        s.note,
       ]),
     ),
   );

@@ -70,7 +70,7 @@ export async function fetchAdminReportData(
       const { data: sales } = await supabase
         .from("sales")
         .select(
-          "id, total, payment_method, discount_amount, loyalty_credit_earned, loyalty_credit_redeemed, loyalty_credit_forfeited, created_at",
+          "id, total, payment_method, discount_amount, discount_reason, loyalty_credit_earned, loyalty_credit_redeemed, loyalty_credit_forfeited, created_at",
         )
         .eq("shop_id", shopId)
         .gte("created_at", from.toISOString())

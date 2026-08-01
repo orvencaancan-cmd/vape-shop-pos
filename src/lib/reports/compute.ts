@@ -15,7 +15,15 @@ export type SaleItemRow = {
   } | null;
 };
 
-export type SaleRow = { id: string; created_at: string; payment_method: string; total: number };
+export type SaleRow = {
+  id: string;
+  created_at: string;
+  payment_method: string;
+  total: number;
+  discount_amount: number;
+  discount_reason: string | null;
+  loyalty_credit_redeemed: number;
+};
 
 export type VariantRow = {
   id: string;
@@ -117,6 +125,9 @@ export type SaleDetail = {
   createdAt: string;
   paymentMethod: string;
   total: number;
+  discountAmount: number;
+  loyaltyCreditRedeemed: number;
+  note: string;
   lines: {
     brand: string | null;
     productName: string;
@@ -126,6 +137,21 @@ export type SaleDetail = {
     lineTotal: number;
   }[];
 };
+
+function buildSaleNote(
+  discountAmount: number,
+  discountReason: string | null,
+  loyaltyCreditRedeemed: number,
+): string {
+  const parts: string[] = [];
+  if (discountAmount > 0) {
+    parts.push(discountReason ? `Discount: ${discountReason}` : "Discount");
+  }
+  if (loyaltyCreditRedeemed > 0) {
+    parts.push("Used loyalty credit");
+  }
+  return parts.join(" · ");
+}
 
 export function computeSalesDetail(sales: SaleRow[], items: SaleItemRow[]): SaleDetail[] {
   const linesBySale = new Map<string, SaleDetail["lines"]>();
@@ -148,6 +174,13 @@ export function computeSalesDetail(sales: SaleRow[], items: SaleItemRow[]): Sale
       createdAt: s.created_at,
       paymentMethod: s.payment_method,
       total: Number(s.total),
+      discountAmount: Number(s.discount_amount),
+      loyaltyCreditRedeemed: Number(s.loyalty_credit_redeemed),
+      note: buildSaleNote(
+        Number(s.discount_amount),
+        s.discount_reason,
+        Number(s.loyalty_credit_redeemed),
+      ),
       lines: linesBySale.get(s.id) ?? [],
     }))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));

@@ -41,6 +41,8 @@ export function SaleDetailTable({ sales }: { sales: SaleDetail[] }) {
       item: `${line.brand ? `${line.brand} — ` : ""}${line.productName} — ${line.label}`,
       quantity: line.quantity,
       price: line.lineTotal,
+      saleTotal: s.total,
+      note: s.note,
       paymentMethod: PAYMENT_LABELS[s.paymentMethod] ?? s.paymentMethod,
     })),
   );
@@ -56,6 +58,8 @@ export function SaleDetailTable({ sales }: { sales: SaleDetail[] }) {
             <th className="py-1.5 pr-3 text-left font-normal">Item</th>
             <th className="py-1.5 pr-3 text-right font-normal">Qty</th>
             <th className="py-1.5 pr-3 text-right font-normal">Price</th>
+            <th className="py-1.5 pr-3 text-right font-normal">Sale total</th>
+            <th className="py-1.5 pr-3 text-left font-normal">Notes</th>
             <th className="py-1.5 text-right font-normal">Payment</th>
           </tr>
         </thead>
@@ -66,6 +70,8 @@ export function SaleDetailTable({ sales }: { sales: SaleDetail[] }) {
               <td className="py-1.5 pr-3 text-ink">{r.item}</td>
               <td className="py-1.5 pr-3 text-right text-ink">{r.quantity}</td>
               <td className="py-1.5 pr-3 text-right text-ink">{formatCurrency(r.price)}</td>
+              <td className="py-1.5 pr-3 text-right text-ink">{formatCurrency(r.saleTotal)}</td>
+              <td className="py-1.5 pr-3 text-warning">{r.note}</td>
               <td className="py-1.5 text-right text-body">{r.paymentMethod}</td>
             </tr>
           ))}
