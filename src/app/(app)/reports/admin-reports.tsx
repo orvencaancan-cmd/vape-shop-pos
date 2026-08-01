@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveRange } from "@/lib/reports/date-range";
 import { fetchAdminReportData, resolveSelectedBranch } from "@/lib/reports/fetch-admin";
 import { formatCurrency } from "@/lib/currency";
-import { RangeLink, Section, Stat, Empty, Table, SaleDetailTable } from "./report-ui";
+import { RangeLink, Section, Stat, Empty, Table } from "./report-ui";
+import { SaleDetailTable } from "./sale-detail-table";
 import type { ShopMembership } from "@/lib/auth/get-current-profile";
 
 export async function AdminReportsPage({

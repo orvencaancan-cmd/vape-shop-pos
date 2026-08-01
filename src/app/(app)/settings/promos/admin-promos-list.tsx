@@ -56,7 +56,7 @@ export async function AdminPromosList({ ownedShops }: { ownedShops: ShopMembersh
               className="rounded-lg border border-hairline bg-canvas-soft p-4"
             >
               <p className="text-sm font-medium text-ink">{s.shopName}</p>
-              <p className="mt-3 text-xs font-medium uppercase text-muted">Loyalty Promo</p>
+              <p className="mt-3 text-xs font-bold uppercase text-muted">Loyalty Promo</p>
               <div className="mt-2">
                 <LoyaltyForm
                   shopId={s.shopId}
@@ -66,7 +66,7 @@ export async function AdminPromosList({ ownedShops }: { ownedShops: ShopMembersh
                 />
               </div>
               <div className="mt-4 border-t border-hairline pt-4">
-                <p className="text-xs font-medium uppercase text-muted">Discount Promo</p>
+                <p className="text-xs font-bold uppercase text-muted">Discount Promo</p>
                 <div className="mt-2">
                   <SaleForm
                     shopId={s.shopId}

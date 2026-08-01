@@ -41,7 +41,7 @@ export default async function PromosPage() {
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
       <h1 className="heading text-2xl">Promos</h1>
 
-      <h2 className="mt-6 text-sm font-medium uppercase text-muted">Loyalty Promo</h2>
+      <h2 className="mt-6 text-sm font-bold uppercase text-muted">Loyalty Promo</h2>
       <p className="mt-1 text-sm text-muted">
         Customers earn store credit here based on what they spend, redeemable on a future
         purchase at any of your branches that accepts redemptions.
@@ -55,7 +55,7 @@ export default async function PromosPage() {
         />
       </div>
 
-      <h2 className="mt-8 text-sm font-medium uppercase text-muted">Discount Promo</h2>
+      <h2 className="mt-8 text-sm font-bold uppercase text-muted">Discount Promo</h2>
       <p className="mt-1 text-sm text-muted">
         Automatically discounts checkout — either the whole branch or specific products — with no
         cashier action needed. Only one promo can apply to a sale at a time, so an active Discount

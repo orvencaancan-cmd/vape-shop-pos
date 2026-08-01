@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveRange } from "@/lib/reports/date-range";
 import { fetchSingleShopReportData } from "@/lib/reports/fetch-single-shop";
 import { formatCurrency } from "@/lib/currency";
-import { RangeLink, Section, Stat, Empty, Table, SaleDetailTable } from "./report-ui";
+import { RangeLink, Section, Stat, Empty, Table } from "./report-ui";
+import { SaleDetailTable } from "./sale-detail-table";
 import { AdminReportsPage } from "./admin-reports";
 
 export default async function ReportsPage({

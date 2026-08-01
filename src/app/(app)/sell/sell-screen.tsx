@@ -85,6 +85,7 @@ export function SellScreen({
   const [pending, startTransition] = useTransition();
   const [voidingId, setVoidingId] = useState<string | null>(null);
   const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
+  const [expandedSales, setExpandedSales] = useState<Set<string>>(new Set());
   const [loyaltySearchName, setLoyaltySearchName] = useState("");
   const [loyaltySearchResults, setLoyaltySearchResults] = useState<LoyaltyCustomer[]>([]);
   const [loyaltySearchPending, setLoyaltySearchPending] = useState(false);
@@ -127,11 +128,27 @@ export function SellScreen({
     });
   };
 
+  const toggleSaleExpanded = (saleId: string) => {
+    setExpandedSales((prev) => {
+      const next = new Set(prev);
+      if (next.has(saleId)) {
+        next.delete(saleId);
+      } else {
+        next.add(saleId);
+      }
+      return next;
+    });
+  };
+
   const filtered = variants.filter((v) => {
     if (category !== "all" && v.category !== category) return false;
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    return v.productName.toLowerCase().includes(q) || v.label.toLowerCase().includes(q);
+    return (
+      v.productName.toLowerCase().includes(q) ||
+      v.label.toLowerCase().includes(q) ||
+      (v.brand?.toLowerCase().includes(q) ?? false)
+    );
   });
 
   const brandGroupMap = new Map<string, BrandGroup>();
@@ -806,33 +823,53 @@ export function SellScreen({
             <p className="mt-2 text-sm text-muted">No sales yet today.</p>
           ) : (
             <div className="mt-2 flex flex-col divide-y divide-hairline">
-              {recentSales.map((s) => (
+              {recentSales.map((s) => {
+                const isExpanded = expandedSales.has(s.id);
+                return (
                 <div key={s.id} className="py-3">
                   <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                    <div className="min-w-0">
-                      <span className={s.voidedAt ? "text-muted line-through" : "text-ink"}>
-                        {new Date(s.createdAt).toLocaleString()} — {formatCurrency(s.total)}
-                      </span>
-                      <span className="ml-2 rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-body">
-                        {PAYMENT_LABELS[s.paymentMethod]}
-                      </span>
-                      {s.discountAmount > 0 && (
-                        <span
-                          className="ml-2 rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-warning"
-                          title={s.discountReason ?? undefined}
-                        >
-                          −{formatCurrency(s.discountAmount)} off
+                    <button
+                      type="button"
+                      onClick={() => toggleSaleExpanded(s.id)}
+                      className="flex min-w-0 items-center gap-1.5 text-left"
+                      aria-expanded={isExpanded}
+                      disabled={s.lines.length === 0}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.75"
+                        className={`h-3.5 w-3.5 shrink-0 text-muted transition-transform ${isExpanded ? "rotate-180" : ""} ${s.lines.length === 0 ? "invisible" : ""}`}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+                      </svg>
+                      <span className="min-w-0 truncate">
+                        <span className={s.voidedAt ? "text-muted line-through" : "text-ink"}>
+                          {new Date(s.createdAt).toLocaleString()} — {formatCurrency(s.total)}
                         </span>
-                      )}
-                      {s.saleDiscountAmount > 0 && (
-                        <span className="ml-2 rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-success">
-                          −{formatCurrency(s.saleDiscountAmount)} discount promo
+                        <span className="ml-2 rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-body">
+                          {PAYMENT_LABELS[s.paymentMethod]}
                         </span>
-                      )}
-                      {s.createdByName && (
-                        <span className="ml-2 text-xs text-muted">{s.createdByName}</span>
-                      )}
-                    </div>
+                        {s.discountAmount > 0 && (
+                          <span
+                            className="ml-2 rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-warning"
+                            title={s.discountReason ?? undefined}
+                          >
+                            −{formatCurrency(s.discountAmount)} off
+                          </span>
+                        )}
+                        {s.saleDiscountAmount > 0 && (
+                          <span className="ml-2 rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-success">
+                            −{formatCurrency(s.saleDiscountAmount)} discount promo
+                          </span>
+                        )}
+                        {s.createdByName && (
+                          <span className="ml-2 text-xs text-muted">{s.createdByName}</span>
+                        )}
+                      </span>
+                    </button>
                     {s.voidedAt ? (
                       <span className="rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-muted">
                         Voided
@@ -847,8 +884,8 @@ export function SellScreen({
                       </button>
                     ) : null}
                   </div>
-                  {s.lines.length > 0 && (
-                    <ul className="mt-1.5 flex flex-col gap-0.5 pl-1">
+                  {isExpanded && s.lines.length > 0 && (
+                    <ul className="mt-1.5 flex flex-col gap-0.5 pl-5">
                       {s.lines.map((line, i) => (
                         <li
                           key={i}
@@ -863,7 +900,8 @@ export function SellScreen({
                     </ul>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
