@@ -85,7 +85,7 @@ export function SellScreen({
   const [loyaltyNewPhone, setLoyaltyNewPhone] = useState("");
   const [loyaltyRegisterPending, setLoyaltyRegisterPending] = useState(false);
   const [loyaltyCustomer, setLoyaltyCustomer] = useState<LoyaltyCustomer | null>(null);
-  const [loyaltyRedeem, setLoyaltyRedeem] = useState("");
+  const [loyaltyUseCredit, setLoyaltyUseCredit] = useState(false);
   // Own state rather than deriving straight from props -- a completed sale
   // updates these directly (new stock counts, the new sale prepended) since
   // we already know exactly what changed, instead of re-fetching the whole
@@ -181,13 +181,14 @@ export function SellScreen({
   const afterDiscount = Math.max(0, subtotal - discountAmount);
 
   const loyaltyRedeemAmount =
-    loyaltyCustomer?.redeemEnabled
-      ? Math.min(afterDiscount, loyaltyCustomer.creditBalance, Number(loyaltyRedeem) || 0)
+    loyaltyCustomer?.redeemEnabled && loyaltyUseCredit
+      ? Math.min(afterDiscount, loyaltyCustomer.creditBalance)
       : 0;
   const total = Math.max(0, afterDiscount - loyaltyRedeemAmount);
-  const loyaltyEarnPreview = loyaltyEarnEnabled
-    ? Math.round(total * (loyaltyRewardPercent / 100) * 100) / 100
-    : 0;
+  const loyaltyEarnPreview =
+    loyaltyEarnEnabled && !loyaltyUseCredit
+      ? Math.round(total * (loyaltyRewardPercent / 100) * 100) / 100
+      : 0;
 
   const loyaltySearchSeq = useRef(0);
 
@@ -225,7 +226,7 @@ export function SellScreen({
     setLoyaltySearchResults([]);
     setLoyaltyDropdownOpen(false);
     setLoyaltyShowNewForm(false);
-    setLoyaltyRedeem("");
+    setLoyaltyUseCredit(false);
   }
 
   async function saveNewLoyaltyCustomer() {
@@ -244,12 +245,12 @@ export function SellScreen({
     setLoyaltySearchResults([]);
     setLoyaltyDropdownOpen(false);
     setLoyaltyShowNewForm(false);
-    setLoyaltyRedeem("");
+    setLoyaltyUseCredit(false);
   }
 
   function changeLoyaltyCustomer() {
     setLoyaltyCustomer(null);
-    setLoyaltyRedeem("");
+    setLoyaltyUseCredit(false);
     setLoyaltySearchResults([]);
     setLoyaltyShowNewForm(false);
   }
@@ -263,7 +264,7 @@ export function SellScreen({
     setLoyaltyNewName("");
     setLoyaltyNewPhone("");
     setLoyaltyCustomer(null);
-    setLoyaltyRedeem("");
+    setLoyaltyUseCredit(false);
   }
 
   function completeSale() {
@@ -274,7 +275,7 @@ export function SellScreen({
     const soldPaymentMethod = paymentMethod;
     const soldLoyaltyPhone = loyaltyCustomer?.phone ?? null;
     const soldLoyaltyName = loyaltyCustomer?.name ?? null;
-    const soldLoyaltyRedeem = loyaltyRedeemAmount;
+    const soldLoyaltyUseCredit = loyaltyRedeemAmount > 0;
     startTransition(async () => {
       const result = await recordSaleAction(
         soldCart,
@@ -283,7 +284,7 @@ export function SellScreen({
         soldDiscountReason,
         soldLoyaltyPhone,
         soldLoyaltyName,
-        soldLoyaltyRedeem,
+        soldLoyaltyUseCredit,
       );
       if (result.error) {
         setMessage({ type: "error", text: result.error });
@@ -660,19 +661,15 @@ export function SellScreen({
                     Balance: {formatCurrency(loyaltyCustomer.creditBalance)}
                   </p>
 
-                  {loyaltyCustomer.redeemEnabled && (
+                  {loyaltyCustomer.redeemEnabled && loyaltyCustomer.creditBalance > 0 && (
                     <label className="mt-2 flex items-center gap-2 text-xs text-body">
-                      Redeem
                       <input
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        max={Math.min(afterDiscount, loyaltyCustomer.creditBalance)}
-                        placeholder="0.00"
-                        value={loyaltyRedeem}
-                        onChange={(e) => setLoyaltyRedeem(e.target.value)}
-                        className="w-24 rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+                        type="checkbox"
+                        checked={loyaltyUseCredit}
+                        onChange={(e) => setLoyaltyUseCredit(e.target.checked)}
+                        className="h-4 w-4 accent-primary"
                       />
+                      Use credit ({formatCurrency(loyaltyCustomer.creditBalance)})
                     </label>
                   )}
                 </div>
@@ -684,7 +681,14 @@ export function SellScreen({
                   <span>−{formatCurrency(loyaltyRedeemAmount)}</span>
                 </div>
               )}
-              {loyaltyEarnEnabled && loyaltyEarnPreview > 0 && (
+              {loyaltyUseCredit && loyaltyCustomer && loyaltyCustomer.creditBalance > loyaltyRedeemAmount && (
+                <p className="mt-1 text-xs text-muted">
+                  Balance resets to ₱0.00 — the remaining{" "}
+                  {formatCurrency(loyaltyCustomer.creditBalance - loyaltyRedeemAmount)} won&apos;t
+                  carry over.
+                </p>
+              )}
+              {loyaltyEarnEnabled && !loyaltyUseCredit && loyaltyEarnPreview > 0 && (
                 <p className="mt-1.5 text-xs text-success">
                   This sale will earn {formatCurrency(loyaltyEarnPreview)} credit
                 </p>

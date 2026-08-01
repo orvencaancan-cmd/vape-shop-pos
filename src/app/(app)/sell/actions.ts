@@ -13,7 +13,7 @@ export async function recordSaleAction(
   discountReason: string | null,
   loyaltyPhone: string | null,
   loyaltyName: string | null,
-  loyaltyRedeemAmount: number,
+  loyaltyUseCredit: boolean,
 ): Promise<SaleResult> {
   if (cart.length === 0) {
     return { error: "Cart is empty" };
@@ -34,7 +34,7 @@ export async function recordSaleAction(
     p_discount_reason: discountReason,
     p_loyalty_phone: loyaltyPhone,
     p_loyalty_name: loyaltyName,
-    p_loyalty_redeem: loyaltyRedeemAmount,
+    p_loyalty_use_credit: loyaltyUseCredit,
   });
   if (error) return { error: error.message };
 
