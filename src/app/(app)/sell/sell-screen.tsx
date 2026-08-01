@@ -2,7 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { recordSaleAction, voidSaleAction, lookupLoyaltyCustomerAction } from "./actions";
+import {
+  recordSaleAction,
+  voidSaleAction,
+  searchLoyaltyCustomersAction,
+  registerLoyaltyCustomerAction,
+  type LoyaltyCustomer,
+} from "./actions";
 import { formatCurrency } from "@/lib/currency";
 import { computePaymentBreakdown } from "@/lib/reports/compute";
 import { Stat } from "@/components/ui/stat";
@@ -31,15 +37,6 @@ type RecentSale = {
 };
 
 type CartLine = { variantId: string; quantity: number };
-
-type LoyaltyCustomer = {
-  customerId: string | null;
-  name: string | null;
-  creditBalance: number;
-  earnEnabled: boolean;
-  redeemEnabled: boolean;
-  rewardPercent: number;
-};
 
 type BrandGroup = { brandKey: string; brandLabel: string; variants: Variant[] };
 
@@ -78,11 +75,16 @@ export function SellScreen({
   const [pending, startTransition] = useTransition();
   const [voidingId, setVoidingId] = useState<string | null>(null);
   const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
-  const [loyaltyPhone, setLoyaltyPhone] = useState("");
+  const [loyaltySearchName, setLoyaltySearchName] = useState("");
+  const [loyaltySearchResults, setLoyaltySearchResults] = useState<LoyaltyCustomer[]>([]);
+  const [loyaltySearchPending, setLoyaltySearchPending] = useState(false);
+  const [loyaltySearchError, setLoyaltySearchError] = useState<string | null>(null);
+  const [loyaltySearched, setLoyaltySearched] = useState(false);
+  const [loyaltyShowNewForm, setLoyaltyShowNewForm] = useState(false);
+  const [loyaltyNewName, setLoyaltyNewName] = useState("");
+  const [loyaltyNewPhone, setLoyaltyNewPhone] = useState("");
+  const [loyaltyRegisterPending, setLoyaltyRegisterPending] = useState(false);
   const [loyaltyCustomer, setLoyaltyCustomer] = useState<LoyaltyCustomer | null>(null);
-  const [loyaltyLookupPending, setLoyaltyLookupPending] = useState(false);
-  const [loyaltyLookupError, setLoyaltyLookupError] = useState<string | null>(null);
-  const [loyaltyName, setLoyaltyName] = useState("");
   const [loyaltyRedeem, setLoyaltyRedeem] = useState("");
   // Own state rather than deriving straight from props -- a completed sale
   // updates these directly (new stock counts, the new sale prepended) since
@@ -187,28 +189,68 @@ export function SellScreen({
     ? Math.round(total * (loyaltyRewardPercent / 100) * 100) / 100
     : 0;
 
-  async function lookUpLoyaltyCustomer() {
-    const phone = loyaltyPhone.trim();
-    if (!phone) return;
-    setLoyaltyLookupPending(true);
-    setLoyaltyLookupError(null);
-    const result = await lookupLoyaltyCustomerAction(phone);
-    setLoyaltyLookupPending(false);
-    if (result.error || !result.customer) {
-      setLoyaltyLookupError(result.error ?? "Couldn't look up that number");
-      setLoyaltyCustomer(null);
+  async function searchLoyalty() {
+    const name = loyaltySearchName.trim();
+    if (!name) return;
+    setLoyaltySearchPending(true);
+    setLoyaltySearchError(null);
+    const result = await searchLoyaltyCustomersAction(name);
+    setLoyaltySearchPending(false);
+    setLoyaltySearched(true);
+    if (result.error) {
+      setLoyaltySearchError(result.error);
+      setLoyaltySearchResults([]);
+      setLoyaltyShowNewForm(true);
+      setLoyaltyNewName(name);
       return;
     }
-    setLoyaltyCustomer(result.customer);
-    setLoyaltyName(result.customer.name ?? "");
+    const results = result.customers ?? [];
+    setLoyaltySearchResults(results);
+    setLoyaltyShowNewForm(results.length === 0);
+    setLoyaltyNewName(name);
+  }
+
+  function selectLoyaltyCustomer(customer: LoyaltyCustomer) {
+    setLoyaltyCustomer(customer);
+    setLoyaltySearchResults([]);
+    setLoyaltyShowNewForm(false);
     setLoyaltyRedeem("");
   }
 
-  function resetLoyalty() {
-    setLoyaltyPhone("");
+  async function saveNewLoyaltyCustomer() {
+    const name = loyaltyNewName.trim();
+    const phone = loyaltyNewPhone.trim();
+    if (!name || !phone) return;
+    setLoyaltyRegisterPending(true);
+    setLoyaltySearchError(null);
+    const result = await registerLoyaltyCustomerAction(name, phone);
+    setLoyaltyRegisterPending(false);
+    if (result.error || !result.customer) {
+      setLoyaltySearchError(result.error ?? "Couldn't save that customer");
+      return;
+    }
+    setLoyaltyCustomer(result.customer);
+    setLoyaltySearchResults([]);
+    setLoyaltyShowNewForm(false);
+    setLoyaltyRedeem("");
+  }
+
+  function changeLoyaltyCustomer() {
     setLoyaltyCustomer(null);
-    setLoyaltyLookupError(null);
-    setLoyaltyName("");
+    setLoyaltyRedeem("");
+    setLoyaltySearchResults([]);
+    setLoyaltyShowNewForm(loyaltySearched && loyaltySearchResults.length === 0);
+  }
+
+  function resetLoyalty() {
+    setLoyaltySearchName("");
+    setLoyaltySearchResults([]);
+    setLoyaltySearchError(null);
+    setLoyaltySearched(false);
+    setLoyaltyShowNewForm(false);
+    setLoyaltyNewName("");
+    setLoyaltyNewPhone("");
+    setLoyaltyCustomer(null);
     setLoyaltyRedeem("");
   }
 
@@ -218,8 +260,8 @@ export function SellScreen({
     const soldDiscountAmount = discountAmount;
     const soldDiscountReason = discountReason.trim() || null;
     const soldPaymentMethod = paymentMethod;
-    const soldLoyaltyPhone = loyaltyPhone.trim() || null;
-    const soldLoyaltyName = loyaltyName.trim() || null;
+    const soldLoyaltyPhone = loyaltyCustomer?.phone ?? null;
+    const soldLoyaltyName = loyaltyCustomer?.name ?? null;
     const soldLoyaltyRedeem = loyaltyRedeemAmount;
     startTransition(async () => {
       const result = await recordSaleAction(
@@ -475,51 +517,138 @@ export function SellScreen({
           {(loyaltyEarnEnabled || loyaltyRedeemEnabled) && (
             <div className="mt-3 border-t border-hairline pt-3">
               <p className="text-xs font-medium uppercase text-muted">Loyalty</p>
-              <div className="mt-2 flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Customer phone number"
-                  value={loyaltyPhone}
-                  onChange={(e) => setLoyaltyPhone(e.target.value)}
-                  className="flex-1 rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={lookUpLoyaltyCustomer}
-                  disabled={!loyaltyPhone.trim() || loyaltyLookupPending}
-                  className="rounded-lg bg-canvas-strong px-3 py-1 text-xs text-body transition-colors hover:text-ink disabled:opacity-50"
-                >
-                  {loyaltyLookupPending ? "Looking up…" : "Look up"}
-                </button>
-              </div>
 
-              {loyaltyLookupError && (
-                <p className="mt-1.5 text-xs text-error">{loyaltyLookupError}</p>
+              {!loyaltyCustomer && (
+                <>
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Customer name"
+                      value={loyaltySearchName}
+                      onChange={(e) => setLoyaltySearchName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          searchLoyalty();
+                        }
+                      }}
+                      className="flex-1 rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={searchLoyalty}
+                      disabled={!loyaltySearchName.trim() || loyaltySearchPending}
+                      className="rounded-lg bg-canvas-strong px-3 py-1 text-xs text-body transition-colors hover:text-ink disabled:opacity-50"
+                    >
+                      {loyaltySearchPending ? "Searching…" : "Search"}
+                    </button>
+                  </div>
+
+                  {loyaltySearchError && (
+                    <p className="mt-1.5 text-xs text-error">{loyaltySearchError}</p>
+                  )}
+
+                  {loyaltySearchResults.length > 0 && (
+                    <div className="mt-2 flex flex-col gap-1">
+                      {loyaltySearchResults.map((c) => (
+                        <button
+                          key={c.customerId}
+                          type="button"
+                          onClick={() => selectLoyaltyCustomer(c)}
+                          className="rounded-lg border border-hairline bg-canvas px-2.5 py-1.5 text-left text-sm text-ink transition-colors hover:border-primary"
+                        >
+                          {c.name}{" "}
+                          <span className="text-xs text-muted">
+                            (•••{c.phone.slice(-4)})
+                          </span>
+                        </button>
+                      ))}
+                      {!loyaltyShowNewForm && (
+                        <button
+                          type="button"
+                          onClick={() => setLoyaltyShowNewForm(true)}
+                          className="mt-1 self-start text-xs text-primary underline underline-offset-2"
+                        >
+                          Not them? + New customer
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {!loyaltyShowNewForm && loyaltySearched && loyaltySearchResults.length === 0 && (
+                    <p className="mt-1.5 text-xs text-muted">No matches.</p>
+                  )}
+                  {!loyaltyShowNewForm && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoyaltyShowNewForm(true);
+                        setLoyaltyNewName(loyaltySearchName);
+                      }}
+                      className="mt-1.5 text-xs text-primary underline underline-offset-2"
+                    >
+                      + New customer
+                    </button>
+                  )}
+
+                  {loyaltyShowNewForm && (
+                    <div className="mt-2 rounded-lg bg-canvas px-2.5 py-2">
+                      <p className="text-xs text-muted">New customer</p>
+                      <input
+                        type="text"
+                        placeholder="Name"
+                        value={loyaltyNewName}
+                        onChange={(e) => setLoyaltyNewName(e.target.value)}
+                        className="mt-1.5 w-full rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Phone number"
+                        value={loyaltyNewPhone}
+                        onChange={(e) => setLoyaltyNewPhone(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            saveNewLoyaltyCustomer();
+                          }
+                        }}
+                        className="mt-1.5 w-full rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={saveNewLoyaltyCustomer}
+                        disabled={
+                          !loyaltyNewName.trim() || !loyaltyNewPhone.trim() || loyaltyRegisterPending
+                        }
+                        className="mt-2 rounded-lg bg-primary px-3 py-1 text-xs font-medium text-on-primary transition-colors hover:bg-primary-active disabled:opacity-50"
+                      >
+                        {loyaltyRegisterPending ? "Saving…" : "Save customer"}
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
 
               {loyaltyCustomer && (
                 <div className="mt-2 rounded-lg bg-canvas px-2.5 py-2 text-sm">
-                  {loyaltyCustomer.customerId ? (
-                    <div className="flex items-center justify-between">
-                      <span className="text-ink">{loyaltyCustomer.name || "Customer"}</span>
-                      <span className="text-body">
-                        Balance: {formatCurrency(loyaltyCustomer.creditBalance)}
-                      </span>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-ink">{loyaltyCustomer.name}</span>
+                      <span className="ml-2 text-xs text-muted">{loyaltyCustomer.phone}</span>
                     </div>
-                  ) : (
-                    <>
-                      <p className="text-xs text-muted">New customer</p>
-                      <input
-                        type="text"
-                        placeholder="Name (optional)"
-                        value={loyaltyName}
-                        onChange={(e) => setLoyaltyName(e.target.value)}
-                        className="mt-1.5 w-full rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
-                      />
-                    </>
-                  )}
+                    <button
+                      type="button"
+                      onClick={changeLoyaltyCustomer}
+                      className="text-xs text-primary underline underline-offset-2"
+                    >
+                      Change
+                    </button>
+                  </div>
+                  <p className="mt-1 text-body">
+                    Balance: {formatCurrency(loyaltyCustomer.creditBalance)}
+                  </p>
 
-                  {loyaltyCustomer.redeemEnabled && loyaltyCustomer.customerId && (
+                  {loyaltyCustomer.redeemEnabled && (
                     <label className="mt-2 flex items-center gap-2 text-xs text-body">
                       Redeem
                       <input

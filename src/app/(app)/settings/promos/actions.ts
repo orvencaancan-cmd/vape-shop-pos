@@ -42,6 +42,6 @@ export async function updateLoyaltySettingsAction(
     .eq("id", shopId);
   if (error) return { error: error.message };
 
-  revalidatePath("/settings/loyalty");
+  revalidatePath("/settings/promos");
   return { success: true };
 }

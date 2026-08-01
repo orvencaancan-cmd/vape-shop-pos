@@ -14,9 +14,9 @@ export async function AdminLoyaltyList({ ownedShops }: { ownedShops: ShopMembers
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
-      <h1 className="heading text-2xl">Loyalty</h1>
+      <h1 className="heading text-2xl">Promos</h1>
       <p className="mt-1 text-sm text-muted">
-        Customers earn store credit based on what they spend, redeemable at any of your
+        Loyalty: customers earn store credit based on what they spend, redeemable at any of your
         branches that accepts redemptions. Each branch sets its own participation and rate.
       </p>
 

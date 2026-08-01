@@ -43,49 +43,71 @@ export async function recordSaleAction(
   return { saleId: data as string };
 }
 
-export type LoyaltyLookupResult = {
-  error?: string;
-  customer?: {
-    customerId: string | null;
-    name: string | null;
-    creditBalance: number;
-    earnEnabled: boolean;
-    redeemEnabled: boolean;
-    rewardPercent: number;
-  };
+export type LoyaltyCustomer = {
+  customerId: string;
+  name: string;
+  phone: string;
+  creditBalance: number;
+  earnEnabled: boolean;
+  redeemEnabled: boolean;
+  rewardPercent: number;
 };
 
-export async function lookupLoyaltyCustomerAction(phone: string): Promise<LoyaltyLookupResult> {
+type LoyaltyRow = {
+  customer_id: string;
+  name: string;
+  phone: string;
+  credit_balance: number;
+  earn_enabled: boolean;
+  redeem_enabled: boolean;
+  reward_percent: number;
+};
+
+function mapLoyaltyRow(row: LoyaltyRow): LoyaltyCustomer {
+  return {
+    customerId: row.customer_id,
+    name: row.name,
+    phone: row.phone,
+    creditBalance: Number(row.credit_balance ?? 0),
+    earnEnabled: row.earn_enabled,
+    redeemEnabled: row.redeem_enabled,
+    rewardPercent: Number(row.reward_percent),
+  };
+}
+
+export type LoyaltySearchResult = { error?: string; customers?: LoyaltyCustomer[] };
+
+export async function searchLoyaltyCustomersAction(name: string): Promise<LoyaltySearchResult> {
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in" };
 
-  type LoyaltyLookupRow = {
-    customer_id: string | null;
-    name: string | null;
-    credit_balance: number;
-    earn_enabled: boolean;
-    redeem_enabled: boolean;
-    reward_percent: number;
-  };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("search_loyalty_customers", {
+    p_shop_id: profile.shopId,
+    p_name: name,
+  });
+  if (error) return { error: error.message };
+
+  return { customers: ((data ?? []) as LoyaltyRow[]).map(mapLoyaltyRow) };
+}
+
+export type LoyaltyRegisterResult = { error?: string; customer?: LoyaltyCustomer };
+
+export async function registerLoyaltyCustomerAction(
+  name: string,
+  phone: string,
+): Promise<LoyaltyRegisterResult> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
 
   const supabase = await createClient();
   const { data, error } = await supabase
-    .rpc("lookup_loyalty_customer", { p_shop_id: profile.shopId, p_phone: phone })
+    .rpc("register_loyalty_customer", { p_shop_id: profile.shopId, p_name: name, p_phone: phone })
     .maybeSingle();
   if (error) return { error: error.message };
-  const row = data as LoyaltyLookupRow | null;
-  if (!row) return { error: "Loyalty program is not enabled for this branch" };
+  if (!data) return { error: "Couldn't save that customer" };
 
-  return {
-    customer: {
-      customerId: row.customer_id,
-      name: row.name,
-      creditBalance: Number(row.credit_balance ?? 0),
-      earnEnabled: row.earn_enabled,
-      redeemEnabled: row.redeem_enabled,
-      rewardPercent: Number(row.reward_percent),
-    },
-  };
+  return { customer: mapLoyaltyRow(data as LoyaltyRow) };
 }
 
 export type VoidResult = { error?: string };

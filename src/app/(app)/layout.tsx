@@ -41,7 +41,7 @@ export default async function AppLayout({
           { href: "/settings/staff", label: "Staff", show: true },
           { href: "/branches", label: "Branches", show: true },
           { href: "/settings/billing", label: "Billing", show: true },
-          { href: "/settings/loyalty", label: "Loyalty", show: true },
+          { href: "/settings/promos", label: "Promos", show: true },
           { href: "/reports", label: "Reports", show: true },
         ].filter((item) => item.show)
       : [
@@ -55,7 +55,7 @@ export default async function AppLayout({
           { href: "/settings/staff", label: "Staff", show: profile.role === "owner" },
           { href: "/branches", label: "Branches", show: profile.role === "owner" },
           { href: "/settings/billing", label: "Billing", show: profile.role === "owner" },
-          { href: "/settings/loyalty", label: "Loyalty", show: profile.role === "owner" },
+          { href: "/settings/promos", label: "Promos", show: profile.role === "owner" },
           { href: "/settings/branding", label: "Branding", show: profile.role === "owner" },
           { href: "/admin", label: "Admin", show: profile.platformAdmin },
         ].filter((item) => item.show);
