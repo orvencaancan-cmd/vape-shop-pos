@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { recordSaleAction, voidSaleAction } from "./actions";
 import { formatCurrency } from "@/lib/currency";
+import { computePaymentBreakdown } from "@/lib/reports/compute";
+import { Stat } from "@/components/ui/stat";
 
 type Variant = {
   id: string;
@@ -37,11 +39,15 @@ const NO_BRAND = "__no_brand__";
 const PAYMENT_LABELS: Record<"cash" | "gcash", string> = { cash: "Cash", gcash: "GCash" };
 
 export function SellScreen({
-  variants,
-  recentSales,
+  shopName,
+  variants: initialVariants,
+  recentSales: initialRecentSales,
+  currentUserName,
 }: {
+  shopName: string;
   variants: Variant[];
   recentSales: RecentSale[];
+  currentUserName: string | null;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -57,10 +63,21 @@ export function SellScreen({
   const [pending, startTransition] = useTransition();
   const [voidingId, setVoidingId] = useState<string | null>(null);
   const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
+  // Own state rather than deriving straight from props -- a completed sale
+  // updates these directly (new stock counts, the new sale prepended) since
+  // we already know exactly what changed, instead of re-fetching the whole
+  // catalog and today's entire sales list from the server on every sale.
+  const [variants, setVariants] = useState<Variant[]>(initialVariants);
+  const [recentSales, setRecentSales] = useState<RecentSale[]>(initialRecentSales);
 
   const variantsById = useMemo(
     () => new Map(variants.map((v) => [v.id, v])),
     [variants],
+  );
+
+  const nonVoidedSales = recentSales.filter((s) => !s.voidedAt);
+  const paymentBreakdown = computePaymentBreakdown(
+    nonVoidedSales.map((s) => ({ total: s.total, payment_method: s.paymentMethod })),
   );
 
   const hasActiveFilter = search.trim() !== "" || category !== "all";
@@ -142,23 +159,59 @@ export function SellScreen({
 
   function completeSale() {
     setMessage(null);
+    const soldCart = cart;
+    const soldDiscountAmount = discountAmount;
+    const soldDiscountReason = discountReason.trim() || null;
+    const soldPaymentMethod = paymentMethod;
     startTransition(async () => {
       const result = await recordSaleAction(
-        cart,
-        paymentMethod,
-        discountAmount,
-        discountReason.trim() || null,
+        soldCart,
+        soldPaymentMethod,
+        soldDiscountAmount,
+        soldDiscountReason,
       );
       if (result.error) {
         setMessage({ type: "error", text: result.error });
-      } else {
-        setMessage({ type: "success", text: `Sale recorded — ${formatCurrency(total)}` });
-        setCart([]);
-        setPaymentMethod("cash");
-        setDiscountValue("");
-        setDiscountReason("");
-        router.refresh();
+        return;
       }
+
+      setMessage({ type: "success", text: `Sale recorded — ${formatCurrency(total)}` });
+      setCart([]);
+      setPaymentMethod("cash");
+      setDiscountValue("");
+      setDiscountReason("");
+
+      // We already know exactly what changed -- update stock and prepend
+      // the new sale directly instead of re-fetching everything.
+      const soldQuantities = new Map(soldCart.map((l) => [l.variantId, l.quantity]));
+      setVariants((prev) =>
+        prev.map((v) => {
+          const qty = soldQuantities.get(v.id);
+          return qty ? { ...v, stockQty: v.stockQty - qty } : v;
+        }),
+      );
+      setRecentSales((prev) => [
+        {
+          id: result.saleId!,
+          total,
+          paymentMethod: soldPaymentMethod,
+          discountAmount: soldDiscountAmount,
+          discountReason: soldDiscountReason,
+          createdAt: new Date().toISOString(),
+          createdByName: currentUserName,
+          voidedAt: null,
+          canVoid: true,
+          lines: soldCart.map((l) => {
+            const v = variantsById.get(l.variantId);
+            return {
+              item: v ? `${v.brand ? `${v.brand} — ` : ""}${v.productName} — ${v.label}` : "",
+              quantity: l.quantity,
+              price: (v?.price ?? 0) * l.quantity,
+            };
+          }),
+        },
+        ...prev,
+      ]);
     });
   }
 
@@ -179,7 +232,19 @@ export function SellScreen({
   }
 
   return (
-    <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-3">
+    <>
+      <div className="mx-auto max-w-5xl px-4 pt-6">
+        <h1 className="heading text-2xl">{shopName} — Sales</h1>
+        {nonVoidedSales.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-4">
+            <Stat label="Sales" value={nonVoidedSales.length.toString()} />
+            <Stat label="Cash" value={formatCurrency(paymentBreakdown.cash)} />
+            <Stat label="GCash" value={formatCurrency(paymentBreakdown.gcash)} />
+            <Stat label="Total" value={formatCurrency(paymentBreakdown.total)} />
+          </div>
+        )}
+      </div>
+      <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-3">
       <div className="md:col-span-2">
         <div className="flex flex-wrap items-center gap-2">
           <input
@@ -448,6 +513,7 @@ export function SellScreen({
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
