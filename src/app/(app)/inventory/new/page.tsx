@@ -109,7 +109,7 @@ export default async function NewProductPage({
     return (
       <PageShell
         title="Add flavors"
-        subtitle="Pick a brand, list the flavors, and check off the nicotine levels each one comes in — every combination is created at once."
+        subtitle="Pick a brand, check off nicotine levels, set the cost and price for this batch, then list the flavors — every combination is created at once."
         backHref="/inventory/new"
         backLabel="Change category"
       >

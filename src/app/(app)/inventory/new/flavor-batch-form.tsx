@@ -36,23 +36,10 @@ export function NewFlavorBatchForm({
         </label>
       </div>
 
-      <label className="flex flex-col gap-1.5">
-        <Label>Flavors</Label>
-        <p className="mt-1 text-xs text-muted">
-          One flavor per line — each becomes its own product.
-        </p>
-        <Textarea
-          name="flavors"
-          rows={5}
-          placeholder={"Blue Razz Ice\nMango Ice\nWatermelon Ice"}
-          className="mt-2"
-        />
-      </label>
-
       <div>
         <Label>Nicotine levels</Label>
         <p className="mt-1 text-xs text-muted">
-          Every flavor above gets one variant per level checked here.
+          Every flavor below gets one variant per level checked here.
         </p>
         <div className="mt-2 flex flex-wrap gap-4">
           {NICOTINE_LEVELS.map((mg) => (
@@ -85,6 +72,20 @@ export function NewFlavorBatchForm({
           ? "Cost, price, and low-stock threshold apply to every variant created — you can adjust individual ones afterward."
           : "Price and low-stock threshold apply to every variant created — you can adjust individual ones afterward."}
       </p>
+
+      <label className="flex flex-col gap-1.5">
+        <Label>Flavors</Label>
+        <p className="mt-1 text-xs text-muted">
+          One flavor per line — each becomes its own product, using the brand, nicotine
+          levels, cost, and price set above.
+        </p>
+        <Textarea
+          name="flavors"
+          rows={5}
+          placeholder={"Blue Razz Ice\nMango Ice\nWatermelon Ice"}
+          className="mt-2"
+        />
+      </label>
 
       {state.error && <p className="text-sm text-error">{state.error}</p>}
 
