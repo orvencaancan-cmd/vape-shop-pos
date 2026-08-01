@@ -23,6 +23,7 @@ type SalesSideReportData = Pick<
   | "salesSummary"
   | "paymentBreakdown"
   | "discounts"
+  | "loyaltySummary"
   | "salesDetail"
   | "revenueProfit"
   | "bestSellers"
@@ -116,6 +117,12 @@ function addSalesSheets(wb: ExcelJS.Workbook, data: SalesSideReportData) {
         data.expenseSummary.total,
       "currency",
     ],
+  ]);
+
+  addKeyValueSheet(wb, "Loyalty", [
+    ["Credit earned", data.loyaltySummary.earned, "currency"],
+    ["Credit redeemed", data.loyaltySummary.redeemed, "currency"],
+    ["Credit forfeited", data.loyaltySummary.forfeited, "currency"],
   ]);
 
   addTableSheet(

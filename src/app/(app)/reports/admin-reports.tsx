@@ -24,6 +24,7 @@ export async function AdminReportsPage({
     salesSummary,
     paymentBreakdown,
     discounts,
+    loyaltySummary,
     salesDetail,
     revenueProfit,
     bestSellers,
@@ -111,6 +112,12 @@ export async function AdminReportsPage({
 
       <Section title="Sales detail">
         <SaleDetailTable sales={salesDetail} />
+      </Section>
+
+      <Section title="Loyalty">
+        <Stat label="Credit earned" value={formatCurrency(loyaltySummary.earned)} />
+        <Stat label="Credit redeemed" value={formatCurrency(loyaltySummary.redeemed)} />
+        <Stat label="Credit forfeited" value={formatCurrency(loyaltySummary.forfeited)} />
       </Section>
 
       <Section title="Revenue & profit">

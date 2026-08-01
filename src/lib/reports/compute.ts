@@ -79,6 +79,24 @@ export function computeDiscounts(sales: { discount_amount: number }[]) {
   return { total: sales.reduce((sum, s) => sum + Number(s.discount_amount), 0) };
 }
 
+export function computeLoyaltySummary(
+  sales: {
+    loyalty_credit_earned: number;
+    loyalty_credit_redeemed: number;
+    loyalty_credit_forfeited: number;
+  }[],
+) {
+  let earned = 0;
+  let redeemed = 0;
+  let forfeited = 0;
+  for (const s of sales) {
+    earned += Number(s.loyalty_credit_earned);
+    redeemed += Number(s.loyalty_credit_redeemed);
+    forfeited += Number(s.loyalty_credit_forfeited);
+  }
+  return { earned, redeemed, forfeited };
+}
+
 export function computeExpenseSummary(expenses: { amount: number }[]) {
   return {
     total: expenses.reduce((sum, e) => sum + Number(e.amount), 0),
