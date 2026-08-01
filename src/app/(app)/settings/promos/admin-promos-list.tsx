@@ -41,10 +41,10 @@ export async function AdminPromosList({ ownedShops }: { ownedShops: ShopMembersh
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
       <h1 className="heading text-2xl">Promos</h1>
       <p className="mt-1 text-sm text-muted">
-        Loyalty: customers earn store credit based on what they spend, redeemable at any of your
-        branches that accepts redemptions. Sale: automatically discounts checkout with no cashier
-        action. Only one promo can apply to a sale at a time. Each branch sets its own
-        participation.
+        Loyalty Promo: customers earn store credit based on what they spend, redeemable at any of
+        your branches that accepts redemptions. Discount Promo: automatically discounts checkout
+        with no cashier action. Only one promo can apply to a sale at a time. Each branch sets its
+        own participation.
       </p>
 
       <div className="stagger mt-6 flex flex-col gap-3">
@@ -56,6 +56,7 @@ export async function AdminPromosList({ ownedShops }: { ownedShops: ShopMembersh
               className="rounded-lg border border-hairline bg-canvas-soft p-4"
             >
               <p className="text-sm font-medium text-ink">{s.shopName}</p>
+              <p className="mt-3 text-xs font-medium uppercase text-muted">Loyalty Promo</p>
               <div className="mt-2">
                 <LoyaltyForm
                   shopId={s.shopId}
@@ -65,7 +66,7 @@ export async function AdminPromosList({ ownedShops }: { ownedShops: ShopMembersh
                 />
               </div>
               <div className="mt-4 border-t border-hairline pt-4">
-                <p className="text-xs font-medium uppercase text-muted">Sale</p>
+                <p className="text-xs font-medium uppercase text-muted">Discount Promo</p>
                 <div className="mt-2">
                   <SaleForm
                     shopId={s.shopId}

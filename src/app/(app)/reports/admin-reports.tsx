@@ -124,7 +124,7 @@ export async function AdminReportsPage({
       <Section title="Revenue & profit">
         <Stat label="Revenue" value={formatCurrency(revenueProfit.revenue)} />
         <Stat label="Discounts" value={formatCurrency(discounts.total)} />
-        <Stat label="Sale discounts" value={formatCurrency(saleDiscounts.total)} />
+        <Stat label="Discount promo" value={formatCurrency(saleDiscounts.total)} />
         <Stat label="Cost of goods" value={formatCurrency(revenueProfit.cost)} />
         <Stat label="Expenses" value={formatCurrency(expenseSummary.total)} />
         <Stat

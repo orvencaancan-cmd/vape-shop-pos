@@ -108,7 +108,7 @@ function addSalesSheets(wb: ExcelJS.Workbook, data: SalesSideReportData) {
   addKeyValueSheet(wb, "Revenue & Profit", [
     ["Revenue", data.revenueProfit.revenue, "currency"],
     ["Discounts", data.discounts.total, "currency"],
-    ["Sale discounts", data.saleDiscounts.total, "currency"],
+    ["Discount promo", data.saleDiscounts.total, "currency"],
     ["Cost of goods", data.revenueProfit.cost, "currency"],
     ["Expenses", data.expenseSummary.total, "currency"],
     [

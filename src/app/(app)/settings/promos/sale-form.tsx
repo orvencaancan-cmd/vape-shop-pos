@@ -65,6 +65,7 @@ export function SaleForm({
 }) {
   const boundAction = updateSaleSettingsAction.bind(null, shopId);
   const [state, formAction, pending] = useActionState(boundAction, initialState);
+  const [isEnabled, setIsEnabled] = useState(enabled);
   const [scope, setScope] = useState(initialScope);
   const [selected, setSelected] = useState<Set<string>>(new Set(selectedProductIds));
   // datetime-local gives a timezone-less string ("2026-08-01T14:30"). Parsed
@@ -113,7 +114,12 @@ export function SaleForm({
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end gap-4">
         <label className="flex items-center gap-1.5 text-sm text-ink">
-          <input type="checkbox" name="enabled" defaultChecked={enabled} />
+          <input
+            type="checkbox"
+            name="enabled"
+            checked={isEnabled}
+            onChange={(e) => setIsEnabled(e.target.checked)}
+          />
           Sale is on
         </label>
         <label className="flex flex-col gap-1">
@@ -177,7 +183,7 @@ export function SaleForm({
         a schedule instead.
       </p>
 
-      {scope === "items" && (
+      {isEnabled && scope === "items" && (
         <div className="rounded-lg border border-hairline bg-canvas p-3">
           <p className="text-xs font-medium uppercase text-muted">
             Pick a brand to include all its flavors, or fine-tune individual ones
@@ -215,11 +221,14 @@ export function SaleForm({
               <p className="text-sm text-muted">No products to choose from.</p>
             )}
           </div>
-          {[...selected].map((id) => (
-            <input key={id} type="hidden" name="productIds" value={id} />
-          ))}
         </div>
       )}
+      {/* Kept outside the collapsible panel above -- these still need to
+          submit the current selection even while "Sale is on" is unchecked
+          and the picker is hidden, so toggling Sale off and saving doesn't
+          wipe out a previously-chosen product list. */}
+      {scope === "items" &&
+        [...selected].map((id) => <input key={id} type="hidden" name="productIds" value={id} />)}
 
       <div className="flex items-center gap-3">
         <Button type="submit" size="sm" disabled={pending}>

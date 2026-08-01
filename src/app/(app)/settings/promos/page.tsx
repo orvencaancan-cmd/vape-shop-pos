@@ -40,12 +40,13 @@ export default async function PromosPage() {
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
       <h1 className="heading text-2xl">Promos</h1>
-      <p className="mt-1 text-sm text-muted">
-        Loyalty: customers earn store credit here based on what they spend, redeemable on a
-        future purchase at any of your branches that accepts redemptions.
-      </p>
 
-      <div className="mt-6 rounded-lg border border-hairline bg-canvas-soft p-4">
+      <h2 className="mt-6 text-sm font-medium uppercase text-muted">Loyalty Promo</h2>
+      <p className="mt-1 text-sm text-muted">
+        Customers earn store credit here based on what they spend, redeemable on a future
+        purchase at any of your branches that accepts redemptions.
+      </p>
+      <div className="mt-3 rounded-lg border border-hairline bg-canvas-soft p-4">
         <LoyaltyForm
           shopId={profile.shopId}
           earnEnabled={shop?.loyalty_earn_enabled ?? false}
@@ -54,11 +55,11 @@ export default async function PromosPage() {
         />
       </div>
 
-      <h2 className="mt-8 text-sm font-medium uppercase text-muted">Sale</h2>
+      <h2 className="mt-8 text-sm font-medium uppercase text-muted">Discount Promo</h2>
       <p className="mt-1 text-sm text-muted">
         Automatically discounts checkout — either the whole branch or specific products — with no
-        cashier action needed. Only one promo can apply to a sale at a time, so an active Sale
-        pauses Loyalty and the manual staff discount for the duration.
+        cashier action needed. Only one promo can apply to a sale at a time, so an active Discount
+        Promo pauses Loyalty and the manual staff discount for the duration.
       </p>
       <div className="mt-3 rounded-lg border border-hairline bg-canvas-soft p-4">
         <SaleForm

@@ -528,7 +528,7 @@ export function SellScreen({
 
           {isSaleTransaction ? (
             <div className="mt-2 flex items-center justify-between text-sm text-success">
-              <span>Sale: {salePercent}% off</span>
+              <span>Discount Promo: {salePercent}% off</span>
               <span>−{formatCurrency(saleDiscount)}</span>
             </div>
           ) : (
@@ -586,14 +586,14 @@ export function SellScreen({
           {(loyaltyEarnEnabled || loyaltyRedeemEnabled) && !loyaltySectionVisible && (
             <p className="mt-3 border-t border-hairline pt-3 text-xs text-muted">
               {isSaleTransaction
-                ? "Loyalty paused during Sale."
-                : "Loyalty paused — a discount is applied to this sale."}
+                ? "Loyalty Promo paused during Discount Promo."
+                : "Loyalty Promo paused — a discount is applied to this sale."}
             </p>
           )}
 
           {loyaltySectionVisible && (
             <div className="mt-3 border-t border-hairline pt-3">
-              <p className="text-xs font-medium uppercase text-muted">Loyalty</p>
+              <p className="text-xs font-medium uppercase text-muted">Loyalty Promo</p>
 
               {!loyaltyCustomer && (
                 <>
@@ -826,7 +826,7 @@ export function SellScreen({
                       )}
                       {s.saleDiscountAmount > 0 && (
                         <span className="ml-2 rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-success">
-                          −{formatCurrency(s.saleDiscountAmount)} sale
+                          −{formatCurrency(s.saleDiscountAmount)} discount promo
                         </span>
                       )}
                       {s.createdByName && (

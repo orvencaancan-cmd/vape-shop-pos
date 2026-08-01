@@ -155,7 +155,7 @@ function buildSaleNote(
 ): string {
   const parts: string[] = [];
   if (saleDiscountAmount > 0) {
-    parts.push("Sale");
+    parts.push("Discount promo");
   }
   if (discountAmount > 0) {
     parts.push(discountReason ? `Discount: ${discountReason}` : "Discount");
