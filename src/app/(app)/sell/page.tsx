@@ -12,6 +12,12 @@ export default async function SellPage() {
   }
 
   const supabase = await createClient();
+  const { data: shop } = await supabase
+    .from("shops")
+    .select("loyalty_earn_enabled, loyalty_redeem_enabled, loyalty_reward_percent")
+    .eq("id", profile.shopId)
+    .single();
+
   const { data: variants } = await supabase
     .from("variants")
     .select(
@@ -123,6 +129,9 @@ export default async function SellPage() {
         variants={items}
         recentSales={recentSales}
         currentUserName={profile.displayName}
+        loyaltyEarnEnabled={shop?.loyalty_earn_enabled ?? false}
+        loyaltyRedeemEnabled={shop?.loyalty_redeem_enabled ?? false}
+        loyaltyRewardPercent={Number(shop?.loyalty_reward_percent ?? 0)}
       />
     </main>
   );

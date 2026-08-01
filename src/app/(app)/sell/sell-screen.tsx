@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { recordSaleAction, voidSaleAction } from "./actions";
+import { recordSaleAction, voidSaleAction, lookupLoyaltyCustomerAction } from "./actions";
 import { formatCurrency } from "@/lib/currency";
 import { computePaymentBreakdown } from "@/lib/reports/compute";
 import { Stat } from "@/components/ui/stat";
@@ -32,6 +32,15 @@ type RecentSale = {
 
 type CartLine = { variantId: string; quantity: number };
 
+type LoyaltyCustomer = {
+  customerId: string | null;
+  name: string | null;
+  creditBalance: number;
+  earnEnabled: boolean;
+  redeemEnabled: boolean;
+  rewardPercent: number;
+};
+
 type BrandGroup = { brandKey: string; brandLabel: string; variants: Variant[] };
 
 const NO_BRAND = "__no_brand__";
@@ -43,11 +52,17 @@ export function SellScreen({
   variants: initialVariants,
   recentSales: initialRecentSales,
   currentUserName,
+  loyaltyEarnEnabled,
+  loyaltyRedeemEnabled,
+  loyaltyRewardPercent,
 }: {
   shopName: string;
   variants: Variant[];
   recentSales: RecentSale[];
   currentUserName: string | null;
+  loyaltyEarnEnabled: boolean;
+  loyaltyRedeemEnabled: boolean;
+  loyaltyRewardPercent: number;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -63,6 +78,12 @@ export function SellScreen({
   const [pending, startTransition] = useTransition();
   const [voidingId, setVoidingId] = useState<string | null>(null);
   const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
+  const [loyaltyPhone, setLoyaltyPhone] = useState("");
+  const [loyaltyCustomer, setLoyaltyCustomer] = useState<LoyaltyCustomer | null>(null);
+  const [loyaltyLookupPending, setLoyaltyLookupPending] = useState(false);
+  const [loyaltyLookupError, setLoyaltyLookupError] = useState<string | null>(null);
+  const [loyaltyName, setLoyaltyName] = useState("");
+  const [loyaltyRedeem, setLoyaltyRedeem] = useState("");
   // Own state rather than deriving straight from props -- a completed sale
   // updates these directly (new stock counts, the new sale prepended) since
   // we already know exactly what changed, instead of re-fetching the whole
@@ -155,7 +176,41 @@ export function SellScreen({
     discountMode === "percent"
       ? Math.min(subtotal, Math.round(subtotal * (discountValueNum / 100) * 100) / 100)
       : Math.min(subtotal, discountValueNum);
-  const total = Math.max(0, subtotal - discountAmount);
+  const afterDiscount = Math.max(0, subtotal - discountAmount);
+
+  const loyaltyRedeemAmount =
+    loyaltyCustomer?.redeemEnabled
+      ? Math.min(afterDiscount, loyaltyCustomer.creditBalance, Number(loyaltyRedeem) || 0)
+      : 0;
+  const total = Math.max(0, afterDiscount - loyaltyRedeemAmount);
+  const loyaltyEarnPreview = loyaltyEarnEnabled
+    ? Math.round(total * (loyaltyRewardPercent / 100) * 100) / 100
+    : 0;
+
+  async function lookUpLoyaltyCustomer() {
+    const phone = loyaltyPhone.trim();
+    if (!phone) return;
+    setLoyaltyLookupPending(true);
+    setLoyaltyLookupError(null);
+    const result = await lookupLoyaltyCustomerAction(phone);
+    setLoyaltyLookupPending(false);
+    if (result.error || !result.customer) {
+      setLoyaltyLookupError(result.error ?? "Couldn't look up that number");
+      setLoyaltyCustomer(null);
+      return;
+    }
+    setLoyaltyCustomer(result.customer);
+    setLoyaltyName(result.customer.name ?? "");
+    setLoyaltyRedeem("");
+  }
+
+  function resetLoyalty() {
+    setLoyaltyPhone("");
+    setLoyaltyCustomer(null);
+    setLoyaltyLookupError(null);
+    setLoyaltyName("");
+    setLoyaltyRedeem("");
+  }
 
   function completeSale() {
     setMessage(null);
@@ -163,12 +218,18 @@ export function SellScreen({
     const soldDiscountAmount = discountAmount;
     const soldDiscountReason = discountReason.trim() || null;
     const soldPaymentMethod = paymentMethod;
+    const soldLoyaltyPhone = loyaltyPhone.trim() || null;
+    const soldLoyaltyName = loyaltyName.trim() || null;
+    const soldLoyaltyRedeem = loyaltyRedeemAmount;
     startTransition(async () => {
       const result = await recordSaleAction(
         soldCart,
         soldPaymentMethod,
         soldDiscountAmount,
         soldDiscountReason,
+        soldLoyaltyPhone,
+        soldLoyaltyName,
+        soldLoyaltyRedeem,
       );
       if (result.error) {
         setMessage({ type: "error", text: result.error });
@@ -180,6 +241,7 @@ export function SellScreen({
       setPaymentMethod("cash");
       setDiscountValue("");
       setDiscountReason("");
+      resetLoyalty();
 
       // We already know exactly what changed -- update stock and prepend
       // the new sale directly instead of re-fetching everything.
@@ -408,6 +470,85 @@ export function SellScreen({
                 className="mt-2 w-full rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
               />
             </>
+          )}
+
+          {(loyaltyEarnEnabled || loyaltyRedeemEnabled) && (
+            <div className="mt-3 border-t border-hairline pt-3">
+              <p className="text-xs font-medium uppercase text-muted">Loyalty</p>
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Customer phone number"
+                  value={loyaltyPhone}
+                  onChange={(e) => setLoyaltyPhone(e.target.value)}
+                  className="flex-1 rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={lookUpLoyaltyCustomer}
+                  disabled={!loyaltyPhone.trim() || loyaltyLookupPending}
+                  className="rounded-lg bg-canvas-strong px-3 py-1 text-xs text-body transition-colors hover:text-ink disabled:opacity-50"
+                >
+                  {loyaltyLookupPending ? "Looking up…" : "Look up"}
+                </button>
+              </div>
+
+              {loyaltyLookupError && (
+                <p className="mt-1.5 text-xs text-error">{loyaltyLookupError}</p>
+              )}
+
+              {loyaltyCustomer && (
+                <div className="mt-2 rounded-lg bg-canvas px-2.5 py-2 text-sm">
+                  {loyaltyCustomer.customerId ? (
+                    <div className="flex items-center justify-between">
+                      <span className="text-ink">{loyaltyCustomer.name || "Customer"}</span>
+                      <span className="text-body">
+                        Balance: {formatCurrency(loyaltyCustomer.creditBalance)}
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted">New customer</p>
+                      <input
+                        type="text"
+                        placeholder="Name (optional)"
+                        value={loyaltyName}
+                        onChange={(e) => setLoyaltyName(e.target.value)}
+                        className="mt-1.5 w-full rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+                      />
+                    </>
+                  )}
+
+                  {loyaltyCustomer.redeemEnabled && loyaltyCustomer.customerId && (
+                    <label className="mt-2 flex items-center gap-2 text-xs text-body">
+                      Redeem
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        max={Math.min(afterDiscount, loyaltyCustomer.creditBalance)}
+                        placeholder="0.00"
+                        value={loyaltyRedeem}
+                        onChange={(e) => setLoyaltyRedeem(e.target.value)}
+                        className="w-24 rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+                      />
+                    </label>
+                  )}
+                </div>
+              )}
+
+              {loyaltyRedeemAmount > 0 && (
+                <div className="mt-2 flex items-center justify-between text-sm text-warning">
+                  <span>Loyalty credit used</span>
+                  <span>−{formatCurrency(loyaltyRedeemAmount)}</span>
+                </div>
+              )}
+              {loyaltyEarnEnabled && loyaltyEarnPreview > 0 && (
+                <p className="mt-1.5 text-xs text-success">
+                  This sale will earn {formatCurrency(loyaltyEarnPreview)} credit
+                </p>
+              )}
+            </div>
           )}
 
           <div className="mt-3 flex items-center justify-between border-t border-hairline pt-3 text-sm font-medium text-ink">
