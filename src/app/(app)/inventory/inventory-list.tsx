@@ -63,10 +63,25 @@ function getBrandSupplier(products: ProductGroup[]): string | null {
   return names.size === 1 ? [...names][0] : null;
 }
 
-// Same idea as getBrandSupplier, for the brand-level Unit cost field --
-// pre-fills only when every variant in the brand already shares one cost.
-function getBrandCost(products: ProductGroup[]): number | null {
-  const costs = new Set(products.flatMap((p) => p.variants.map((v) => v.cost)));
+// Every distinct nicotine level found among a brand's variants, so Unit
+// cost can be edited per level (cost commonly differs by strength even
+// though every flavor at one strength shares a cost). Accessories with no
+// nicotine dimension collapse to a single `null` entry -- one flat field.
+function getBrandNicotineLevels(products: ProductGroup[]): (number | null)[] {
+  const levels = new Set(products.flatMap((p) => p.variants.map((v) => v.nicotineMg)));
+  return [...levels].sort((a, b) => {
+    if (a == null) return 1;
+    if (b == null) return -1;
+    return a - b;
+  });
+}
+
+// Same idea as getBrandSupplier, for one nicotine level's Unit cost field --
+// pre-fills only when every variant at that level already shares one cost.
+function getBrandCostForLevel(products: ProductGroup[], nicotineMg: number | null): number | null {
+  const costs = new Set(
+    products.flatMap((p) => p.variants.filter((v) => v.nicotineMg === nicotineMg).map((v) => v.cost)),
+  );
   return costs.size === 1 ? [...costs][0] : null;
 }
 
@@ -310,7 +325,7 @@ export function InventoryList({
             {isExpanded && (
             <div className="animate-fade-in-up mt-4 flex flex-col gap-5">
               {canEdit && (
-                <div className="-mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+                <div className="-mt-3 flex flex-col gap-2">
                   <form
                     action={updateBrandSupplierAction.bind(
                       null,
@@ -335,27 +350,35 @@ export function InventoryList({
                       Save
                     </button>
                   </form>
-                  <form
-                    action={updateBrandCostAction.bind(
-                      null,
-                      brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel,
-                    )}
-                    className="flex items-center gap-2"
-                  >
-                    <label className="text-xs text-muted">Unit cost</label>
-                    <input
-                      name="cost"
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      defaultValue={getBrandCost(brandGroup.products) ?? ""}
-                      placeholder="Applies to every flavor"
-                      className="w-40 rounded border border-hairline bg-canvas px-2 py-0.5 text-xs text-ink placeholder:text-muted"
-                    />
-                    <button type="submit" className="text-xs text-primary underline underline-offset-2">
-                      Save
-                    </button>
-                  </form>
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                    {getBrandNicotineLevels(brandGroup.products).map((mg) => (
+                      <form
+                        key={mg ?? "none"}
+                        action={updateBrandCostAction.bind(
+                          null,
+                          brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel,
+                          mg,
+                        )}
+                        className="flex items-center gap-2"
+                      >
+                        <label className="text-xs text-muted">
+                          {mg != null ? `${mg}mg cost` : "Unit cost"}
+                        </label>
+                        <input
+                          name="cost"
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          defaultValue={getBrandCostForLevel(brandGroup.products, mg) ?? ""}
+                          placeholder="Applies to every flavor"
+                          className="w-36 rounded border border-hairline bg-canvas px-2 py-0.5 text-xs text-ink placeholder:text-muted"
+                        />
+                        <button type="submit" className="text-xs text-primary underline underline-offset-2">
+                          Save
+                        </button>
+                      </form>
+                    ))}
+                  </div>
                 </div>
               )}
               {brandGroup.products.map((product) => (

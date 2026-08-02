@@ -228,11 +228,19 @@ export async function updateBrandSupplierAction(brand: string | null, formData: 
   revalidatePath("/inventory");
 }
 
-// Sets the unit cost for every variant of every product sharing a brand at
-// once -- cost previously only lived on the per-variant edit form (or as a
-// side effect of logging a stock receipt), which is tedious to correct
-// across a whole brand's flavors one at a time.
-export async function updateBrandCostAction(brand: string | null, formData: FormData) {
+// Sets the unit cost for every variant at one nicotine level (or, for
+// accessories that have no nicotine dimension, every variant) across every
+// product sharing a brand at once. Scoped by nicotine level because cost
+// commonly varies by strength within a brand (e.g. 12mg vs 24mg vs 36mg all
+// pricing differently) even though every flavor at a given strength shares
+// one cost -- cost previously only lived on the per-variant edit form (or
+// as a side effect of logging a stock receipt), tedious to correct one
+// flavor at a time.
+export async function updateBrandCostAction(
+  brand: string | null,
+  nicotineMg: number | null,
+  formData: FormData,
+) {
   const profile = await getCurrentProfile();
   if (!profile) return;
   if (profile.role !== "owner") return;
@@ -252,11 +260,14 @@ export async function updateBrandCostAction(brand: string | null, formData: Form
   const productIds = (products ?? []).map((p) => p.id);
   if (productIds.length === 0) return;
 
-  const { error } = await supabase
+  let variantQuery = supabase
     .from("variants")
     .update({ cost })
     .eq("shop_id", profile.shopId)
     .in("product_id", productIds);
+  variantQuery =
+    nicotineMg != null ? variantQuery.eq("nicotine_mg", nicotineMg) : variantQuery.is("nicotine_mg", null);
+  const { error } = await variantQuery;
   if (error) {
     console.error("updateBrandCostAction failed:", error.message);
     return;
