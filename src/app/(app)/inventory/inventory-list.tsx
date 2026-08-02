@@ -19,8 +19,10 @@ export type InventoryVariant = {
   forDevice: string | null;
   ohms: number | null;
   price: number;
+  cost: number;
   stockQty: number;
   lowStockThreshold: number;
+  supplierName: string | null;
 };
 
 type ProductGroup = {
@@ -328,6 +330,11 @@ export function InventoryList({
                       </div>
                     )}
                   </div>
+                  {canEdit && product.variants[0]?.supplierName && (
+                    <p className="mt-0.5 text-xs text-muted">
+                      Supplier: {product.variants[0].supplierName}
+                    </p>
+                  )}
 
                   <div className="mt-2 flex flex-col gap-3">
                     {groupByFlavor(product.variants).map(([flavorKey, vs]) => (
@@ -361,6 +368,11 @@ export function InventoryList({
                                   >
                                     {v.stockQty} in stock
                                   </span>
+                                  {canEdit && (
+                                    <span className="text-xs text-muted">
+                                      Cost {formatCurrency(v.cost)}
+                                    </span>
+                                  )}
                                   <span className="text-xs text-muted">
                                     {formatCurrency(v.price)}
                                   </span>

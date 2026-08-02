@@ -18,7 +18,7 @@ export default async function InventoryPage() {
     supabase
       .from("variants")
       .select(
-        "id, product_id, flavor, nicotine_mg, size, for_device, ohms, price, stock_qty, low_stock_threshold, products(name, brand, category, subcategory, archived)",
+        "id, product_id, flavor, nicotine_mg, size, for_device, ohms, price, cost, stock_qty, low_stock_threshold, products(name, brand, category, subcategory, archived, suppliers(name))",
       )
       .eq("shop_id", profile.shopId),
     supabase.from("suppliers").select("id, name").eq("shop_id", profile.shopId).order("name"),
@@ -28,6 +28,7 @@ export default async function InventoryPage() {
     .map((v) => {
       const product = Array.isArray(v.products) ? v.products[0] : v.products;
       if (!product || product.archived) return null;
+      const supplierRow = Array.isArray(product.suppliers) ? product.suppliers[0] : product.suppliers;
       return {
         id: v.id as string,
         productId: v.product_id as string,
@@ -41,8 +42,10 @@ export default async function InventoryPage() {
         forDevice: v.for_device as string | null,
         ohms: v.ohms != null ? Number(v.ohms) : null,
         price: Number(v.price),
+        cost: Number(v.cost),
         stockQty: v.stock_qty as number,
         lowStockThreshold: v.low_stock_threshold as number,
+        supplierName: (supplierRow?.name as string | undefined) ?? null,
       };
     })
     .filter((v): v is InventoryVariant => v !== null);
