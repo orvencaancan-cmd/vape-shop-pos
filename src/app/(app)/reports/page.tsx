@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveRange } from "@/lib/reports/date-range";
 import { fetchSingleShopReportData } from "@/lib/reports/fetch-single-shop";
 import { formatCurrency } from "@/lib/currency";
-import { RangeLink, Section, Stat, Empty, Table } from "./report-ui";
+import { RangeLink, Stat, Empty, Table, PromosDetail } from "./report-ui";
+import { CollapsibleSection } from "./collapsible-section";
 import { SaleDetailTable } from "./sale-detail-table";
 import { AdminReportsPage } from "./admin-reports";
 
@@ -90,27 +91,20 @@ export default async function ReportsPage({
         </form>
       </div>
 
-      <Section title="Sales summary">
+      <CollapsibleSection title="Sales summary" defaultOpen>
         <Stat label="Sales" value={salesSummary.count.toString()} />
         <Stat label="Cash" value={formatCurrency(paymentBreakdown.cash)} />
         <Stat label="GCash" value={formatCurrency(paymentBreakdown.gcash)} />
         <Stat label="Total" value={formatCurrency(salesSummary.revenue)} />
-      </Section>
+      </CollapsibleSection>
 
-      <Section title="Sales detail">
+      <CollapsibleSection title="Sales detail" collapsible={false}>
         <SaleDetailTable sales={salesDetail} />
-      </Section>
+      </CollapsibleSection>
 
-      <Section title="Loyalty">
-        <Stat label="Credit earned" value={formatCurrency(loyaltySummary.earned)} />
-        <Stat label="Credit redeemed" value={formatCurrency(loyaltySummary.redeemed)} />
-        <Stat label="Credit forfeited" value={formatCurrency(loyaltySummary.forfeited)} />
-      </Section>
-
-      <Section title="Revenue & profit">
+      <CollapsibleSection title="Revenue & profit" defaultOpen>
         <Stat label="Revenue" value={formatCurrency(revenueProfit.revenue)} />
         <Stat label="Discounts" value={formatCurrency(discounts.total)} />
-        <Stat label="Discount promo" value={formatCurrency(saleDiscounts.total)} />
         <Stat label="Cost of goods" value={formatCurrency(revenueProfit.cost)} />
         <Stat label="Expenses" value={formatCurrency(expenseSummary.total)} />
         <Stat
@@ -123,9 +117,9 @@ export default async function ReportsPage({
               expenseSummary.total,
           )}
         />
-      </Section>
+      </CollapsibleSection>
 
-      <Section title="Best sellers">
+      <CollapsibleSection title="Best sellers">
         {bestSellers.length === 0 ? (
           <Empty />
         ) : (
@@ -137,23 +131,21 @@ export default async function ReportsPage({
             ])}
           />
         )}
-      </Section>
+      </CollapsibleSection>
 
-      <Section title="Sales by category">
-        <Table
-          rows={byCategory.map((c) => [c.category, "", formatCurrency(c.revenue)])}
-        />
-        {byNicotine.length > 0 && (
-          <>
-            <p className="mt-3 text-xs font-medium uppercase text-muted">
-              E-juice by nicotine strength
-            </p>
-            <Table rows={byNicotine.map((n) => [n.mg, "", formatCurrency(n.revenue)])} />
-          </>
+      <CollapsibleSection title="Sales by category" collapsible={false}>
+        <Table rows={byCategory.map((c) => [c.category, "", formatCurrency(c.revenue)])} />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Sales by nicotine strength">
+        {byNicotine.length === 0 ? (
+          <Empty />
+        ) : (
+          <Table rows={byNicotine.map((n) => [n.mg, "", formatCurrency(n.revenue)])} />
         )}
-      </Section>
+      </CollapsibleSection>
 
-      <Section title="Low stock">
+      <CollapsibleSection title="Low stock">
         {lowStock.length === 0 ? (
           <Empty text="Nothing is low on stock." />
         ) : (
@@ -165,9 +157,9 @@ export default async function ReportsPage({
             ])}
           />
         )}
-      </Section>
+      </CollapsibleSection>
 
-      <Section title="Slow movers">
+      <CollapsibleSection title="Slow movers">
         {slowMovers.length === 0 ? (
           <Empty />
         ) : (
@@ -179,14 +171,14 @@ export default async function ReportsPage({
             ])}
           />
         )}
-      </Section>
+      </CollapsibleSection>
 
-      <Section title="Inventory value">
+      <CollapsibleSection title="Inventory value">
         <Stat label="Total" value={formatCurrency(inventoryValue.total)} />
         <Table rows={inventoryValue.byCategory.map((c) => [c.category, "", formatCurrency(c.value)])} />
-      </Section>
+      </CollapsibleSection>
 
-      <Section title="Supplier activity">
+      <CollapsibleSection title="Supplier activity" collapsible={false}>
         {supplierActivity.length === 0 ? (
           <Empty />
         ) : (
@@ -198,9 +190,9 @@ export default async function ReportsPage({
             ])}
           />
         )}
-      </Section>
+      </CollapsibleSection>
 
-      <Section title="Expenses">
+      <CollapsibleSection title="Expenses">
         {expenses.length === 0 ? (
           <Empty />
         ) : (
@@ -212,9 +204,9 @@ export default async function ReportsPage({
             ])}
           />
         )}
-      </Section>
+      </CollapsibleSection>
 
-      <Section title="Staff activity">
+      <CollapsibleSection title="Staff activity">
         {staffActivity.length === 0 ? (
           <Empty />
         ) : (
@@ -228,7 +220,11 @@ export default async function ReportsPage({
             ])}
           />
         )}
-      </Section>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Promos">
+        <PromosDetail loyaltySummary={loyaltySummary} saleDiscounts={saleDiscounts} />
+      </CollapsibleSection>
     </main>
   );
 }

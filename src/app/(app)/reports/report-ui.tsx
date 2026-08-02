@@ -1,7 +1,38 @@
 import Link from "next/link";
 import { Section, Stat } from "@/components/ui/stat";
+import { formatCurrency } from "@/lib/currency";
 
 export { Section, Stat };
+
+const PROMO_BADGE =
+  "inline-block rounded-full bg-primary px-3 py-1 text-xs font-bold uppercase tracking-wide text-white";
+
+export function PromosDetail({
+  loyaltySummary,
+  saleDiscounts,
+}: {
+  loyaltySummary: { earned: number; redeemed: number; forfeited: number };
+  saleDiscounts: { total: number };
+}) {
+  return (
+    <div className="flex w-full flex-col gap-5">
+      <div>
+        <p className={PROMO_BADGE}>Loyalty Promo</p>
+        <div className="mt-3 flex flex-wrap gap-4">
+          <Stat label="Credit earned" value={formatCurrency(loyaltySummary.earned)} />
+          <Stat label="Credit redeemed" value={formatCurrency(loyaltySummary.redeemed)} />
+          <Stat label="Credit forfeited" value={formatCurrency(loyaltySummary.forfeited)} />
+        </div>
+      </div>
+      <div>
+        <p className={PROMO_BADGE}>Discount Promo</p>
+        <div className="mt-3 flex flex-wrap gap-4">
+          <Stat label="Discount promo" value={formatCurrency(saleDiscounts.total)} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function RangeLink({
   range,
