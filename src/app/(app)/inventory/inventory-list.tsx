@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ReceiveStockForm } from "./receive-stock-form";
-import { archiveProductAction } from "./actions";
+import { archiveProductAction, updateBrandSupplierAction } from "./actions";
 import { formatCurrency } from "@/lib/currency";
 
 export type InventoryVariant = {
@@ -65,9 +65,11 @@ function getBrandSupplier(products: ProductGroup[]): string | null {
 
 export function InventoryList({
   variants,
+  supplierNames,
   canEdit,
 }: {
   variants: InventoryVariant[];
+  supplierNames: string[];
   canEdit: boolean;
 }) {
   const [search, setSearch] = useState("");
@@ -300,10 +302,31 @@ export function InventoryList({
             </button>
             {isExpanded && (
             <div className="animate-fade-in-up mt-4 flex flex-col gap-5">
-              {canEdit && getBrandSupplier(brandGroup.products) && (
-                <p className="-mt-3 text-xs text-muted">
-                  Supplier: {getBrandSupplier(brandGroup.products)}
-                </p>
+              {canEdit && (
+                <form
+                  action={updateBrandSupplierAction.bind(
+                    null,
+                    brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel,
+                  )}
+                  className="-mt-3 flex items-center gap-2"
+                >
+                  <label className="text-xs text-muted">Supplier</label>
+                  <input
+                    name="supplier"
+                    defaultValue={getBrandSupplier(brandGroup.products) ?? ""}
+                    list={`brand-supplier-suggestions-${brandGroup.brandKey}`}
+                    placeholder="e.g. Metro Vape Distributors"
+                    className="rounded border border-hairline bg-canvas px-2 py-0.5 text-xs text-ink placeholder:text-muted"
+                  />
+                  <datalist id={`brand-supplier-suggestions-${brandGroup.brandKey}`}>
+                    {supplierNames.map((s) => (
+                      <option key={s} value={s} />
+                    ))}
+                  </datalist>
+                  <button type="submit" className="text-xs text-primary underline underline-offset-2">
+                    Save
+                  </button>
+                </form>
               )}
               {brandGroup.products.map((product) => (
                 <div key={product.productId}>

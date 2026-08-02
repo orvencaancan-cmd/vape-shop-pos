@@ -195,6 +195,39 @@ export async function updateProductAction(
   return {};
 }
 
+// Sets (or clears) the supplier for every product sharing a brand at once --
+// the per-product edit form only ever touches one product, which is tedious
+// for a brand with several flavors.
+export async function updateBrandSupplierAction(brand: string | null, formData: FormData) {
+  const profile = await getCurrentProfile();
+  if (!profile) return;
+
+  const supabase = await createClient();
+  const resolvedSupplier = await resolveSupplierId(
+    supabase,
+    profile.shopId,
+    String(formData.get("supplier") ?? ""),
+  );
+  if (resolvedSupplier.error) {
+    console.error("updateBrandSupplierAction failed:", resolvedSupplier.error);
+    return;
+  }
+
+  let query = supabase
+    .from("products")
+    .update({ supplier_id: resolvedSupplier.id })
+    .eq("shop_id", profile.shopId)
+    .eq("archived", false);
+  query = brand ? query.eq("brand", brand) : query.is("brand", null);
+  const { error } = await query;
+  if (error) {
+    console.error("updateBrandSupplierAction failed:", error.message);
+    return;
+  }
+
+  revalidatePath("/inventory");
+}
+
 export async function archiveProductAction(productId: string) {
   const profile = await getCurrentProfile();
   if (!profile) return;
