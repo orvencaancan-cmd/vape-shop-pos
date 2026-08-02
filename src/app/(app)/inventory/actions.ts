@@ -9,6 +9,32 @@ import { getAccessorySubcategory } from "@/lib/inventory/accessory-subcategories
 
 export type ActionState = { error?: string };
 
+// Case-insensitive find-or-create, shared by anywhere a free-text supplier
+// name needs to become a supplier_id (Add E-juice, editing an existing
+// product).
+async function resolveSupplierId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  shopId: string,
+  supplierName: string | undefined,
+): Promise<{ id: string | null; error?: string }> {
+  const name = supplierName?.trim();
+  if (!name) return { id: null };
+  const { data: existing } = await supabase
+    .from("suppliers")
+    .select("id")
+    .eq("shop_id", shopId)
+    .ilike("name", name)
+    .maybeSingle();
+  if (existing) return { id: existing.id };
+  const { data: created, error } = await supabase
+    .from("suppliers")
+    .insert({ shop_id: shopId, name })
+    .select("id")
+    .single();
+  if (error) return { id: null, error: error.message };
+  return { id: created.id };
+}
+
 const receiveStockSchema = z.object({
   variantId: z.string().uuid(),
   quantity: z.coerce.number().int().positive(),
@@ -72,6 +98,7 @@ const productSchema = z.object({
   category: z.enum(["ejuice", "accessory"]),
   subcategory: z.string().optional(),
   description: z.string().optional(),
+  supplier: z.string().optional(),
 });
 
 export async function createProductAction(
@@ -136,6 +163,7 @@ export async function updateProductAction(
     category: formData.get("category"),
     subcategory: formData.get("subcategory") ?? "",
     description: formData.get("description") ?? "",
+    supplier: formData.get("supplier") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -145,6 +173,9 @@ export async function updateProductAction(
   if (!profile) return { error: "Not signed in" };
 
   const supabase = await createClient();
+  const resolvedSupplier = await resolveSupplierId(supabase, profile.shopId, parsed.data.supplier);
+  if (resolvedSupplier.error) return { error: resolvedSupplier.error };
+
   const { error } = await supabase
     .from("products")
     .update({
@@ -153,6 +184,7 @@ export async function updateProductAction(
       category: parsed.data.category,
       subcategory: parsed.data.category === "accessory" ? parsed.data.subcategory || null : null,
       description: parsed.data.description,
+      supplier_id: resolvedSupplier.id,
     })
     .eq("id", productId)
     .eq("shop_id", profile.shopId);
@@ -226,27 +258,9 @@ export async function createFlavorBatchAction(
   if (!profile) return { error: "Not signed in" };
   const shopId = profile.shopId;
 
-  let supplierId: string | null = null;
-  const supplierName = supplier?.trim();
-  if (supplierName) {
-    const { data: existingSupplier } = await supabase
-      .from("suppliers")
-      .select("id")
-      .eq("shop_id", shopId)
-      .ilike("name", supplierName)
-      .maybeSingle();
-    if (existingSupplier) {
-      supplierId = existingSupplier.id;
-    } else {
-      const { data: newSupplier, error: supplierError } = await supabase
-        .from("suppliers")
-        .insert({ shop_id: shopId, name: supplierName })
-        .select("id")
-        .single();
-      if (supplierError) return { error: supplierError.message };
-      supplierId = newSupplier.id;
-    }
-  }
+  const resolvedSupplier = await resolveSupplierId(supabase, shopId, supplier);
+  if (resolvedSupplier.error) return { error: resolvedSupplier.error };
+  const supplierId = resolvedSupplier.id;
 
   // Reuse an existing product for any flavor name that already exists under this
   // brand, instead of creating a second, visually-duplicate product card. Only

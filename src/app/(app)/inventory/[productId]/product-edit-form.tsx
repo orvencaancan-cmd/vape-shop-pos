@@ -14,6 +14,8 @@ export function ProductEditForm({
   category,
   subcategory,
   description,
+  supplier,
+  supplierNames,
 }: {
   productId: string;
   name: string;
@@ -21,6 +23,8 @@ export function ProductEditForm({
   category: "ejuice" | "accessory";
   subcategory: string | null;
   description: string | null;
+  supplier: string | null;
+  supplierNames: string[];
 }) {
   const boundAction = updateProductAction.bind(null, productId);
   const [state, formAction, pending] = useActionState(boundAction, initialState);
@@ -66,6 +70,20 @@ export function ProductEditForm({
       <label className="flex flex-1 flex-col gap-1.5">
         <Label>Description</Label>
         <Input name="description" defaultValue={description ?? ""} />
+      </label>
+      <label className="flex flex-1 flex-col gap-1.5">
+        <Label>Supplier</Label>
+        <Input
+          name="supplier"
+          defaultValue={supplier ?? ""}
+          list="edit-supplier-suggestions"
+          placeholder="e.g. Metro Vape Distributors"
+        />
+        <datalist id="edit-supplier-suggestions">
+          {supplierNames.map((s) => (
+            <option key={s} value={s} />
+          ))}
+        </datalist>
       </label>
       <Button type="submit" disabled={pending}>
         {pending ? "Saving…" : "Save"}

@@ -23,11 +23,19 @@ export default async function ProductPage({
   const supabase = await createClient();
   const { data: product } = await supabase
     .from("products")
-    .select("id, name, brand, category, subcategory, description")
+    .select("id, name, brand, category, subcategory, description, supplier_id, suppliers(name)")
     .eq("id", productId)
     .eq("shop_id", profile.shopId)
     .maybeSingle();
   if (!product) notFound();
+  const supplierRow = Array.isArray(product.suppliers) ? product.suppliers[0] : product.suppliers;
+
+  const { data: supplierRows } = await supabase
+    .from("suppliers")
+    .select("name")
+    .eq("shop_id", profile.shopId)
+    .order("name");
+  const supplierNames = [...new Set((supplierRows ?? []).map((s) => s.name))];
 
   const { data: variants } = await supabase
     .from("variants")
@@ -54,6 +62,8 @@ export default async function ProductPage({
             category={product.category}
             subcategory={product.subcategory}
             description={product.description}
+            supplier={supplierRow?.name ?? null}
+            supplierNames={supplierNames}
           />
         </div>
         <form action={boundArchive} className="mt-3">
