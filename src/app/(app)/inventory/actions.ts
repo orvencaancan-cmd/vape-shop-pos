@@ -228,17 +228,18 @@ export async function updateBrandSupplierAction(brand: string | null, formData: 
   revalidatePath("/inventory");
 }
 
-// Sets the unit cost for every variant at one nicotine level (or, for
-// accessories that have no nicotine dimension, every variant) across every
-// product sharing a brand at once. Scoped by nicotine level because cost
-// commonly varies by strength within a brand (e.g. 12mg vs 24mg vs 36mg all
-// pricing differently) even though every flavor at a given strength shares
-// one cost -- cost previously only lived on the per-variant edit form (or
-// as a side effect of logging a stock receipt), tedious to correct one
-// flavor at a time.
+// Sets the unit cost for every variant at one nicotine level across every
+// e-juice product sharing a brand at once. Scoped by nicotine level because
+// cost commonly varies by strength within a brand (e.g. 12mg vs 24mg vs 36mg
+// all pricing differently) even though every flavor at a given strength
+// shares one cost -- cost previously only lived on the per-variant edit form
+// (or as a side effect of logging a stock receipt), tedious to correct one
+// flavor at a time. Scoped to category='ejuice' -- accessory cost bulk-edits
+// go through updateAccessoryCostAction below instead, since nicotine level
+// isn't a meaningful axis for them.
 export async function updateBrandCostAction(
   brand: string | null,
-  nicotineMg: number | null,
+  nicotineMg: number,
   formData: FormData,
 ) {
   const profile = await getCurrentProfile();
@@ -254,22 +255,68 @@ export async function updateBrandCostAction(
     .from("products")
     .select("id")
     .eq("shop_id", profile.shopId)
+    .eq("category", "ejuice")
     .eq("archived", false);
   productQuery = brand ? productQuery.eq("brand", brand) : productQuery.is("brand", null);
   const { data: products } = await productQuery;
   const productIds = (products ?? []).map((p) => p.id);
   if (productIds.length === 0) return;
 
-  let variantQuery = supabase
+  const { error } = await supabase
+    .from("variants")
+    .update({ cost })
+    .eq("shop_id", profile.shopId)
+    .in("product_id", productIds)
+    .eq("nicotine_mg", nicotineMg);
+  if (error) {
+    console.error("updateBrandCostAction failed:", error.message);
+    return;
+  }
+
+  revalidatePath("/inventory");
+}
+
+// Accessory counterpart to updateBrandCostAction above -- accessories have no
+// nicotine dimension, but a brand can span several distinct accessory types
+// (e.g. OXVA sells both a Device and a Cartridge), and those types don't
+// share a cost just because they share a brand. Scoped by subcategory
+// instead, so "Cartridge cost" and "Device cost" are edited separately
+// rather than one flat field silently overwriting every accessory under the
+// brand (which was the bug -- an Oneo Cartridge and an XLIM Cartridge got
+// the same cost purely because both happened to have no nicotine level).
+export async function updateAccessoryCostAction(
+  brand: string | null,
+  subcategory: string | null,
+  formData: FormData,
+) {
+  const profile = await getCurrentProfile();
+  if (!profile) return;
+  if (profile.role !== "owner") return;
+
+  const cost = Number(formData.get("cost"));
+  if (!Number.isFinite(cost) || cost < 0) return;
+
+  const supabase = await createClient();
+
+  let productQuery = supabase
+    .from("products")
+    .select("id")
+    .eq("shop_id", profile.shopId)
+    .eq("category", "accessory")
+    .eq("archived", false);
+  productQuery = brand ? productQuery.eq("brand", brand) : productQuery.is("brand", null);
+  productQuery = subcategory ? productQuery.eq("subcategory", subcategory) : productQuery.is("subcategory", null);
+  const { data: products } = await productQuery;
+  const productIds = (products ?? []).map((p) => p.id);
+  if (productIds.length === 0) return;
+
+  const { error } = await supabase
     .from("variants")
     .update({ cost })
     .eq("shop_id", profile.shopId)
     .in("product_id", productIds);
-  variantQuery =
-    nicotineMg != null ? variantQuery.eq("nicotine_mg", nicotineMg) : variantQuery.is("nicotine_mg", null);
-  const { error } = await variantQuery;
   if (error) {
-    console.error("updateBrandCostAction failed:", error.message);
+    console.error("updateAccessoryCostAction failed:", error.message);
     return;
   }
 

@@ -3,7 +3,12 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ReceiveStockForm } from "./receive-stock-form";
-import { archiveProductAction, updateBrandSupplierAction, updateBrandCostAction } from "./actions";
+import {
+  archiveProductAction,
+  updateBrandSupplierAction,
+  updateBrandCostAction,
+  updateAccessoryCostAction,
+} from "./actions";
 import { formatCurrency } from "@/lib/currency";
 
 export type InventoryVariant = {
@@ -63,24 +68,48 @@ function getBrandSupplier(products: ProductGroup[]): string | null {
   return names.size === 1 ? [...names][0] : null;
 }
 
-// Every distinct nicotine level found among a brand's variants, so Unit
-// cost can be edited per level (cost commonly differs by strength even
-// though every flavor at one strength shares a cost). Accessories with no
-// nicotine dimension collapse to a single `null` entry -- one flat field.
-function getBrandNicotineLevels(products: ProductGroup[]): (number | null)[] {
-  const levels = new Set(products.flatMap((p) => p.variants.map((v) => v.nicotineMg)));
-  return [...levels].sort((a, b) => {
-    if (a == null) return 1;
-    if (b == null) return -1;
-    return a - b;
-  });
+// Every distinct nicotine level found among a brand's e-juice variants, so
+// Unit cost can be edited per level (cost commonly differs by strength even
+// though every flavor at one strength shares a cost). Scoped to e-juice
+// products only -- accessories have no nicotine dimension and are scoped by
+// subcategory instead, below.
+function getBrandNicotineLevels(products: ProductGroup[]): number[] {
+  const levels = new Set(
+    products
+      .filter((p) => p.category === "ejuice")
+      .flatMap((p) => p.variants.map((v) => v.nicotineMg))
+      .filter((mg): mg is number => mg != null),
+  );
+  return [...levels].sort((a, b) => a - b);
 }
 
 // Same idea as getBrandSupplier, for one nicotine level's Unit cost field --
-// pre-fills only when every variant at that level already shares one cost.
-function getBrandCostForLevel(products: ProductGroup[], nicotineMg: number | null): number | null {
+// pre-fills only when every e-juice variant at that level already shares one cost.
+function getBrandCostForLevel(products: ProductGroup[], nicotineMg: number): number | null {
   const costs = new Set(
-    products.flatMap((p) => p.variants.filter((v) => v.nicotineMg === nicotineMg).map((v) => v.cost)),
+    products
+      .filter((p) => p.category === "ejuice")
+      .flatMap((p) => p.variants.filter((v) => v.nicotineMg === nicotineMg).map((v) => v.cost)),
+  );
+  return costs.size === 1 ? [...costs][0] : null;
+}
+
+// Every distinct accessory subcategory found among a brand's products (e.g.
+// a brand like OXVA can sell both a Device and a Cartridge line). Unit cost
+// is scoped per subcategory rather than flat per brand, since different
+// accessory types under one brand don't share a cost just because they
+// share a brand name.
+function getAccessorySubcategories(products: ProductGroup[]): (string | null)[] {
+  const subs = new Set(products.filter((p) => p.category === "accessory").map((p) => p.subcategory));
+  return [...subs].sort((a, b) => (a ?? "").localeCompare(b ?? ""));
+}
+
+// Same idea as getBrandCostForLevel, scoped to one accessory subcategory.
+function getAccessoryCostForSubcategory(products: ProductGroup[], subcategory: string | null): number | null {
+  const costs = new Set(
+    products
+      .filter((p) => p.category === "accessory" && p.subcategory === subcategory)
+      .flatMap((p) => p.variants.map((v) => v.cost)),
   );
   return costs.size === 1 ? [...costs][0] : null;
 }
@@ -353,7 +382,7 @@ export function InventoryList({
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                     {getBrandNicotineLevels(brandGroup.products).map((mg) => (
                       <form
-                        key={mg ?? "none"}
+                        key={`ejuice-${mg}`}
                         action={updateBrandCostAction.bind(
                           null,
                           brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel,
@@ -361,9 +390,7 @@ export function InventoryList({
                         )}
                         className="flex items-center gap-2"
                       >
-                        <label className="text-xs text-muted">
-                          {mg != null ? `${mg}mg cost` : "Unit cost"}
-                        </label>
+                        <label className="text-xs text-muted">{mg}mg cost</label>
                         <input
                           name="cost"
                           type="number"
@@ -371,6 +398,31 @@ export function InventoryList({
                           min={0}
                           defaultValue={getBrandCostForLevel(brandGroup.products, mg) ?? ""}
                           placeholder="Applies to every flavor"
+                          className="w-36 rounded border border-hairline bg-canvas px-2 py-0.5 text-xs text-ink placeholder:text-muted"
+                        />
+                        <button type="submit" className="text-xs text-primary underline underline-offset-2">
+                          Save
+                        </button>
+                      </form>
+                    ))}
+                    {getAccessorySubcategories(brandGroup.products).map((sub) => (
+                      <form
+                        key={`accessory-${sub ?? "none"}`}
+                        action={updateAccessoryCostAction.bind(
+                          null,
+                          brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel,
+                          sub,
+                        )}
+                        className="flex items-center gap-2"
+                      >
+                        <label className="text-xs text-muted">{sub ? `${sub} cost` : "Unit cost"}</label>
+                        <input
+                          name="cost"
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          defaultValue={getAccessoryCostForSubcategory(brandGroup.products, sub) ?? ""}
+                          placeholder={sub ? `Applies to every ${sub.toLowerCase()}` : "Applies to every item"}
                           className="w-36 rounded border border-hairline bg-canvas px-2 py-0.5 text-xs text-ink placeholder:text-muted"
                         />
                         <button type="submit" className="text-xs text-primary underline underline-offset-2">
