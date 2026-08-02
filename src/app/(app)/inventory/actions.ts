@@ -228,6 +228,43 @@ export async function updateBrandSupplierAction(brand: string | null, formData: 
   revalidatePath("/inventory");
 }
 
+// Sets the unit cost for every variant of every product sharing a brand at
+// once -- cost previously only lived on the per-variant edit form (or as a
+// side effect of logging a stock receipt), which is tedious to correct
+// across a whole brand's flavors one at a time.
+export async function updateBrandCostAction(brand: string | null, formData: FormData) {
+  const profile = await getCurrentProfile();
+  if (!profile) return;
+  if (profile.role !== "owner") return;
+
+  const cost = Number(formData.get("cost"));
+  if (!Number.isFinite(cost) || cost < 0) return;
+
+  const supabase = await createClient();
+
+  let productQuery = supabase
+    .from("products")
+    .select("id")
+    .eq("shop_id", profile.shopId)
+    .eq("archived", false);
+  productQuery = brand ? productQuery.eq("brand", brand) : productQuery.is("brand", null);
+  const { data: products } = await productQuery;
+  const productIds = (products ?? []).map((p) => p.id);
+  if (productIds.length === 0) return;
+
+  const { error } = await supabase
+    .from("variants")
+    .update({ cost })
+    .eq("shop_id", profile.shopId)
+    .in("product_id", productIds);
+  if (error) {
+    console.error("updateBrandCostAction failed:", error.message);
+    return;
+  }
+
+  revalidatePath("/inventory");
+}
+
 export async function archiveProductAction(productId: string) {
   const profile = await getCurrentProfile();
   if (!profile) return;
