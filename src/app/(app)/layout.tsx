@@ -45,17 +45,17 @@ export default async function AppLayout({
           { href: "/reports", label: "Reports", show: true },
         ].filter((item) => item.show)
       : [
-          { href: "/sell", label: "Sales", show: true },
-          { href: "/expenses", label: "Expenses", show: true },
+          { href: "/dashboard", label: "Dashboard", show: profile.role === "owner" },
+          { href: "/sell", label: "POS", show: true },
           { href: "/inventory", label: "Inventory", show: true },
           { href: "/audit", label: "Audit", show: true },
-          { href: "/dashboard", label: "Dashboard", show: profile.role === "owner" },
           { href: "/reports", label: "Reports", show: profile.role === "owner" },
-          { href: "/settings/suppliers", label: "Suppliers", show: profile.role === "owner" },
           { href: "/settings/staff", label: "Staff", show: profile.role === "owner" },
+          { href: "/settings/promos", label: "Promos", show: profile.role === "owner" },
+          { href: "/promos", label: "Promos", show: profile.role !== "owner" },
+          { href: "/expenses", label: "Expenses", show: profile.role === "owner" },
           { href: "/branches", label: "Branches", show: profile.role === "owner" },
           { href: "/settings/billing", label: "Billing", show: profile.role === "owner" },
-          { href: "/settings/promos", label: "Promos", show: profile.role === "owner" },
           { href: "/settings/branding", label: "Branding", show: profile.role === "owner" },
           { href: "/admin", label: "Admin", show: profile.platformAdmin },
         ].filter((item) => item.show);
