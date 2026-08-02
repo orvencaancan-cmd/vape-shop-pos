@@ -4,6 +4,7 @@ import { resolveRange } from "@/lib/reports/date-range";
 import { fetchAdminReportData, resolveSelectedBranch } from "@/lib/reports/fetch-admin";
 import { formatCurrency } from "@/lib/currency";
 import { RangeLink, Stat, Empty, Table, PromosDetail } from "./report-ui";
+import { CustomRangeForm } from "./custom-range-form";
 import { CollapsibleSection } from "./collapsible-section";
 import { SaleDetailTable } from "./sale-detail-table";
 import type { ShopMembership } from "@/lib/auth/get-current-profile";
@@ -66,24 +67,7 @@ export async function AdminReportsPage({
           <RangeLink range="today" current={preset} label="Today" extraParams={`&branch=${selectedBranch}`} />
           <RangeLink range="7d" current={preset} label="Last 7 days" extraParams={`&branch=${selectedBranch}`} />
           <RangeLink range="30d" current={preset} label="Last 30 days" extraParams={`&branch=${selectedBranch}`} />
-          <form className="flex items-center gap-1" action="/reports">
-            <input type="hidden" name="range" value="custom" />
-            <input type="hidden" name="branch" value={selectedBranch} />
-            <input
-              type="date"
-              name="from"
-              className="rounded border border-hairline bg-canvas px-2 py-1 text-xs text-ink"
-            />
-            <span className="text-muted">to</span>
-            <input
-              type="date"
-              name="to"
-              className="rounded border border-hairline bg-canvas px-2 py-1 text-xs text-ink"
-            />
-            <button className="rounded bg-primary px-2 py-1 text-xs text-on-primary hover:bg-primary-active">
-              Go
-            </button>
-          </form>
+          <CustomRangeForm branch={selectedBranch} />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -276,6 +260,7 @@ function BranchLink({
   return (
     <Link
       href={`/reports?branch=${shopId}${rangePart}`}
+      scroll={false}
       className={`rounded-lg px-3 py-1.5 text-xs transition-colors ${active ? "bg-primary text-on-primary" : "bg-canvas-strong text-body hover:text-ink"}`}
     >
       {label}

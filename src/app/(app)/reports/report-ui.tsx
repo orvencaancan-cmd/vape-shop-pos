@@ -48,6 +48,7 @@ export function RangeLink({
   return (
     <Link
       href={`/reports?range=${range}${extraParams ?? ""}`}
+      scroll={false}
       className={`rounded-lg px-3 py-1.5 transition-colors ${active ? "bg-primary text-on-primary" : "bg-canvas-strong text-body hover:text-ink"}`}
     >
       {label}

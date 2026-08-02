@@ -5,6 +5,7 @@ import { resolveRange } from "@/lib/reports/date-range";
 import { fetchSingleShopReportData } from "@/lib/reports/fetch-single-shop";
 import { formatCurrency } from "@/lib/currency";
 import { RangeLink, Stat, Empty, Table, PromosDetail } from "./report-ui";
+import { CustomRangeForm } from "./custom-range-form";
 import { CollapsibleSection } from "./collapsible-section";
 import { SaleDetailTable } from "./sale-detail-table";
 import { AdminReportsPage } from "./admin-reports";
@@ -72,23 +73,7 @@ export default async function ReportsPage({
         <RangeLink range="today" current={preset} label="Today" />
         <RangeLink range="7d" current={preset} label="Last 7 days" />
         <RangeLink range="30d" current={preset} label="Last 30 days" />
-        <form className="flex items-center gap-1" action="/reports">
-          <input type="hidden" name="range" value="custom" />
-          <input
-            type="date"
-            name="from"
-            className="rounded border border-hairline bg-canvas px-2 py-1 text-xs text-ink"
-          />
-          <span className="text-muted">to</span>
-          <input
-            type="date"
-            name="to"
-            className="rounded border border-hairline bg-canvas px-2 py-1 text-xs text-ink"
-          />
-          <button className="rounded bg-primary px-2 py-1 text-xs text-on-primary hover:bg-primary-active">
-            Go
-          </button>
-        </form>
+        <CustomRangeForm />
       </div>
 
       <CollapsibleSection title="Sales summary" defaultOpen>
