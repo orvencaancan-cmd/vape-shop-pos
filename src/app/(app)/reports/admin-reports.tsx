@@ -61,49 +61,51 @@ export async function AdminReportsPage({
         </a>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-        <RangeLink range="today" current={preset} label="Today" extraParams={`&branch=${selectedBranch}`} />
-        <RangeLink range="7d" current={preset} label="Last 7 days" extraParams={`&branch=${selectedBranch}`} />
-        <RangeLink range="30d" current={preset} label="Last 30 days" extraParams={`&branch=${selectedBranch}`} />
-        <form className="flex items-center gap-1" action="/reports">
-          <input type="hidden" name="range" value="custom" />
-          <input type="hidden" name="branch" value={selectedBranch} />
-          <input
-            type="date"
-            name="from"
-            className="rounded border border-hairline bg-canvas px-2 py-1 text-xs text-ink"
-          />
-          <span className="text-muted">to</span>
-          <input
-            type="date"
-            name="to"
-            className="rounded border border-hairline bg-canvas px-2 py-1 text-xs text-ink"
-          />
-          <button className="rounded bg-primary px-2 py-1 text-xs text-on-primary hover:bg-primary-active">
-            Go
-          </button>
-        </form>
-      </div>
+      <div className="sticky top-0 z-10 mt-4 flex flex-col gap-2 border-b border-hairline bg-canvas-soft/95 py-3 text-sm backdrop-blur-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <RangeLink range="today" current={preset} label="Today" extraParams={`&branch=${selectedBranch}`} />
+          <RangeLink range="7d" current={preset} label="Last 7 days" extraParams={`&branch=${selectedBranch}`} />
+          <RangeLink range="30d" current={preset} label="Last 30 days" extraParams={`&branch=${selectedBranch}`} />
+          <form className="flex items-center gap-1" action="/reports">
+            <input type="hidden" name="range" value="custom" />
+            <input type="hidden" name="branch" value={selectedBranch} />
+            <input
+              type="date"
+              name="from"
+              className="rounded border border-hairline bg-canvas px-2 py-1 text-xs text-ink"
+            />
+            <span className="text-muted">to</span>
+            <input
+              type="date"
+              name="to"
+              className="rounded border border-hairline bg-canvas px-2 py-1 text-xs text-ink"
+            />
+            <button className="rounded bg-primary px-2 py-1 text-xs text-on-primary hover:bg-primary-active">
+              Go
+            </button>
+          </form>
+        </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-xs text-muted">Sales for:</span>
-        <BranchLink
-          shopId="combined"
-          label="All branches (combined)"
-          current={selectedBranch}
-          preset={preset}
-          rangeQuery={rangeQuery}
-        />
-        {ownedShops.map((s) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted">Sales for:</span>
           <BranchLink
-            key={s.shopId}
-            shopId={s.shopId}
-            label={s.shopName}
+            shopId="combined"
+            label="All branches (combined)"
             current={selectedBranch}
             preset={preset}
             rangeQuery={rangeQuery}
           />
-        ))}
+          {ownedShops.map((s) => (
+            <BranchLink
+              key={s.shopId}
+              shopId={s.shopId}
+              label={s.shopName}
+              current={selectedBranch}
+              preset={preset}
+              rangeQuery={rangeQuery}
+            />
+          ))}
+        </div>
       </div>
 
       <CollapsibleSection title="Sales summary" defaultOpen>

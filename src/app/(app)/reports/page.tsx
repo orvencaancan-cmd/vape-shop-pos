@@ -68,7 +68,7 @@ export default async function ReportsPage({
         </a>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+      <div className="sticky top-0 z-10 mt-4 flex flex-wrap items-center gap-2 border-b border-hairline bg-canvas-soft/95 py-3 text-sm backdrop-blur-sm">
         <RangeLink range="today" current={preset} label="Today" />
         <RangeLink range="7d" current={preset} label="Last 7 days" />
         <RangeLink range="30d" current={preset} label="Last 30 days" />
