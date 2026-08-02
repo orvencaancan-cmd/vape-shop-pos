@@ -154,6 +154,9 @@ export function InventoryList({
   });
   for (const g of brandGroups) {
     g.products.sort((a, b) => a.productName.localeCompare(b.productName));
+    for (const p of g.products) {
+      p.variants.sort((a, b) => (a.nicotineMg ?? Infinity) - (b.nicotineMg ?? Infinity));
+    }
   }
 
   return (
