@@ -38,12 +38,6 @@ export default async function ProductPage({
     .eq("shop_id", profile.shopId)
     .order("created_at");
 
-  const { data: suppliers } = await supabase
-    .from("suppliers")
-    .select("id, name")
-    .eq("shop_id", profile.shopId)
-    .order("name");
-
   const boundArchive = archiveProductAction.bind(null, productId);
 
   return (
@@ -93,7 +87,7 @@ export default async function ProductPage({
               />
               <div className="flex items-center gap-2 pl-3 text-xs text-muted">
                 <span className="shrink-0">{v.stock_qty} in stock —</span>
-                <ReceiveStockForm variantId={v.id} suppliers={suppliers ?? []} canManageCost />
+                <ReceiveStockForm variantId={v.id} canManageCost />
               </div>
             </div>
           ))}

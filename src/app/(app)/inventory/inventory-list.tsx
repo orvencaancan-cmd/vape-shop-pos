@@ -53,13 +53,21 @@ function groupByFlavor(variants: InventoryVariant[]): [string, InventoryVariant[
   return [...groups.entries()];
 }
 
+// Shown once under the brand heading, inconspicuously -- only when every
+// product in the brand agrees on the same supplier, to avoid stating a
+// single supplier for a brand that's actually sourced from more than one.
+function getBrandSupplier(products: ProductGroup[]): string | null {
+  const names = new Set(
+    products.flatMap((p) => p.variants.map((v) => v.supplierName)).filter((n): n is string => !!n),
+  );
+  return names.size === 1 ? [...names][0] : null;
+}
+
 export function InventoryList({
   variants,
-  suppliers,
   canEdit,
 }: {
   variants: InventoryVariant[];
-  suppliers: { id: string; name: string }[];
   canEdit: boolean;
 }) {
   const [search, setSearch] = useState("");
@@ -292,6 +300,11 @@ export function InventoryList({
             </button>
             {isExpanded && (
             <div className="animate-fade-in-up mt-4 flex flex-col gap-5">
+              {canEdit && getBrandSupplier(brandGroup.products) && (
+                <p className="-mt-3 text-xs text-muted">
+                  Supplier: {getBrandSupplier(brandGroup.products)}
+                </p>
+              )}
               {brandGroup.products.map((product) => (
                 <div key={product.productId}>
                   <div className="flex items-center justify-between">
@@ -330,11 +343,6 @@ export function InventoryList({
                       </div>
                     )}
                   </div>
-                  {canEdit && product.variants[0]?.supplierName && (
-                    <p className="mt-0.5 text-xs text-muted">
-                      Supplier: {product.variants[0].supplierName}
-                    </p>
-                  )}
 
                   <div className="mt-2 flex flex-col gap-3">
                     {groupByFlavor(product.variants).map(([flavorKey, vs]) => (
@@ -377,11 +385,7 @@ export function InventoryList({
                                     {formatCurrency(v.price)}
                                   </span>
                                 </div>
-                                <ReceiveStockForm
-                                  variantId={v.id}
-                                  suppliers={suppliers}
-                                  canManageCost={canEdit}
-                                />
+                                <ReceiveStockForm variantId={v.id} canManageCost={canEdit} />
                               </div>
                             );
                           })}

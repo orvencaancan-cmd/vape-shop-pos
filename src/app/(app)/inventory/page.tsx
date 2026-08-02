@@ -14,15 +14,12 @@ export default async function InventoryPage() {
 
   const supabase = await createClient();
 
-  const [{ data: variants }, { data: suppliers }] = await Promise.all([
-    supabase
-      .from("variants")
-      .select(
-        "id, product_id, flavor, nicotine_mg, size, for_device, ohms, price, cost, stock_qty, low_stock_threshold, products(name, brand, category, subcategory, archived, suppliers(name))",
-      )
-      .eq("shop_id", profile.shopId),
-    supabase.from("suppliers").select("id, name").eq("shop_id", profile.shopId).order("name"),
-  ]);
+  const { data: variants } = await supabase
+    .from("variants")
+    .select(
+      "id, product_id, flavor, nicotine_mg, size, for_device, ohms, price, cost, stock_qty, low_stock_threshold, products(name, brand, category, subcategory, archived, suppliers(name))",
+    )
+    .eq("shop_id", profile.shopId);
 
   const items: InventoryVariant[] = (variants ?? [])
     .map((v) => {
@@ -70,11 +67,7 @@ export default async function InventoryPage() {
           </Link>
         </p>
       ) : (
-        <InventoryList
-          variants={items}
-          suppliers={suppliers ?? []}
-          canEdit={profile.role === "owner"}
-        />
+        <InventoryList variants={items} canEdit={profile.role === "owner"} />
       )}
     </main>
   );
