@@ -3,6 +3,7 @@ import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { ProductEditForm } from "./product-edit-form";
 import { VariantForm } from "./variant-form";
+import { BackLink } from "./back-link";
 import { archiveProductAction } from "../actions";
 import { ReceiveStockForm } from "../receive-stock-form";
 
@@ -50,7 +51,8 @@ export default async function ProductPage({
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-3xl px-4 py-8">
-      <h1 className="heading text-2xl">{product.name}</h1>
+      <BackLink />
+      <h1 className="heading mt-2 text-2xl">{product.name}</h1>
 
       <section className="mt-6">
         <h2 className="text-sm font-medium text-muted">Product details</h2>
