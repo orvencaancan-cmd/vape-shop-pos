@@ -429,11 +429,6 @@ export function InventoryList({
                                   >
                                     {v.stockQty} in stock
                                   </span>
-                                  {canEdit && (
-                                    <span className="text-xs text-muted">
-                                      Cost {formatCurrency(v.cost)}
-                                    </span>
-                                  )}
                                   <span className="text-xs text-muted">
                                     {formatCurrency(v.price)}
                                   </span>
