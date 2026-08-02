@@ -53,7 +53,7 @@ export default async function AppLayout({
           { href: "/settings/staff", label: "Staff", show: profile.role === "owner" },
           { href: "/settings/promos", label: "Promos", show: profile.role === "owner" },
           { href: "/promos", label: "Promos", show: profile.role !== "owner" },
-          { href: "/expenses", label: "Expenses", show: profile.role === "owner" },
+          { href: "/expenses", label: "Expenses", show: true },
           { href: "/branches", label: "Branches", show: profile.role === "owner" },
           { href: "/settings/billing", label: "Billing", show: profile.role === "owner" },
           { href: "/settings/branding", label: "Branding", show: profile.role === "owner" },
