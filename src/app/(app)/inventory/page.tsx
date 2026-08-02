@@ -14,7 +14,7 @@ export default async function InventoryPage() {
 
   const supabase = await createClient();
 
-  const [{ data: variants }, { data: suppliers }, { data: receipts }] = await Promise.all([
+  const [{ data: variants }, { data: suppliers }] = await Promise.all([
     supabase
       .from("variants")
       .select(
@@ -22,23 +22,7 @@ export default async function InventoryPage() {
       )
       .eq("shop_id", profile.shopId),
     supabase.from("suppliers").select("id, name").eq("shop_id", profile.shopId).order("name"),
-    supabase
-      .from("stock_receipts")
-      .select("variant_id, received_at, suppliers(name)")
-      .eq("shop_id", profile.shopId)
-      .order("received_at", { ascending: false })
-      .limit(300),
   ]);
-
-  const latestSupplierByVariant = new Map<string, string>();
-  for (const r of receipts ?? []) {
-    if (!latestSupplierByVariant.has(r.variant_id) && r.suppliers) {
-      const supplierName = Array.isArray(r.suppliers)
-        ? r.suppliers[0]?.name
-        : (r.suppliers as { name: string }).name;
-      if (supplierName) latestSupplierByVariant.set(r.variant_id, supplierName);
-    }
-  }
 
   const items: InventoryVariant[] = (variants ?? [])
     .map((v) => {
@@ -59,7 +43,6 @@ export default async function InventoryPage() {
         price: Number(v.price),
         stockQty: v.stock_qty as number,
         lowStockThreshold: v.low_stock_threshold as number,
-        latestSupplier: latestSupplierByVariant.get(v.id as string) ?? null,
       };
     })
     .filter((v): v is InventoryVariant => v !== null);

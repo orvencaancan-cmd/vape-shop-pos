@@ -21,7 +21,6 @@ export type InventoryVariant = {
   price: number;
   stockQty: number;
   lowStockThreshold: number;
-  latestSupplier: string | null;
 };
 
 type ProductGroup = {
@@ -39,6 +38,18 @@ type BrandGroup = {
 };
 
 const ALL = "__all__";
+
+// Groups a product's variants by flavor so the flavor is shown once above its
+// nicotine-level rows, instead of repeating the same flavor text on every row.
+function groupByFlavor(variants: InventoryVariant[]): [string, InventoryVariant[]][] {
+  const groups = new Map<string, InventoryVariant[]>();
+  for (const v of variants) {
+    const key = v.flavor ?? "";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(v);
+  }
+  return [...groups.entries()];
+}
 
 export function InventoryList({
   variants,
@@ -318,44 +329,53 @@ export function InventoryList({
                     )}
                   </div>
 
-                  <div className="mt-2 flex flex-col divide-y divide-hairline">
-                    {product.variants.map((v) => {
-                      const isLow = v.stockQty <= v.lowStockThreshold;
-                      const label =
-                        [
-                          v.flavor && v.flavor !== v.productName ? v.flavor : null,
-                          v.nicotineMg != null ? `${v.nicotineMg}mg` : null,
-                          v.size,
-                          v.forDevice ? `For ${v.forDevice}` : null,
-                          v.ohms != null ? `${v.ohms}Ω` : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ") || "Default";
-                      return (
-                        <div
-                          key={v.id}
-                          className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
-                        >
-                          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
-                            <span className="text-sm text-ink">{label}</span>
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                                isLow ? "bg-error/15 text-error" : "bg-canvas-strong text-body"
-                              }`}
-                            >
-                              {v.stockQty} in stock
-                            </span>
-                            <span className="text-xs text-muted">
-                              {formatCurrency(v.price)}
-                            </span>
-                            <span className="text-xs text-muted">
-                              {v.latestSupplier ?? "no supplier logged"}
-                            </span>
-                          </div>
-                          <ReceiveStockForm variantId={v.id} suppliers={suppliers} />
+                  <div className="mt-2 flex flex-col gap-3">
+                    {groupByFlavor(product.variants).map(([flavorKey, vs]) => (
+                      <div key={flavorKey || "__none__"}>
+                        {flavorKey && flavorKey !== product.productName && (
+                          <p className="text-xs font-medium uppercase text-muted">{flavorKey}</p>
+                        )}
+                        <div className="mt-1 flex flex-col divide-y divide-hairline">
+                          {vs.map((v) => {
+                            const isLow = v.stockQty <= v.lowStockThreshold;
+                            const detail =
+                              [
+                                v.nicotineMg != null ? `${v.nicotineMg}mg` : null,
+                                v.size,
+                                v.forDevice ? `For ${v.forDevice}` : null,
+                                v.ohms != null ? `${v.ohms}Ω` : null,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ") || "Default";
+                            return (
+                              <div
+                                key={v.id}
+                                className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                              >
+                                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+                                  <span className="text-sm text-ink">{detail}</span>
+                                  <span
+                                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                      isLow ? "bg-error/15 text-error" : "bg-canvas-strong text-body"
+                                    }`}
+                                  >
+                                    {v.stockQty} in stock
+                                  </span>
+                                  <span className="text-xs text-muted">
+                                    {formatCurrency(v.price)}
+                                  </span>
+                                </div>
+                                <ReceiveStockForm
+                                  variantId={v.id}
+                                  suppliers={suppliers}
+                                  canManageCost={canEdit}
+                                />
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}

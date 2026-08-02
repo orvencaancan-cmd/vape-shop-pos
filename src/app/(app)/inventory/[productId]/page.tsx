@@ -93,7 +93,7 @@ export default async function ProductPage({
               />
               <div className="flex items-center gap-2 pl-3 text-xs text-muted">
                 <span className="shrink-0">{v.stock_qty} in stock —</span>
-                <ReceiveStockForm variantId={v.id} suppliers={suppliers ?? []} />
+                <ReceiveStockForm variantId={v.id} suppliers={suppliers ?? []} canManageCost />
               </div>
             </div>
           ))}
