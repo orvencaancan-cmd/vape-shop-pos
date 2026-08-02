@@ -107,7 +107,7 @@ export default async function AppLayout({
             </form>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-5xl items-center gap-4 overflow-x-auto px-4 py-3 text-sm">
+        <nav className="scrollbar-thin mx-auto flex max-w-5xl items-center gap-4 overflow-x-auto px-4 py-3 text-sm">
           {navItems.map((item) => (
             <Link
               key={item.href}
