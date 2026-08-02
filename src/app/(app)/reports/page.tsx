@@ -133,7 +133,7 @@ export default async function ReportsPage({
         )}
       </CollapsibleSection>
 
-      <CollapsibleSection title="Sales by category" collapsible={false}>
+      <CollapsibleSection title="Sales by category">
         <Table rows={byCategory.map((c) => [c.category, "", formatCurrency(c.revenue)])} />
       </CollapsibleSection>
 
@@ -178,7 +178,7 @@ export default async function ReportsPage({
         <Table rows={inventoryValue.byCategory.map((c) => [c.category, "", formatCurrency(c.value)])} />
       </CollapsibleSection>
 
-      <CollapsibleSection title="Supplier activity" collapsible={false}>
+      <CollapsibleSection title="Supplier activity">
         {supplierActivity.length === 0 ? (
           <Empty />
         ) : (
