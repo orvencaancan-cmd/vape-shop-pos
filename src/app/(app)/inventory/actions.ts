@@ -373,6 +373,120 @@ export async function createFlavorBatchAction(
   redirect("/inventory");
 }
 
+const flavorPodBatchSchema = z.object({
+  brand: z.string().min(1, "Brand is required"),
+  forDevice: z.string().optional(),
+  flavors: z
+    .string()
+    .transform((text) => text.split("\n").map((f) => f.trim()).filter(Boolean)),
+  cost: z.coerce.number().nonnegative(),
+  price: z.coerce.number().nonnegative(),
+});
+
+// Flavor Pods get their own flow (brand + flavors, mirroring Add E-juice)
+// rather than the generic accessory batch form -- there's no nicotine-level
+// split to worry about (a pod line only ever comes in one strength), so it's
+// simpler than e-juice: one cost/price/flavor-list per brand+device, not
+// repeated per anything.
+export async function createFlavorPodBatchAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = flavorPodBatchSchema.safeParse({
+    brand: formData.get("brand") ?? "",
+    forDevice: formData.get("forDevice") ?? "",
+    flavors: formData.get("flavors") ?? "",
+    cost: formData.get("cost") || 0,
+    price: formData.get("price") || 0,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const { brand, forDevice, flavors, cost, price } = parsed.data;
+  if (flavors.length === 0) {
+    return { error: "Add at least one flavor" };
+  }
+
+  const supabase = await createClient();
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+  const shopId = profile.shopId;
+  const effectiveCost = profile.role === "owner" ? cost : 0;
+  const deviceValue = forDevice?.trim() || null;
+
+  // Reuse an existing product for any flavor name that already exists under
+  // this brand, instead of creating a second, visually-duplicate product card.
+  const { data: existingProducts } = await supabase
+    .from("products")
+    .select("id, name")
+    .eq("shop_id", shopId)
+    .eq("category", "accessory")
+    .eq("subcategory", "Flavor Pod")
+    .eq("archived", false)
+    .eq("brand", brand);
+  const productIdByName = new Map(
+    (existingProducts ?? []).map((p) => [p.name.trim().toLowerCase(), p.id as string]),
+  );
+
+  const uniqueFlavors = [...new Set(flavors)];
+  const newNames = uniqueFlavors.filter((name) => !productIdByName.has(name.trim().toLowerCase()));
+  if (newNames.length > 0) {
+    const { data: inserted, error: productsError } = await supabase
+      .from("products")
+      .insert(
+        newNames.map((name) => ({
+          shop_id: shopId,
+          name,
+          brand,
+          category: "accessory" as const,
+          subcategory: "Flavor Pod",
+        })),
+      )
+      .select("id");
+    if (productsError) return { error: productsError.message };
+    newNames.forEach((name, i) => productIdByName.set(name.trim().toLowerCase(), inserted[i].id));
+  }
+
+  const productIds = [...new Set(uniqueFlavors.map((name) => productIdByName.get(name.trim().toLowerCase())!))];
+  const { data: existingVariants } = productIds.length
+    ? await supabase.from("variants").select("product_id, for_device").in("product_id", productIds)
+    : { data: [] as { product_id: string; for_device: string | null }[] };
+  const seenVariantKeys = new Set(
+    (existingVariants ?? []).map((v) => `${v.product_id}|${v.for_device ?? ""}`),
+  );
+
+  const variantRows: {
+    shop_id: string;
+    product_id: string;
+    flavor: string;
+    for_device: string | null;
+    cost: number;
+    price: number;
+  }[] = [];
+  for (const name of uniqueFlavors) {
+    const productId = productIdByName.get(name.trim().toLowerCase())!;
+    const key = `${productId}|${deviceValue ?? ""}`;
+    if (seenVariantKeys.has(key)) continue;
+    seenVariantKeys.add(key);
+    variantRows.push({
+      shop_id: shopId,
+      product_id: productId,
+      flavor: name,
+      for_device: deviceValue,
+      cost: effectiveCost,
+      price,
+    });
+  }
+
+  if (variantRows.length > 0) {
+    const { error: variantsError } = await supabase.from("variants").insert(variantRows);
+    if (variantsError) return { error: variantsError.message };
+  }
+
+  revalidatePath("/inventory");
+  redirect("/inventory");
+}
+
 const accessoryBatchSchema = z.object({
   subcategoryKey: z.string().min(1),
   brand: z.string().optional(),

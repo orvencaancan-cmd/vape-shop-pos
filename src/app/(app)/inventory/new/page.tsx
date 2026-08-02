@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { NewProductForm } from "./product-form";
 import { NewFlavorBatchForm } from "./flavor-batch-form";
+import { NewFlavorPodBatchForm } from "./flavor-pod-batch-form";
 import { NewAccessoryBatchForm } from "./accessory-batch-form";
 import { ACCESSORY_SUBCATEGORIES, getAccessorySubcategory } from "@/lib/inventory/accessory-subcategories";
 
@@ -43,6 +44,19 @@ export default async function NewProductPage({
       .eq("shop_id", profile.shopId)
       .not("brand", "is", null);
     const brands = [...new Set((brandRows ?? []).map((r) => r.brand as string))].sort();
+
+    if (subcategoryKey === "flavor-pod") {
+      return (
+        <PageShell
+          title="Flavor Pods"
+          subtitle="Pick a brand, then list the flavors — each becomes its own product."
+          backHref="/inventory/new?category=accessory"
+          backLabel="Change accessory type"
+        >
+          <NewFlavorPodBatchForm brands={brands} role={profile.role} />
+        </PageShell>
+      );
+    }
 
     return (
       <PageShell
