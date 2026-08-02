@@ -28,6 +28,7 @@ export type InventoryVariant = {
   stockQty: number;
   lowStockThreshold: number;
   supplierName: string | null;
+  lastRestockedAt: string | null;
 };
 
 type ProductGroup = {
@@ -112,6 +113,32 @@ function getAccessoryCostForSubcategory(products: ProductGroup[], subcategory: s
       .flatMap((p) => p.variants.map((v) => v.cost)),
   );
   return costs.size === 1 ? [...costs][0] : null;
+}
+
+function latestDate(dates: string[]): string | null {
+  return dates.length === 0 ? null : dates.reduce((latest, d) => (d > latest ? d : latest));
+}
+
+// Most recent restock date across every e-juice variant under a brand,
+// shown as one flat line -- e-juice flavors under a brand are typically
+// restocked together in one batch, so a per-brand summary is meaningful
+// (unlike accessories, which restock independently per product -- see
+// getProductLastRestocked below).
+function getBrandLastRestocked(products: ProductGroup[]): string | null {
+  return latestDate(
+    products
+      .filter((p) => p.category === "ejuice")
+      .flatMap((p) => p.variants.map((v) => v.lastRestockedAt))
+      .filter((d): d is string => d != null),
+  );
+}
+
+// Most recent restock date across one accessory product's own variants
+// (e.g. every color of a Device). Shown per product rather than flat per
+// brand, since different named products under one brand -- a Device vs a
+// Cartridge -- restock on their own schedules.
+function getProductLastRestocked(variants: InventoryVariant[]): string | null {
+  return latestDate(variants.map((v) => v.lastRestockedAt).filter((d): d is string => d != null));
 }
 
 export function InventoryList({
@@ -433,6 +460,14 @@ export function InventoryList({
                   </div>
                 </div>
               )}
+              {(() => {
+                const lastRestocked = getBrandLastRestocked(brandGroup.products);
+                return lastRestocked ? (
+                  <p className="text-xs text-muted">
+                    Last restocked {new Date(lastRestocked).toLocaleDateString()}
+                  </p>
+                ) : null;
+              })()}
               {brandGroup.products.map((product) => (
                 <div key={product.productId}>
                   <div className="flex items-center justify-between">
@@ -443,6 +478,16 @@ export function InventoryList({
                           ? `${product.subcategory} · ${product.category}`
                           : product.category}
                       </span>
+                      {product.category === "accessory" &&
+                        (() => {
+                          const lastRestocked = getProductLastRestocked(product.variants);
+                          return lastRestocked ? (
+                            <span className="text-xs font-normal text-muted">
+                              {" "}
+                              · Last restocked {new Date(lastRestocked).toLocaleDateString()}
+                            </span>
+                          ) : null;
+                        })()}
                     </h3>
                     {canEdit && (
                       <div className="flex shrink-0 items-center gap-3">

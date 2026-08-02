@@ -14,7 +14,7 @@ export default async function InventoryPage() {
 
   const supabase = await createClient();
 
-  const [{ data: variants }, { data: supplierRows }] = await Promise.all([
+  const [{ data: variants }, { data: supplierRows }, { data: restockRows }] = await Promise.all([
     supabase
       .from("variants")
       .select(
@@ -22,8 +22,15 @@ export default async function InventoryPage() {
       )
       .eq("shop_id", profile.shopId),
     supabase.from("suppliers").select("name").eq("shop_id", profile.shopId).order("name"),
+    supabase.rpc("get_last_restock_dates", { p_shop_id: profile.shopId }),
   ]);
   const supplierNames = [...new Set((supplierRows ?? []).map((s) => s.name))];
+  const lastRestockedByVariant = new Map(
+    ((restockRows ?? []) as { variant_id: string; last_restocked_at: string }[]).map((r) => [
+      r.variant_id,
+      r.last_restocked_at,
+    ]),
+  );
 
   const items: InventoryVariant[] = (variants ?? [])
     .map((v) => {
@@ -47,6 +54,7 @@ export default async function InventoryPage() {
         stockQty: v.stock_qty as number,
         lowStockThreshold: v.low_stock_threshold as number,
         supplierName: (supplierRow?.name as string | undefined) ?? null,
+        lastRestockedAt: lastRestockedByVariant.get(v.id as string) ?? null,
       };
     })
     .filter((v): v is InventoryVariant => v !== null);
