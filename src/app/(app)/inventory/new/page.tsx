@@ -106,14 +106,20 @@ export default async function NewProductPage({
       .not("brand", "is", null);
     const brands = [...new Set((brandRows ?? []).map((r) => r.brand as string))].sort();
 
+    const { data: supplierRows } = await supabase
+      .from("suppliers")
+      .select("name")
+      .eq("shop_id", profile.shopId);
+    const suppliers = [...new Set((supplierRows ?? []).map((r) => r.name as string))].sort();
+
     return (
       <PageShell
-        title="Add flavors"
-        subtitle="Pick a brand, check off nicotine levels, set the cost and price for this batch, then list the flavors — every combination is created at once."
+        title="E-juice"
+        subtitle="Pick a brand, then fill in cost, price, and flavors separately for each nicotine level you carry."
         backHref="/inventory/new"
         backLabel="Change category"
       >
-        <NewFlavorBatchForm brands={brands} role={profile.role} />
+        <NewFlavorBatchForm brands={brands} suppliers={suppliers} role={profile.role} />
       </PageShell>
     );
   }

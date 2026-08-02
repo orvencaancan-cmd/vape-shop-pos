@@ -182,18 +182,13 @@ export async function archiveProductAction(productId: string) {
 }
 
 const flavorBatchSchema = z.object({
-  brand: z.string().optional(),
+  brand: z.string().min(1, "Brand is required"),
   size: z.string().optional(),
-  flavors: z
-    .string()
-    .transform((text) => text.split("\n").map((f) => f.trim()).filter(Boolean)),
+  supplier: z.string().optional(),
   nicotineLevels: z
-    .array(z.coerce.number())
-    .transform((arr) => [...new Set(arr)])
+    .string()
+    .transform((s) => s.split(",").map(Number).filter((n) => Number.isFinite(n)))
     .refine((arr) => arr.length > 0, "Select at least one nicotine level"),
-  cost: z.coerce.number().nonnegative(),
-  price: z.coerce.number().nonnegative(),
-  lowStockThreshold: z.coerce.number().int().nonnegative(),
 });
 
 export async function createFlavorBatchAction(
@@ -203,43 +198,72 @@ export async function createFlavorBatchAction(
   const parsed = flavorBatchSchema.safeParse({
     brand: formData.get("brand") ?? "",
     size: formData.get("size") ?? "",
-    flavors: formData.get("flavors") ?? "",
-    nicotineLevels: formData.getAll("nicotineLevels"),
-    cost: formData.get("cost") || 0,
-    price: formData.get("price") || 0,
-    lowStockThreshold: formData.get("lowStockThreshold") || 5,
+    supplier: formData.get("supplier") ?? "",
+    nicotineLevels: formData.get("nicotineLevels") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
-  const { brand, size, flavors, nicotineLevels, cost, price, lowStockThreshold } = parsed.data;
-  if (flavors.length === 0) {
-    return { error: "Add at least one flavor" };
+  const { brand, size, supplier, nicotineLevels } = parsed.data;
+
+  const levels = nicotineLevels.map((mg) => {
+    const flavors = String(formData.get(`flavors-${mg}`) ?? "")
+      .split("\n")
+      .map((f) => f.trim())
+      .filter(Boolean);
+    const cost = Number(formData.get(`cost-${mg}`) ?? 0) || 0;
+    const price = Number(formData.get(`price-${mg}`) ?? 0) || 0;
+    return { mg, flavors, cost, price };
+  });
+
+  const emptyLevel = levels.find((l) => l.flavors.length === 0);
+  if (emptyLevel) {
+    return { error: `Add at least one flavor for ${emptyLevel.mg}mg` };
   }
 
   const supabase = await createClient();
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in" };
   const shopId = profile.shopId;
-  const effectiveCost = profile.role === "owner" ? cost : 0;
+
+  let supplierId: string | null = null;
+  const supplierName = supplier?.trim();
+  if (supplierName) {
+    const { data: existingSupplier } = await supabase
+      .from("suppliers")
+      .select("id")
+      .eq("shop_id", shopId)
+      .ilike("name", supplierName)
+      .maybeSingle();
+    if (existingSupplier) {
+      supplierId = existingSupplier.id;
+    } else {
+      const { data: newSupplier, error: supplierError } = await supabase
+        .from("suppliers")
+        .insert({ shop_id: shopId, name: supplierName })
+        .select("id")
+        .single();
+      if (supplierError) return { error: supplierError.message };
+      supplierId = newSupplier.id;
+    }
+  }
 
   // Reuse an existing product for any flavor name that already exists under this
-  // brand, instead of creating a second, visually-duplicate product card.
-  let existingQuery = supabase
+  // brand, instead of creating a second, visually-duplicate product card. Only
+  // newly-created products get the supplier set — existing ones keep their own.
+  const { data: existingProducts } = await supabase
     .from("products")
     .select("id, name")
     .eq("shop_id", shopId)
     .eq("category", "ejuice")
-    .eq("archived", false);
-  existingQuery = brand ? existingQuery.eq("brand", brand) : existingQuery.is("brand", null);
-  const { data: existingProducts } = await existingQuery;
+    .eq("archived", false)
+    .eq("brand", brand);
   const productIdByName = new Map(
     (existingProducts ?? []).map((p) => [p.name.trim().toLowerCase(), p.id as string]),
   );
 
-  const newNames = [...new Set(
-    flavors.filter((name) => !productIdByName.has(name.trim().toLowerCase())),
-  )];
+  const allFlavorNames = [...new Set(levels.flatMap((l) => l.flavors))];
+  const newNames = allFlavorNames.filter((name) => !productIdByName.has(name.trim().toLowerCase()));
   if (newNames.length > 0) {
     const { data: inserted, error: productsError } = await supabase
       .from("products")
@@ -247,8 +271,9 @@ export async function createFlavorBatchAction(
         newNames.map((name) => ({
           shop_id: shopId,
           name,
-          brand: brand || null,
+          brand,
           category: "ejuice" as const,
+          supplier_id: supplierId,
         })),
       )
       .select("id");
@@ -256,7 +281,7 @@ export async function createFlavorBatchAction(
     newNames.forEach((name, i) => productIdByName.set(name.trim().toLowerCase(), inserted[i].id));
   }
 
-  const productIds = [...new Set(flavors.map((name) => productIdByName.get(name.trim().toLowerCase())!))];
+  const productIds = [...new Set(allFlavorNames.map((name) => productIdByName.get(name.trim().toLowerCase())!))];
   const { data: existingVariants } = productIds.length
     ? await supabase.from("variants").select("product_id, nicotine_mg, size").in("product_id", productIds)
     : { data: [] as { product_id: string; nicotine_mg: number | null; size: string | null }[] };
@@ -272,11 +297,11 @@ export async function createFlavorBatchAction(
     size: string | null;
     cost: number;
     price: number;
-    low_stock_threshold: number;
   }[] = [];
-  for (const name of flavors) {
-    const productId = productIdByName.get(name.trim().toLowerCase())!;
-    for (const mg of nicotineLevels) {
+  for (const { mg, flavors, cost, price } of levels) {
+    const effectiveCost = profile.role === "owner" ? cost : 0;
+    for (const name of flavors) {
+      const productId = productIdByName.get(name.trim().toLowerCase())!;
       const key = `${productId}|${mg}|${size || ""}`;
       if (seenVariantKeys.has(key)) continue;
       seenVariantKeys.add(key);
@@ -288,7 +313,6 @@ export async function createFlavorBatchAction(
         size: size || null,
         cost: effectiveCost,
         price,
-        low_stock_threshold: lowStockThreshold,
       });
     }
   }
