@@ -138,7 +138,7 @@ export function InventoryList({
     if (ohms !== ALL && String(v.ohms) !== ohms) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
-      const haystack = `${v.productName} ${v.brand ?? ""} ${v.flavor ?? ""} ${v.subcategory ?? ""} ${v.forDevice ?? ""}`.toLowerCase();
+      const haystack = `${v.productName} ${v.brand ?? ""} ${v.flavor ?? ""} ${v.subcategory ?? ""} ${v.forDevice ?? ""} ${v.supplierName ?? ""}`.toLowerCase();
       if (!haystack.includes(q)) return false;
     }
     return true;
@@ -187,7 +187,7 @@ export function InventoryList({
       <div className="flex flex-wrap items-center gap-2">
         <input
           type="text"
-          placeholder="Search name, brand, flavor, device…"
+          placeholder="Search name, brand, flavor, device, supplier…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
