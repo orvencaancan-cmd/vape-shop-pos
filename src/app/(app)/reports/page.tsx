@@ -45,6 +45,7 @@ export default async function ReportsPage({
     lowStock,
     slowMovers,
     inventoryValue,
+    projectedRevenueProfit,
     supplierActivity,
     staffActivity,
     expenses,
@@ -102,6 +103,16 @@ export default async function ReportsPage({
               expenseSummary.total,
           )}
         />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Projected revenue & profit">
+        <p className="w-full text-xs text-muted">
+          If every unit currently in stock sold at its listed price — a snapshot of your inventory, not
+          a forecast based on sales history.
+        </p>
+        <Stat label="Revenue" value={formatCurrency(projectedRevenueProfit.revenue)} />
+        <Stat label="Cost of goods" value={formatCurrency(projectedRevenueProfit.cost)} />
+        <Stat label="Profit" value={formatCurrency(projectedRevenueProfit.profit)} />
       </CollapsibleSection>
 
       <CollapsibleSection title="Best sellers">

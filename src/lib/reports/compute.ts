@@ -36,6 +36,7 @@ export type VariantRow = {
   stock_qty: number;
   low_stock_threshold: number;
   cost: number;
+  price: number;
   product_id: string;
   products: { name: string; category: "ejuice" | "accessory"; archived: boolean } | null;
 };
@@ -299,6 +300,21 @@ export function computeInventoryValue(variants: VariantRow[]) {
     byCategory.set(category, (byCategory.get(category) ?? 0) + value);
   }
   return { total, byCategory: [...byCategory.entries()].map(([category, value]) => ({ category, value })) };
+}
+
+// "If every unit currently in stock sold at its listed price" -- a snapshot
+// projection from current inventory, not a sales-velocity forecast. Distinct
+// from computeRevenueProfit (which sums actual completed sales in the
+// selected date range).
+export function computeProjectedRevenueProfit(variants: VariantRow[]) {
+  let revenue = 0;
+  let cost = 0;
+  for (const v of variants) {
+    if (v.products?.archived) continue;
+    revenue += v.stock_qty * Number(v.price);
+    cost += v.stock_qty * Number(v.cost);
+  }
+  return { revenue, cost, profit: revenue - cost };
 }
 
 export function computeDailySeries(sales: { total: number; created_at: string }[], days: number) {

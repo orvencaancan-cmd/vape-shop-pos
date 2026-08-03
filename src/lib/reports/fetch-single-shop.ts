@@ -9,6 +9,7 @@ import {
   computeLowStock,
   computeSlowMovers,
   computeInventoryValue,
+  computeProjectedRevenueProfit,
   computeSupplierActivity,
   computeStaffActivity,
   computePaymentBreakdown,
@@ -35,6 +36,7 @@ export type SingleShopReportData = {
   lowStock: ReturnType<typeof computeLowStock>;
   slowMovers: ReturnType<typeof computeSlowMovers>;
   inventoryValue: ReturnType<typeof computeInventoryValue>;
+  projectedRevenueProfit: ReturnType<typeof computeProjectedRevenueProfit>;
   supplierActivity: ReturnType<typeof computeSupplierActivity>;
   staffActivity: ReturnType<typeof computeStaffActivity>;
   expenses: ExpenseRow[];
@@ -71,7 +73,7 @@ export async function fetchSingleShopReportData(
   const { data: variants } = await supabase
     .from("variants")
     .select(
-      "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
+      "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, price, product_id, products(name, category, archived)",
     )
     .eq("shop_id", shopId);
 
@@ -134,6 +136,7 @@ export async function fetchSingleShopReportData(
     lowStock: computeLowStock(variantRows),
     slowMovers: computeSlowMovers(variantRows, items),
     inventoryValue: computeInventoryValue(variantRows),
+    projectedRevenueProfit: computeProjectedRevenueProfit(variantRows),
     supplierActivity: computeSupplierActivity(receiptRows),
     staffActivity: computeStaffActivity(staffSales ?? [], staffProfiles ?? []),
     expenses,

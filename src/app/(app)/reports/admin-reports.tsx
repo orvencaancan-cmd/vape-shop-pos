@@ -236,6 +236,16 @@ export async function AdminReportsPage({
               rows={b.inventoryValue.byCategory.map((c) => [c.category, "", formatCurrency(c.value)])}
             />
           </CollapsibleSection>
+
+          <CollapsibleSection title="Projected revenue & profit">
+            <p className="w-full text-xs text-muted">
+              If every unit currently in stock sold at its listed price — a snapshot of this branch&apos;s
+              inventory, not a forecast based on sales history.
+            </p>
+            <Stat label="Revenue" value={formatCurrency(b.projectedRevenueProfit.revenue)} />
+            <Stat label="Cost of goods" value={formatCurrency(b.projectedRevenueProfit.cost)} />
+            <Stat label="Profit" value={formatCurrency(b.projectedRevenueProfit.profit)} />
+          </CollapsibleSection>
         </div>
       ))}
     </main>

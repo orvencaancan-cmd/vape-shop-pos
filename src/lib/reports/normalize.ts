@@ -22,6 +22,7 @@ export function normalizeVariants(rows: unknown[]): VariantRow[] {
     stock_qty: r.stock_qty as number,
     low_stock_threshold: r.low_stock_threshold as number,
     cost: r.cost as number,
+    price: r.price as number,
     product_id: r.product_id as string,
     products: normalizeOne(r.products) as VariantRow["products"],
   }));

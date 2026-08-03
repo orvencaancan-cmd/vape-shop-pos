@@ -10,6 +10,7 @@ import {
   computeLowStock,
   computeSlowMovers,
   computeInventoryValue,
+  computeProjectedRevenueProfit,
   computeSupplierActivity,
   computeStaffActivity,
   computePaymentBreakdown,
@@ -35,6 +36,7 @@ export type BranchInventory = {
   lowStock: ReturnType<typeof computeLowStock>;
   slowMovers: ReturnType<typeof computeSlowMovers>;
   inventoryValue: ReturnType<typeof computeInventoryValue>;
+  projectedRevenueProfit: ReturnType<typeof computeProjectedRevenueProfit>;
 };
 
 export type AdminReportData = {
@@ -150,7 +152,7 @@ export async function fetchAdminReportData(
         supabase
           .from("variants")
           .select(
-            "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
+            "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, price, product_id, products(name, category, archived)",
           )
           .eq("shop_id", s.shopId),
         supabase
@@ -182,6 +184,7 @@ export async function fetchAdminReportData(
         lowStock: computeLowStock(variantRows),
         slowMovers: computeSlowMovers(variantRows, branchItems),
         inventoryValue: computeInventoryValue(variantRows),
+        projectedRevenueProfit: computeProjectedRevenueProfit(variantRows),
       };
     }),
   );
