@@ -8,6 +8,7 @@ import {
   updateBrandSupplierAction,
   updateBrandCostAction,
   updateAccessoryCostAction,
+  addBrandFlavorsAction,
 } from "./actions";
 import { formatCurrency } from "@/lib/currency";
 
@@ -158,6 +159,7 @@ export function InventoryList({
   const [device, setDevice] = useState(ALL);
   const [ohms, setOhms] = useState(ALL);
   const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
+  const [addFlavorBrands, setAddFlavorBrands] = useState<Set<string>>(new Set());
 
   const hasActiveFilter =
     search.trim() !== "" ||
@@ -170,6 +172,18 @@ export function InventoryList({
 
   const toggleBrand = (brandKey: string) => {
     setExpandedBrands((prev) => {
+      const next = new Set(prev);
+      if (next.has(brandKey)) {
+        next.delete(brandKey);
+      } else {
+        next.add(brandKey);
+      }
+      return next;
+    });
+  };
+
+  const toggleAddFlavor = (brandKey: string) => {
+    setAddFlavorBrands((prev) => {
       const next = new Set(prev);
       if (next.has(brandKey)) {
         next.delete(brandKey);
@@ -458,6 +472,39 @@ export function InventoryList({
                       </form>
                     ))}
                   </div>
+                </div>
+              )}
+              {getBrandNicotineLevels(brandGroup.products).length > 0 && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => toggleAddFlavor(brandGroup.brandKey)}
+                    className="text-xs text-primary underline underline-offset-2"
+                  >
+                    + Add flavor
+                  </button>
+                  {addFlavorBrands.has(brandGroup.brandKey) && (
+                    <form
+                      action={addBrandFlavorsAction.bind(
+                        null,
+                        brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel,
+                      )}
+                      className="mt-2 flex flex-col gap-2"
+                    >
+                      <textarea
+                        name="flavors"
+                        rows={2}
+                        placeholder="One flavor per line — nicotine levels, size, cost, and price are copied from this brand"
+                        className="w-full max-w-sm rounded border border-hairline bg-canvas px-2 py-1 text-xs text-ink placeholder:text-muted"
+                      />
+                      <button
+                        type="submit"
+                        className="self-start rounded bg-primary px-2 py-1 text-xs text-on-primary hover:bg-primary-active"
+                      >
+                        Add
+                      </button>
+                    </form>
+                  )}
                 </div>
               )}
               {(() => {

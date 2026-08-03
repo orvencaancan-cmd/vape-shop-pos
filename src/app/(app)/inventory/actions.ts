@@ -323,6 +323,143 @@ export async function updateAccessoryCostAction(
   revalidatePath("/inventory");
 }
 
+const addBrandFlavorsSchema = z.object({
+  flavors: z
+    .string()
+    .transform((s) => s.split("\n").map((f) => f.trim()).filter(Boolean)),
+});
+
+// Quick "a new flavor just came in" shortcut for an existing e-juice brand --
+// available to owner AND staff, unlike the Supplier/Cost brand-level edits
+// above, since it doesn't ask for anything role-sensitive: just the flavor
+// name(s). Every other detail (nicotine levels, size, cost, price) is
+// inferred from that brand's existing flavors, since a new flavor line
+// almost always just extends what's already there rather than introducing a
+// new strength/size/pricing scheme.
+export async function addBrandFlavorsAction(brand: string | null, formData: FormData) {
+  const parsed = addBrandFlavorsSchema.safeParse({ flavors: formData.get("flavors") ?? "" });
+  if (!parsed.success || parsed.data.flavors.length === 0) return;
+
+  const profile = await getCurrentProfile();
+  if (!profile) return;
+
+  const supabase = await createClient();
+  const shopId = profile.shopId;
+
+  let existingQuery = supabase
+    .from("products")
+    .select("id, name, supplier_id")
+    .eq("shop_id", shopId)
+    .eq("category", "ejuice")
+    .eq("archived", false);
+  existingQuery = brand ? existingQuery.eq("brand", brand) : existingQuery.is("brand", null);
+  const { data: existingProducts } = await existingQuery;
+  const productIds = (existingProducts ?? []).map((p) => p.id);
+  if (productIds.length === 0) return;
+
+  const { data: existingVariants } = await supabase
+    .from("variants")
+    .select("product_id, nicotine_mg, size, cost, price")
+    .eq("shop_id", shopId)
+    .in("product_id", productIds);
+
+  const levels = [
+    ...new Set((existingVariants ?? []).map((v) => v.nicotine_mg).filter((n): n is number => n != null)),
+  ];
+  if (levels.length === 0) return;
+
+  const sizes = new Set((existingVariants ?? []).map((v) => v.size).filter((s): s is string => !!s));
+  const commonSize = sizes.size === 1 ? [...sizes][0] : null;
+
+  const supplierIds = new Set(
+    (existingProducts ?? []).map((p) => p.supplier_id).filter((id): id is string => !!id),
+  );
+  const commonSupplierId = supplierIds.size === 1 ? [...supplierIds][0] : null;
+
+  function valueForLevel(mg: number, field: "cost" | "price"): number {
+    const values = new Set(
+      (existingVariants ?? []).filter((v) => v.nicotine_mg === mg).map((v) => Number(v[field])),
+    );
+    return values.size === 1 ? [...values][0] : 0;
+  }
+
+  const productIdByName = new Map(
+    (existingProducts ?? []).map((p) => [p.name.trim().toLowerCase(), p.id as string]),
+  );
+  const newNames = parsed.data.flavors.filter((name) => !productIdByName.has(name.trim().toLowerCase()));
+  if (newNames.length > 0) {
+    const { data: inserted, error } = await supabase
+      .from("products")
+      .insert(
+        newNames.map((name) => ({
+          shop_id: shopId,
+          name,
+          brand,
+          category: "ejuice" as const,
+          supplier_id: commonSupplierId,
+        })),
+      )
+      .select("id");
+    if (error) {
+      console.error("addBrandFlavorsAction failed:", error.message);
+      return;
+    }
+    newNames.forEach((name, i) => productIdByName.set(name.trim().toLowerCase(), inserted[i].id));
+  }
+
+  const targetProductIds = [
+    ...new Set(parsed.data.flavors.map((name) => productIdByName.get(name.trim().toLowerCase())!)),
+  ];
+
+  const { data: alreadyHaveVariants } = await supabase
+    .from("variants")
+    .select("product_id, nicotine_mg")
+    .in("product_id", targetProductIds);
+  const seenVariantKeys = new Set(
+    (alreadyHaveVariants ?? []).map((v) => `${v.product_id}|${v.nicotine_mg}`),
+  );
+
+  // Staff can add flavors here, but RLS only allows a staff-authored variant
+  // insert when cost is 0 (variants_insert_member) -- same rule every other
+  // staff-facing add flow in this file already follows.
+  const effectiveCostFor = (mg: number) =>
+    profile.role === "owner" ? valueForLevel(mg, "cost") : 0;
+
+  const variantRows: {
+    shop_id: string;
+    product_id: string;
+    nicotine_mg: number;
+    size: string | null;
+    cost: number;
+    price: number;
+  }[] = [];
+  for (const productId of targetProductIds) {
+    for (const mg of levels) {
+      const key = `${productId}|${mg}`;
+      if (seenVariantKeys.has(key)) continue;
+      seenVariantKeys.add(key);
+      variantRows.push({
+        shop_id: shopId,
+        product_id: productId,
+        nicotine_mg: mg,
+        size: commonSize,
+        cost: effectiveCostFor(mg),
+        price: valueForLevel(mg, "price"),
+      });
+    }
+  }
+
+  if (variantRows.length > 0) {
+    const { error } = await supabase.from("variants").insert(variantRows);
+    if (error) {
+      console.error("addBrandFlavorsAction failed:", error.message);
+      return;
+    }
+  }
+
+  revalidatePath("/inventory");
+}
+
 export async function archiveProductAction(productId: string) {
   const profile = await getCurrentProfile();
   if (!profile) return;
