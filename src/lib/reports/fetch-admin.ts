@@ -47,6 +47,7 @@ export type AdminReportData = {
   loyaltySummary: ReturnType<typeof computeLoyaltySummary>;
   salesDetail: ReturnType<typeof computeSalesDetail>;
   revenueProfit: ReturnType<typeof computeRevenueProfit>;
+  projectedRevenueProfit: ReturnType<typeof computeProjectedRevenueProfit>;
   bestSellers: ReturnType<typeof computeBestSellers>;
   byCategory: ReturnType<typeof computeSalesByCategory>["byCategory"];
   byNicotine: ReturnType<typeof computeSalesByCategory>["byNicotine"];
@@ -189,6 +190,29 @@ export async function fetchAdminReportData(
     }),
   );
 
+  // Top-level Projected revenue & profit follows the same combined/selected
+  // scoping as the sales-side numbers above -- unlike Low stock/Slow movers/
+  // Inventory value (which stay per-branch only, since two branches can
+  // carry identically-named products and a merged product list would be
+  // misleading), this is just a scalar sum with no naming collision risk,
+  // so summing it across branches for "combined" is safe. Derived from the
+  // already-fetched inventoryPerBranch instead of a second query.
+  const projectedRevenueProfit =
+    selectedBranch === "combined"
+      ? inventoryPerBranch.reduce(
+          (acc, b) => ({
+            revenue: acc.revenue + b.projectedRevenueProfit.revenue,
+            cost: acc.cost + b.projectedRevenueProfit.cost,
+            profit: acc.profit + b.projectedRevenueProfit.profit,
+          }),
+          { revenue: 0, cost: 0, profit: 0 },
+        )
+      : (inventoryPerBranch.find((b) => b.shopId === selectedBranch)?.projectedRevenueProfit ?? {
+          revenue: 0,
+          cost: 0,
+          profit: 0,
+        });
+
   return {
     salesSummary: computeSalesSummary(sales),
     paymentBreakdown: computePaymentBreakdown(sales),
@@ -197,6 +221,7 @@ export async function fetchAdminReportData(
     loyaltySummary: computeLoyaltySummary(sales),
     salesDetail: computeSalesDetail(sales, items),
     revenueProfit: computeRevenueProfit(items),
+    projectedRevenueProfit,
     bestSellers: computeBestSellers(items),
     byCategory,
     byNicotine,

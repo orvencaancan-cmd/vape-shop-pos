@@ -31,6 +31,7 @@ export async function AdminReportsPage({
     loyaltySummary,
     salesDetail,
     revenueProfit,
+    projectedRevenueProfit,
     bestSellers,
     byCategory,
     byNicotine,
@@ -118,6 +119,16 @@ export async function AdminReportsPage({
               expenseSummary.total,
           )}
         />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Projected revenue & profit">
+        <p className="w-full text-xs text-muted">
+          If every unit currently in stock sold at its listed price — a snapshot of inventory, not a
+          forecast based on sales history.
+        </p>
+        <Stat label="Revenue" value={formatCurrency(projectedRevenueProfit.revenue)} />
+        <Stat label="Cost of goods" value={formatCurrency(projectedRevenueProfit.cost)} />
+        <Stat label="Profit" value={formatCurrency(projectedRevenueProfit.profit)} />
       </CollapsibleSection>
 
       <CollapsibleSection title="Best sellers">
