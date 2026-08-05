@@ -353,8 +353,16 @@ create index if not exists sale_promo_products_product_id_idx on sale_promo_prod
 
 -- 5. Currency column scale. Verified against live data first (all rows
 -- already at <=2 decimal places) -- this is a constraint, not a backfill.
+-- variants.cost is referenced inside the variants_insert_member RLS policy
+-- (staff may only insert a variant with cost = 0), and Postgres refuses to
+-- alter a column's type while a policy expression depends on it -- drop and
+-- recreate the policy (identical to its current definition from 0015)
+-- around that one alter.
 alter table variants alter column price type numeric(12,2);
+drop policy "variants_insert_member" on variants;
 alter table variants alter column cost type numeric(12,2);
+create policy "variants_insert_member" on variants for insert
+  with check (is_member_of(shop_id) and (is_owner(shop_id) or cost = 0));
 alter table sales alter column total type numeric(12,2);
 alter table sales alter column discount_amount type numeric(12,2);
 alter table sales alter column sale_discount_amount type numeric(12,2);
