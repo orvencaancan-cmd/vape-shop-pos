@@ -11,25 +11,30 @@ export default async function AdminPage() {
   if (!profile.platformAdmin) redirect("/dashboard");
 
   const supabase = await createClient();
-  const [{ data: shops }, { count: pendingPaymentCount }, { data: lastSales }] = await Promise.all([
-    supabase
-      .from("shops")
-      .select(
-        "id, name, subscription_status, trial_ends_at, current_period_end, suspended_at, created_at, billing_tier",
-      )
-      .eq("is_platform_shop", false)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("manual_payment_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending"),
-    supabase.rpc("get_last_sale_dates"),
-  ]);
+  const [{ data: shops }, { count: pendingPaymentCount }, { data: lastSales }, { data: featureAdoption }] =
+    await Promise.all([
+      supabase
+        .from("shops")
+        .select(
+          "id, name, subscription_status, trial_ends_at, current_period_end, suspended_at, created_at, billing_tier",
+        )
+        .eq("is_platform_shop", false)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("manual_payment_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending"),
+      supabase.rpc("get_last_sale_dates"),
+      supabase.rpc("get_feature_adoption"),
+    ]);
   const lastSaleByShopId = new Map(
     ((lastSales ?? []) as { shop_id: string; last_sale_at: string }[]).map((r) => [
       r.shop_id,
       r.last_sale_at,
     ]),
+  );
+  const featureRows = ((featureAdoption ?? []) as { feature: string; shop_count: number }[]).sort(
+    (a, b) => b.shop_count - a.shop_count,
   );
 
   const counts = { trialing: 0, trialExpired: 0, active: 0, paymentDue: 0, past_due: 0, canceled: 0 };
@@ -57,6 +62,7 @@ export default async function AdminPage() {
   const mrrLabel = `${mrr.toFixed(2)} PHP`;
 
   const neverSoldCount = (shops ?? []).filter((s) => !lastSaleByShopId.has(s.id)).length;
+  const totalShops = shops?.length ?? 0;
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-3xl px-4 py-8">
@@ -138,6 +144,33 @@ export default async function AdminPage() {
             })}
           </tbody>
         </table>
+      </div>
+
+      <h2 className="mt-8 text-sm font-medium text-muted">Feature adoption</h2>
+      {featureRows.length > 0 && featureRows[0].shop_count > 0 && (
+        <p className="mt-1 text-sm text-ink">
+          Most used: <span className="font-medium">{featureRows[0].feature}</span> —{" "}
+          {featureRows[0].shop_count} of {totalShops} shops
+        </p>
+      )}
+      <div className="mt-3 flex flex-col gap-2">
+        {featureRows.map((f) => {
+          const pct = totalShops > 0 ? Math.round((f.shop_count / totalShops) * 100) : 0;
+          return (
+            <div key={f.feature} className="flex items-center gap-3 text-sm">
+              <span className="w-36 shrink-0 text-body">{f.feature}</span>
+              <div className="h-1.5 flex-1 rounded-full bg-canvas-strong">
+                <div className="h-1.5 rounded-full bg-primary" style={{ width: `${pct}%` }} />
+              </div>
+              <span className="w-24 shrink-0 text-right text-xs text-muted">
+                {f.shop_count}/{totalShops} ({pct}%)
+              </span>
+            </div>
+          );
+        })}
+        {featureRows.length === 0 && (
+          <p className="text-sm text-muted">No feature usage yet.</p>
+        )}
       </div>
     </main>
   );
