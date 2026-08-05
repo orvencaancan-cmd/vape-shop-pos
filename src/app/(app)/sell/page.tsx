@@ -80,7 +80,7 @@ export default async function SellPage() {
   const { data: recentSalesRaw } = await supabase
     .from("sales")
     .select(
-      "id, total, payment_method, discount_amount, discount_reason, sale_discount_amount, created_at, created_by, voided_at, profiles!sales_created_by_fkey(display_name)",
+      "id, total, payment_method, discount_amount, discount_reason, sale_discount_amount, created_at, created_by, voided_at, voided_reason, profiles!sales_created_by_fkey(display_name)",
     )
     .eq("shop_id", profile.shopId)
     .gte("created_at", todayStart.toISOString())
@@ -100,7 +100,7 @@ export default async function SellPage() {
 
   const linesBySaleId = new Map<
     string,
-    { item: string; quantity: number; price: number }[]
+    { variantId: string; item: string; quantity: number; price: number }[]
   >();
   for (const row of saleItemsRaw ?? []) {
     const variant = Array.isArray(row.variants) ? row.variants[0] : row.variants;
@@ -116,6 +116,7 @@ export default async function SellPage() {
         .filter(Boolean)
         .join(" · ") || "Default";
     const line = {
+      variantId: row.variant_id as string,
       item: `${product?.brand ? `${product.brand} — ` : ""}${product?.name ?? "Unknown product"} — ${label}`,
       quantity: row.quantity as number,
       price: Number(row.unit_price) * (row.quantity as number),
@@ -137,6 +138,7 @@ export default async function SellPage() {
       createdAt: s.created_at as string,
       createdByName: (creator?.display_name as string | null) ?? null,
       voidedAt: s.voided_at as string | null,
+      voidedReason: s.voided_reason as string | null,
       canVoid: !s.voided_at && (profile.role === "owner" || s.created_by === profile.id),
       lines: linesBySaleId.get(s.id as string) ?? [],
     };

@@ -10,6 +10,7 @@ export type DashboardSale = {
   total: number;
   createdAt: string;
   voidedAt: string | null;
+  voidedReason: string | null;
 };
 
 export function DashboardRecentSales({ sales }: { sales: DashboardSale[] }) {
@@ -19,13 +20,15 @@ export function DashboardRecentSales({ sales }: { sales: DashboardSale[] }) {
   const [error, setError] = useState<string | null>(null);
 
   function voidSale(saleId: string, total: number) {
-    if (!confirm(`Void this ${formatCurrency(total)} sale? This restores the stock quantity.`)) {
-      return;
-    }
+    const reason = window.prompt(
+      `Void this ${formatCurrency(total)} sale? This restores the stock quantity.\n\nReason for voiding (required):`,
+    );
+    if (!reason || !reason.trim()) return;
+
     setError(null);
     setVoidingId(saleId);
     startTransition(async () => {
-      const result = await voidSaleAction(saleId);
+      const result = await voidSaleAction(saleId, reason.trim());
       setVoidingId(null);
       if (result.error) {
         setError(result.error);
@@ -52,8 +55,11 @@ export function DashboardRecentSales({ sales }: { sales: DashboardSale[] }) {
                 {formatCurrency(s.total)}
               </span>
               {s.voidedAt ? (
-                <span className="rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-muted">
-                  Voided
+                <span
+                  className="rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-muted"
+                  title={s.voidedReason ?? undefined}
+                >
+                  Voided{s.voidedReason ? `: ${s.voidedReason}` : ""}
                 </span>
               ) : (
                 <button

@@ -34,8 +34,9 @@ type RecentSale = {
   createdAt: string;
   createdByName: string | null;
   voidedAt: string | null;
+  voidedReason: string | null;
   canVoid: boolean;
-  lines: { item: string; quantity: number; price: number }[];
+  lines: { variantId: string; item: string; quantity: number; price: number }[];
 };
 
 type CartLine = { variantId: string; quantity: number };
@@ -376,10 +377,12 @@ export function SellScreen({
           createdAt: new Date().toISOString(),
           createdByName: currentUserName,
           voidedAt: null,
+          voidedReason: null,
           canVoid: true,
           lines: soldCart.map((l) => {
             const v = variantsById.get(l.variantId);
             return {
+              variantId: l.variantId,
               item: v ? `${v.brand ? `${v.brand} — ` : ""}${v.productName} — ${v.label}` : "",
               quantity: l.quantity,
               price: (v?.price ?? 0) * l.quantity,
@@ -392,18 +395,44 @@ export function SellScreen({
   }
 
   function voidSale(saleId: string, saleTotal: number) {
-    if (!confirm(`Void this ${formatCurrency(saleTotal)} sale? This restores the stock quantity.`)) {
-      return;
-    }
+    const reason = window.prompt(
+      `Void this ${formatCurrency(saleTotal)} sale? This restores the stock quantity.\n\nReason for voiding (required):`,
+    );
+    if (!reason || !reason.trim()) return;
+
     setVoidingId(saleId);
     startTransition(async () => {
-      const result = await voidSaleAction(saleId);
+      const result = await voidSaleAction(saleId, reason.trim());
       setVoidingId(null);
       if (result.error) {
         setMessage({ type: "error", text: result.error });
-      } else {
-        router.refresh();
+        return;
       }
+      // Patch local state directly instead of relying on router.refresh()
+      // alone -- both recentSales and variants were seeded from the initial
+      // server props into useState, so a prop update from refresh() doesn't
+      // re-initialize them: the Void button/status and the catalog's stock
+      // count would otherwise keep showing stale (un-voided / un-restored)
+      // values until a full reload.
+      const voidedSale = recentSales.find((s) => s.id === saleId);
+      setRecentSales((prev) =>
+        prev.map((s) =>
+          s.id === saleId ? { ...s, voidedAt: new Date().toISOString(), voidedReason: reason.trim() } : s,
+        ),
+      );
+      if (voidedSale) {
+        const restoredByVariant = new Map<string, number>();
+        for (const line of voidedSale.lines) {
+          restoredByVariant.set(line.variantId, (restoredByVariant.get(line.variantId) ?? 0) + line.quantity);
+        }
+        setVariants((prev) =>
+          prev.map((v) => {
+            const restore = restoredByVariant.get(v.id);
+            return restore ? { ...v, stockQty: v.stockQty + restore } : v;
+          }),
+        );
+      }
+      router.refresh();
     });
   }
 
@@ -871,8 +900,11 @@ export function SellScreen({
                       </span>
                     </button>
                     {s.voidedAt ? (
-                      <span className="rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-muted">
-                        Voided
+                      <span
+                        className="rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-muted"
+                        title={s.voidedReason ?? undefined}
+                      >
+                        Voided{s.voidedReason ? `: ${s.voidedReason}` : ""}
                       </span>
                     ) : s.canVoid ? (
                       <button

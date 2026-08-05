@@ -49,7 +49,7 @@ export default async function DashboardPage({
         .eq("shop_id", profile.shopId),
       supabase
         .from("sales")
-        .select("id, total, created_at, voided_at")
+        .select("id, total, created_at, voided_at, voided_reason")
         .eq("shop_id", profile.shopId)
         .order("created_at", { ascending: false })
         .limit(10),
@@ -245,6 +245,7 @@ export default async function DashboardPage({
             total: Number(s.total),
             createdAt: s.created_at,
             voidedAt: s.voided_at,
+            voidedReason: s.voided_reason,
           }))}
         />
       </Card>

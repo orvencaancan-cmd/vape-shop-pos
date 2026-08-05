@@ -112,7 +112,7 @@ export async function registerLoyaltyCustomerAction(
 
 export type VoidResult = { error?: string };
 
-export async function voidSaleAction(saleId: string): Promise<VoidResult> {
+export async function voidSaleAction(saleId: string, reason: string): Promise<VoidResult> {
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in" };
 
@@ -120,6 +120,7 @@ export async function voidSaleAction(saleId: string): Promise<VoidResult> {
   const { error } = await supabase.rpc("void_sale", {
     p_shop_id: profile.shopId,
     p_sale_id: saleId,
+    p_reason: reason,
   });
   if (error) return { error: error.message };
 
