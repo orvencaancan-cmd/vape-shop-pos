@@ -11,7 +11,7 @@ export default async function AdminPage() {
   if (!profile.platformAdmin) redirect("/dashboard");
 
   const supabase = await createClient();
-  const [{ data: shops }, { count: pendingPaymentCount }] = await Promise.all([
+  const [{ data: shops }, { count: pendingPaymentCount }, { data: lastSales }] = await Promise.all([
     supabase
       .from("shops")
       .select(
@@ -23,7 +23,14 @@ export default async function AdminPage() {
       .from("manual_payment_requests")
       .select("id", { count: "exact", head: true })
       .eq("status", "pending"),
+    supabase.rpc("get_last_sale_dates"),
   ]);
+  const lastSaleByShopId = new Map(
+    ((lastSales ?? []) as { shop_id: string; last_sale_at: string }[]).map((r) => [
+      r.shop_id,
+      r.last_sale_at,
+    ]),
+  );
 
   const counts = { trialing: 0, trialExpired: 0, active: 0, paymentDue: 0, past_due: 0, canceled: 0 };
   const activeByTier = { primary: 0, additional: 0 };
@@ -48,6 +55,8 @@ export default async function AdminPage() {
 
   const mrr = activeByTier.primary * TIER_AMOUNTS.primary + activeByTier.additional * TIER_AMOUNTS.additional;
   const mrrLabel = `${mrr.toFixed(2)} PHP`;
+
+  const neverSoldCount = (shops ?? []).filter((s) => !lastSaleByShopId.has(s.id)).length;
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-3xl px-4 py-8">
@@ -75,6 +84,7 @@ export default async function AdminPage() {
         <Stat label="Past due" value={String(counts.past_due)} />
         <Stat label="Canceled" value={String(counts.canceled)} />
         <Stat label="MRR (from active)" value={mrrLabel} />
+        <Stat label="Never sold" value={String(neverSoldCount)} />
       </div>
 
       <h2 className="mt-8 text-sm font-medium text-muted">All shops</h2>
@@ -85,41 +95,62 @@ export default async function AdminPage() {
               <th className="py-1.5 pr-3">Shop</th>
               <th className="py-1.5 pr-3">Status</th>
               <th className="py-1.5 pr-3">Trial ends</th>
-              <th className="py-1.5">Signed up</th>
+              <th className="py-1.5 pr-3">Signed up</th>
+              <th className="py-1.5">Last activity</th>
             </tr>
           </thead>
           <tbody>
-            {(shops ?? []).map((s) => (
-              <tr key={s.id} className="border-b border-hairline">
-                <td className="py-1.5 pr-3">
-                  <Link
-                    href={`/admin/${s.id}`}
-                    className="text-primary underline underline-offset-2"
-                  >
-                    {s.name}
-                  </Link>
-                </td>
-                <td className="py-1.5 pr-3 text-body">
-                  {statusLabel({
-                    subscriptionStatus: s.subscription_status,
-                    trialEndsAt: s.trial_ends_at,
-                    currentPeriodEnd: s.current_period_end,
-                  })}
-                  {s.suspended_at && <span className="ml-1 text-xs text-error">(suspended)</span>}
-                </td>
-                <td className="py-1.5 pr-3 text-muted">
-                  {s.trial_ends_at ? new Date(s.trial_ends_at).toLocaleDateString() : "—"}
-                </td>
-                <td className="py-1.5 text-muted">
-                  {new Date(s.created_at).toLocaleDateString()}
-                </td>
-              </tr>
-            ))}
+            {(shops ?? []).map((s) => {
+              const signedUpDays = daysSince(s.created_at);
+              const lastSaleAt = lastSaleByShopId.get(s.id);
+              const stalled = !lastSaleAt && signedUpDays > 7;
+              return (
+                <tr key={s.id} className="border-b border-hairline">
+                  <td className="py-1.5 pr-3">
+                    <Link
+                      href={`/admin/${s.id}`}
+                      className="text-primary underline underline-offset-2"
+                    >
+                      {s.name}
+                    </Link>
+                  </td>
+                  <td className="py-1.5 pr-3 text-body">
+                    {statusLabel({
+                      subscriptionStatus: s.subscription_status,
+                      trialEndsAt: s.trial_ends_at,
+                      currentPeriodEnd: s.current_period_end,
+                    })}
+                    {s.suspended_at && <span className="ml-1 text-xs text-error">(suspended)</span>}
+                  </td>
+                  <td className="py-1.5 pr-3 text-muted">
+                    {s.trial_ends_at ? new Date(s.trial_ends_at).toLocaleDateString() : "—"}
+                  </td>
+                  <td className="py-1.5 pr-3 text-muted">
+                    {new Date(s.created_at).toLocaleDateString()} ({formatDaysAgo(signedUpDays)})
+                  </td>
+                  <td className={`py-1.5 ${stalled ? "text-warning" : "text-muted"}`}>
+                    {lastSaleAt
+                      ? `${new Date(lastSaleAt).toLocaleDateString()} (${formatDaysAgo(daysSince(lastSaleAt))})`
+                      : "No sales yet"}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
     </main>
   );
+}
+
+function daysSince(iso: string): number {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+}
+
+function formatDaysAgo(days: number): string {
+  if (days <= 0) return "today";
+  if (days === 1) return "1d ago";
+  return `${days}d ago`;
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
