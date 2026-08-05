@@ -17,6 +17,7 @@ import { Stat } from "@/components/ui/stat";
 import { SalesChart } from "@/components/sales-chart";
 import { DashboardRecentSales } from "./recent-sales";
 import { AdminDashboardGrid } from "./admin-dashboard-grid";
+import { DashboardRealtimeRefresh } from "./realtime-refresh";
 
 export default async function DashboardPage({
   searchParams,
@@ -111,6 +112,7 @@ export default async function DashboardPage({
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
+      <DashboardRealtimeRefresh shopId={profile.shopId} />
       <h1 className="heading text-2xl">
         {profile.shop.name} — Dashboard
       </h1>

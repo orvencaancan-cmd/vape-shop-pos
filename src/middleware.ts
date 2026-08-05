@@ -14,7 +14,16 @@ const PUBLIC_PATHS = [
   "/privacy",
 ];
 
-export async function proxy(request: NextRequest) {
+// This file must be named exactly "middleware.ts" (at the project root or,
+// with a src/ layout like this one, at src/middleware.ts) for Next.js to
+// actually run it -- it previously lived at src/proxy.ts under the name
+// proxy(), which is not a filename/export Next.js's routing layer
+// recognizes, so none of this logic was ever executing. In particular,
+// nothing was refreshing the session cookie: the access token just expired
+// on its normal ~1 hour lifetime while a tab sat open, and the next server
+// request failed auth and redirected to /login even though the refresh
+// token was still perfectly valid.
+export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

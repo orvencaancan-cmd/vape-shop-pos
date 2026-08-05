@@ -12,6 +12,7 @@ import {
 import { formatCurrency } from "@/lib/currency";
 import { computePaymentBreakdown } from "@/lib/reports/compute";
 import { Stat } from "@/components/ui/stat";
+import { useRealtimeSalesRefresh } from "@/lib/supabase/use-realtime-sales-refresh";
 
 type Variant = {
   id: string;
@@ -48,6 +49,7 @@ const NO_BRAND = "__no_brand__";
 const PAYMENT_LABELS: Record<"cash" | "gcash", string> = { cash: "Cash", gcash: "GCash" };
 
 export function SellScreen({
+  shopId,
   shopName,
   variants: initialVariants,
   recentSales: initialRecentSales,
@@ -60,6 +62,7 @@ export function SellScreen({
   saleScope,
   saleProductIds,
 }: {
+  shopId: string;
   shopName: string;
   variants: Variant[];
   recentSales: RecentSale[];
@@ -73,6 +76,7 @@ export function SellScreen({
   saleProductIds: string[];
 }) {
   const router = useRouter();
+  useRealtimeSalesRefresh(shopId);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<"all" | "ejuice" | "accessory">("all");
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -104,6 +108,23 @@ export function SellScreen({
   // catalog and today's entire sales list from the server on every sale.
   const [variants, setVariants] = useState<Variant[]>(initialVariants);
   const [recentSales, setRecentSales] = useState<RecentSale[]>(initialRecentSales);
+  // Re-sync when the server sends fresh props -- e.g. after a
+  // router.refresh() triggered by useRealtimeSalesRefresh picking up
+  // another session's sale or void. A prop change alone doesn't reset state
+  // that's already mounted, so without this a Realtime-triggered refresh
+  // would silently do nothing visible here. Adjusting state during render
+  // (React's recommended pattern for this) instead of in an effect, to
+  // avoid an extra cascading render.
+  const [prevInitialVariants, setPrevInitialVariants] = useState(initialVariants);
+  if (initialVariants !== prevInitialVariants) {
+    setPrevInitialVariants(initialVariants);
+    setVariants(initialVariants);
+  }
+  const [prevInitialRecentSales, setPrevInitialRecentSales] = useState(initialRecentSales);
+  if (initialRecentSales !== prevInitialRecentSales) {
+    setPrevInitialRecentSales(initialRecentSales);
+    setRecentSales(initialRecentSales);
+  }
 
   const variantsById = useMemo(
     () => new Map(variants.map((v) => [v.id, v])),

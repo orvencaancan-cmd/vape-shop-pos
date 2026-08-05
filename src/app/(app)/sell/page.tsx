@@ -147,6 +147,7 @@ export default async function SellPage() {
   return (
     <main className="animate-fade-in-up">
       <SellScreen
+        shopId={profile.shopId}
         shopName={profile.shop.name}
         variants={items}
         recentSales={recentSales}
