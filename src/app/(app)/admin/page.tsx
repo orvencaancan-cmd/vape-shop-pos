@@ -69,6 +69,9 @@ export default async function AdminPage() {
       <div className="flex items-center justify-between gap-2">
         <h1 className="heading text-2xl">Platform admin</h1>
         <div className="flex items-center gap-3">
+          <Link href="/admin/activity" className="text-xs text-primary underline underline-offset-2">
+            Activity
+          </Link>
           <Link
             href="/admin/payments"
             className="text-xs text-primary underline underline-offset-2"
@@ -102,7 +105,7 @@ export default async function AdminPage() {
               <th className="py-1.5 pr-3">Status</th>
               <th className="py-1.5 pr-3">Trial ends</th>
               <th className="py-1.5 pr-3">Signed up</th>
-              <th className="py-1.5">Last activity</th>
+              <th className="py-1.5">Last sale</th>
             </tr>
           </thead>
           <tbody>
