@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ReceiveStockForm } from "./receive-stock-form";
 import { CorrectStockForm } from "./correct-stock-form";
@@ -17,6 +17,7 @@ import {
 import { formatCurrency } from "@/lib/currency";
 import { variantLabel } from "@/lib/variant-label";
 import { ActionButton } from "@/components/action-button";
+import { matchesSearch } from "@/lib/search-match";
 
 export type InventoryVariant = {
   id: string;
@@ -181,6 +182,10 @@ export function InventoryList({
   canEdit: boolean;
 }) {
   const [search, setSearch] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    searchInputRef.current?.focus();
+  }, []);
   const [category, setCategory] = useState<"all" | "ejuice" | "accessory">("all");
   const [brand, setBrand] = useState(ALL);
   const [flavor, setFlavor] = useState(ALL);
@@ -312,9 +317,8 @@ export function InventoryList({
     if (device !== ALL && v.forDevice !== device) return false;
     if (ohms !== ALL && String(v.ohms) !== ohms) return false;
     if (search.trim()) {
-      const q = search.toLowerCase();
-      const haystack = `${v.productName} ${v.brand ?? ""} ${v.flavor ?? ""} ${v.subcategory ?? ""} ${v.forDevice ?? ""} ${v.supplierName ?? ""}`.toLowerCase();
-      if (!haystack.includes(q)) return false;
+      const haystack = `${v.productName} ${v.brand ?? ""} ${v.flavor ?? ""} ${v.subcategory ?? ""} ${v.forDevice ?? ""} ${v.supplierName ?? ""}`;
+      if (!matchesSearch(haystack, search)) return false;
     }
     return true;
   });
@@ -360,13 +364,29 @@ export function InventoryList({
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2">
-        <input
-          type="text"
-          placeholder="Search name, brand, flavor, device, supplier…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
-        />
+        <div className="relative flex-1">
+          <input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search name, brand, flavor, device, supplier…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-lg border border-hairline bg-canvas px-3 py-2 pr-8 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                searchInputRef.current?.focus();
+              }}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
+            >
+              ×
+            </button>
+          )}
+        </div>
         {(["all", "ejuice", "accessory"] as const).map((c) => (
           <button
             key={c}

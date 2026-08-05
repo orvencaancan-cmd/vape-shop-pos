@@ -14,6 +14,7 @@ import { computePaymentBreakdown } from "@/lib/reports/compute";
 import { Stat } from "@/components/ui/stat";
 import { useRealtimeSalesRefresh } from "@/lib/supabase/use-realtime-sales-refresh";
 import { groupByBrand } from "@/lib/group-by-brand";
+import { matchesSearch } from "@/lib/search-match";
 
 type Variant = {
   id: string;
@@ -75,6 +76,10 @@ export function SellScreen({
   const router = useRouter();
   useRealtimeSalesRefresh(shopId);
   const [search, setSearch] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    searchInputRef.current?.focus();
+  }, []);
   const [category, setCategory] = useState<"all" | "ejuice" | "accessory">("all");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "gcash">("cash");
@@ -162,12 +167,8 @@ export function SellScreen({
   const filtered = variants.filter((v) => {
     if (category !== "all" && v.category !== category) return false;
     if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      v.productName.toLowerCase().includes(q) ||
-      v.label.toLowerCase().includes(q) ||
-      (v.brand?.toLowerCase().includes(q) ?? false)
-    );
+    const haystack = `${v.productName} ${v.label} ${v.brand ?? ""}`;
+    return matchesSearch(haystack, search);
   });
 
   const brandGroups = groupByBrand(filtered);
@@ -361,6 +362,8 @@ export function SellScreen({
       setDiscountValue("");
       setDiscountReason("");
       resetLoyalty();
+      setSearch("");
+      searchInputRef.current?.focus();
 
       // We already know exactly what changed -- update stock and prepend
       // the new sale directly instead of re-fetching everything.
@@ -457,13 +460,29 @@ export function SellScreen({
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-3">
       <div className="md:col-span-2">
         <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="text"
-            placeholder="Search products…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
-          />
+          <div className="relative flex-1">
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search products…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-lg border border-hairline bg-canvas px-3 py-2 pr-8 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  searchInputRef.current?.focus();
+                }}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
+              >
+                ×
+              </button>
+            )}
+          </div>
           {(["all", "ejuice", "accessory"] as const).map((c) => (
             <button
               key={c}
