@@ -9,6 +9,9 @@ import {
   updateBrandCostAction,
   updateAccessoryCostAction,
   addBrandFlavorsAction,
+  getBrandRestockHistoryAction,
+  getProductRestockHistoryAction,
+  type RestockHistoryRow,
 } from "./actions";
 import { formatCurrency } from "@/lib/currency";
 
@@ -142,6 +145,29 @@ function getProductLastRestocked(variants: InventoryVariant[]): string | null {
   return latestDate(variants.map((v) => v.lastRestockedAt).filter((d): d is string => d != null));
 }
 
+// Shared by the brand-level and product-level "View restock history"
+// expansions -- same row shape (RestockHistoryRow) either way.
+function RestockHistoryList({ rows }: { rows: "loading" | RestockHistoryRow[] }) {
+  if (rows === "loading") {
+    return <p className="mt-1 text-xs text-muted">Loading…</p>;
+  }
+  if (rows.length === 0) {
+    return <p className="mt-1 text-xs text-muted">No restocks logged yet.</p>;
+  }
+  return (
+    <div className="mt-1 flex flex-col divide-y divide-hairline">
+      {rows.map((r, i) => (
+        <div key={i} className="flex items-center justify-between gap-3 py-1 text-xs">
+          <span className="text-muted">{new Date(r.date).toLocaleDateString()}</span>
+          <span className="min-w-0 flex-1 truncate text-ink">{r.label}</span>
+          <span className="text-ink">+{r.quantity}</span>
+          <span className="text-muted">{r.receivedByName ?? "—"}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function InventoryList({
   variants,
   supplierNames,
@@ -160,6 +186,12 @@ export function InventoryList({
   const [ohms, setOhms] = useState(ALL);
   const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
   const [addFlavorBrands, setAddFlavorBrands] = useState<Set<string>>(new Set());
+  const [brandRestockHistory, setBrandRestockHistory] = useState<Map<string, "loading" | RestockHistoryRow[]>>(
+    new Map(),
+  );
+  const [productRestockHistory, setProductRestockHistory] = useState<
+    Map<string, "loading" | RestockHistoryRow[]>
+  >(new Map());
 
   const hasActiveFilter =
     search.trim() !== "" ||
@@ -192,6 +224,34 @@ export function InventoryList({
       }
       return next;
     });
+  };
+
+  const toggleBrandRestockHistory = async (brandKey: string, brand: string | null) => {
+    if (brandRestockHistory.has(brandKey)) {
+      setBrandRestockHistory((prev) => {
+        const next = new Map(prev);
+        next.delete(brandKey);
+        return next;
+      });
+      return;
+    }
+    setBrandRestockHistory((prev) => new Map(prev).set(brandKey, "loading"));
+    const rows = await getBrandRestockHistoryAction(brand);
+    setBrandRestockHistory((prev) => new Map(prev).set(brandKey, rows));
+  };
+
+  const toggleProductRestockHistory = async (productId: string) => {
+    if (productRestockHistory.has(productId)) {
+      setProductRestockHistory((prev) => {
+        const next = new Map(prev);
+        next.delete(productId);
+        return next;
+      });
+      return;
+    }
+    setProductRestockHistory((prev) => new Map(prev).set(productId, "loading"));
+    const rows = await getProductRestockHistoryAction(productId);
+    setProductRestockHistory((prev) => new Map(prev).set(productId, rows));
   };
 
   const brands = useMemo(
@@ -509,11 +569,26 @@ export function InventoryList({
               )}
               {(() => {
                 const lastRestocked = getBrandLastRestocked(brandGroup.products);
-                return lastRestocked ? (
-                  <p className="text-xs text-muted">
-                    Last restocked {new Date(lastRestocked).toLocaleDateString()}
-                  </p>
-                ) : null;
+                if (!lastRestocked) return null;
+                const historyKey = brandGroup.brandKey;
+                const brandArg = brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel;
+                return (
+                  <div>
+                    <p className="text-xs text-muted">
+                      Last restocked {new Date(lastRestocked).toLocaleDateString()}{" "}
+                      <button
+                        type="button"
+                        onClick={() => toggleBrandRestockHistory(historyKey, brandArg)}
+                        className="text-primary underline underline-offset-2"
+                      >
+                        {brandRestockHistory.has(historyKey) ? "Hide" : "View"} restock history
+                      </button>
+                    </p>
+                    {brandRestockHistory.has(historyKey) && (
+                      <RestockHistoryList rows={brandRestockHistory.get(historyKey)!} />
+                    )}
+                  </div>
+                );
               })()}
               {brandGroup.products.map((product) => (
                 <div key={product.productId}>
@@ -531,7 +606,14 @@ export function InventoryList({
                           return lastRestocked ? (
                             <span className="text-xs font-normal text-muted">
                               {" "}
-                              · Last restocked {new Date(lastRestocked).toLocaleDateString()}
+                              · Last restocked {new Date(lastRestocked).toLocaleDateString()}{" "}
+                              <button
+                                type="button"
+                                onClick={() => toggleProductRestockHistory(product.productId)}
+                                className="text-primary underline underline-offset-2"
+                              >
+                                {productRestockHistory.has(product.productId) ? "Hide" : "View"} restock history
+                              </button>
                             </span>
                           ) : null;
                         })()}
@@ -563,6 +645,9 @@ export function InventoryList({
                       </div>
                     )}
                   </div>
+                  {productRestockHistory.has(product.productId) && (
+                    <RestockHistoryList rows={productRestockHistory.get(product.productId)!} />
+                  )}
 
                   <div className="mt-2 flex flex-col gap-3">
                     {groupByFlavor(product.variants).map(([flavorKey, vs]) => (

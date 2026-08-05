@@ -460,6 +460,114 @@ export async function addBrandFlavorsAction(brand: string | null, formData: Form
   revalidatePath("/inventory");
 }
 
+export type RestockHistoryRow = {
+  date: string;
+  label: string;
+  quantity: number;
+  receivedByName: string | null;
+};
+
+// Fetched on demand (not on every Inventory page load) -- an earlier fix
+// this session deliberately removed a similar unbounded stock_receipts join
+// from the main page query once it stopped being used, specifically to keep
+// Inventory light. This one only runs when the owner/staff actually opens
+// "View restock history" for a brand, and is capped to the most recent 50
+// receipts.
+export async function getBrandRestockHistoryAction(brand: string | null): Promise<RestockHistoryRow[]> {
+  const profile = await getCurrentProfile();
+  if (!profile) return [];
+
+  const supabase = await createClient();
+
+  let productQuery = supabase
+    .from("products")
+    .select("id, name")
+    .eq("shop_id", profile.shopId)
+    .eq("category", "ejuice")
+    .eq("archived", false);
+  productQuery = brand ? productQuery.eq("brand", brand) : productQuery.is("brand", null);
+  const { data: products } = await productQuery;
+  const productNameById = new Map((products ?? []).map((p) => [p.id, p.name]));
+  const productIds = [...productNameById.keys()];
+  if (productIds.length === 0) return [];
+
+  const { data: variantRows } = await supabase
+    .from("variants")
+    .select("id, nicotine_mg, product_id")
+    .in("product_id", productIds);
+  const variantInfoById = new Map(
+    (variantRows ?? []).map((v) => [
+      v.id as string,
+      { flavor: productNameById.get(v.product_id as string) ?? "Unknown flavor", nicotineMg: v.nicotine_mg as number | null },
+    ]),
+  );
+  const variantIds = [...variantInfoById.keys()];
+  if (variantIds.length === 0) return [];
+
+  const { data: receipts } = await supabase
+    .from("stock_receipts")
+    .select("received_at, quantity_added, variant_id, profiles!stock_receipts_received_by_fkey(display_name)")
+    .eq("shop_id", profile.shopId)
+    .in("variant_id", variantIds)
+    .order("received_at", { ascending: false })
+    .limit(50);
+
+  return (receipts ?? []).map((r) => {
+    const info = variantInfoById.get(r.variant_id as string);
+    const receivedBy = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+    return {
+      date: r.received_at as string,
+      label: info ? `${info.flavor}${info.nicotineMg != null ? ` · ${info.nicotineMg}mg` : ""}` : "Unknown flavor",
+      quantity: r.quantity_added as number,
+      receivedByName: (receivedBy?.display_name as string | undefined) ?? null,
+    };
+  });
+}
+
+// Accessory counterpart -- scoped to one product's own variants (e.g. every
+// color of a Device), matching getProductLastRestocked's per-product scope
+// in inventory-list.tsx rather than the brand-wide scope above.
+export async function getProductRestockHistoryAction(productId: string): Promise<RestockHistoryRow[]> {
+  const profile = await getCurrentProfile();
+  if (!profile) return [];
+
+  const supabase = await createClient();
+
+  const { data: variantRows } = await supabase
+    .from("variants")
+    .select("id, size, for_device, ohms")
+    .eq("shop_id", profile.shopId)
+    .eq("product_id", productId);
+  const variantInfoById = new Map(
+    (variantRows ?? []).map((v) => [
+      v.id as string,
+      [v.size, v.for_device ? `For ${v.for_device}` : null, v.ohms != null ? `${v.ohms}Ω` : null]
+        .filter(Boolean)
+        .join(" · ") || "Default",
+    ]),
+  );
+  const variantIds = [...variantInfoById.keys()];
+  if (variantIds.length === 0) return [];
+
+  const { data: receipts } = await supabase
+    .from("stock_receipts")
+    .select("received_at, quantity_added, variant_id, profiles!stock_receipts_received_by_fkey(display_name)")
+    .eq("shop_id", profile.shopId)
+    .in("variant_id", variantIds)
+    .order("received_at", { ascending: false })
+    .limit(50);
+
+  return (receipts ?? []).map((r) => {
+    const receivedBy = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+    return {
+      date: r.received_at as string,
+      label: variantInfoById.get(r.variant_id as string) ?? "Default",
+      quantity: r.quantity_added as number,
+      receivedByName: (receivedBy?.display_name as string | undefined) ?? null,
+    };
+  });
+}
+
 export async function archiveProductAction(productId: string) {
   const profile = await getCurrentProfile();
   if (!profile) return;
