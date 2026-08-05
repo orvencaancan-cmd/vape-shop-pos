@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ReceiveStockForm } from "./receive-stock-form";
+import { CorrectStockForm } from "./correct-stock-form";
 import {
   archiveProductAction,
   updateBrandSupplierAction,
@@ -729,7 +730,12 @@ export function InventoryList({
                                     {formatCurrency(v.price)}
                                   </span>
                                 </div>
-                                <ReceiveStockForm variantId={v.id} canManageCost={canEdit} />
+                                <div className="flex flex-wrap items-center gap-3">
+                                  <ReceiveStockForm variantId={v.id} canManageCost={canEdit} />
+                                  {canEdit && (
+                                    <CorrectStockForm variantId={v.id} currentQty={v.stockQty} />
+                                  )}
+                                </div>
                               </div>
                             );
                           })}

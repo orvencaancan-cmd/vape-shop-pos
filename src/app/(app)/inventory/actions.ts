@@ -93,6 +93,47 @@ export async function receiveStockAction(
   return {};
 }
 
+const correctStockSchema = z.object({
+  variantId: z.string().uuid(),
+  newQty: z.coerce.number().int().min(0, "Quantity can't be negative"),
+  reason: z.string().trim().min(1, "A reason is required"),
+});
+
+// Fixes a wrong stock count directly (e.g. miscounted at setup, damage
+// never logged) without running a full physical audit for one item.
+// Owner-only, reason required -- enforced again inside correct_stock()
+// itself (security definer), not just here, same defense-in-depth as
+// every other money/stock-moving RPC in this app.
+export async function correctStockAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = correctStockSchema.safeParse({
+    variantId: formData.get("variantId"),
+    newQty: formData.get("newQty"),
+    reason: formData.get("reason"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+  if (profile.role !== "owner") return { error: "Only the shop owner can correct stock" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("correct_stock", {
+    p_shop_id: profile.shopId,
+    p_variant_id: parsed.data.variantId,
+    p_new_qty: parsed.data.newQty,
+    p_reason: parsed.data.reason,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/inventory");
+  return {};
+}
+
 const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   brand: z.string().optional(),
