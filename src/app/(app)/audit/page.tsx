@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
+import { variantLabel } from "@/lib/variant-label";
 import { AuditScreen, type AuditVariant, type AuditHistoryEntry } from "./audit-screen";
 
 export default async function AuditPage() {
@@ -46,16 +47,7 @@ export default async function AuditPage() {
         productName: product.name as string,
         brand: (product.brand as string | null) ?? null,
         category: product.category as "ejuice" | "accessory",
-        label:
-          [
-            v.flavor,
-            v.nicotine_mg != null ? `${v.nicotine_mg}mg` : null,
-            v.size,
-            v.for_device ? `For ${v.for_device}` : null,
-            v.ohms != null ? `${v.ohms}Ω` : null,
-          ]
-            .filter(Boolean)
-            .join(" · ") || "Default",
+        label: variantLabel(v),
         stockQty: v.stock_qty as number,
         cost: Number(v.cost),
       };
@@ -90,16 +82,7 @@ export default async function AuditPage() {
       .map((l) => {
         const variant = Array.isArray(l.variants) ? l.variants[0] : l.variants;
         const product = variant ? (Array.isArray(variant.products) ? variant.products[0] : variant.products) : null;
-        const label =
-          [
-            variant?.flavor,
-            variant?.nicotine_mg != null ? `${variant.nicotine_mg}mg` : null,
-            variant?.size,
-            variant?.for_device ? `For ${variant.for_device}` : null,
-            variant?.ohms != null ? `${variant.ohms}Ω` : null,
-          ]
-            .filter(Boolean)
-            .join(" · ") || "Default";
+        const label = variantLabel(variant ?? {});
         const diff = (l.counted_qty as number) - (l.system_qty as number);
         return {
           item: `${product?.brand ? `${product.brand} — ` : ""}${product?.name ?? "Unknown product"} — ${label}`,

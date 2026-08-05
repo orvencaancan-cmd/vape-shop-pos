@@ -12,6 +12,23 @@ export async function signOutAction() {
 }
 
 export async function switchShopAction(shopId: string, role: "owner" | "staff", next?: string) {
+  // getCurrentProfile() re-derives the active shop from real memberships and
+  // falls back to the first one on a mismatch, so a forged shopId here was
+  // already harmless -- but that made it "safe by accident of a downstream
+  // check" rather than safe by construction. Verify membership here too.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const { data: membership } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("shop_id", shopId)
+    .maybeSingle();
+  if (!membership) redirect("/dashboard");
+
   const cookieStore = await cookies();
   cookieStore.set(ACTIVE_SHOP_COOKIE, shopId, {
     httpOnly: true,

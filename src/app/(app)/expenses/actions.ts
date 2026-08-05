@@ -44,12 +44,19 @@ export async function createExpenseAction(
   return {};
 }
 
-export async function deleteExpenseAction(expenseId: string) {
+export async function deleteExpenseAction(expenseId: string): Promise<ActionState> {
   const profile = await getCurrentProfile();
-  if (!profile) return;
+  if (!profile) return { error: "Not signed in" };
 
   const supabase = await createClient();
-  await supabase.from("expenses").delete().eq("id", expenseId).eq("shop_id", profile.shopId);
+  const { error } = await supabase
+    .from("expenses")
+    .delete()
+    .eq("id", expenseId)
+    .eq("shop_id", profile.shopId);
+  if (error) return { error: error.message };
+
   revalidatePath("/expenses");
   revalidatePath("/reports");
+  return {};
 }

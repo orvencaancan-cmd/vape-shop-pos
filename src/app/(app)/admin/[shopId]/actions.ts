@@ -8,24 +8,33 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ActionState = { error?: string };
 
-export async function suspendShopAction(shopId: string) {
+export async function suspendShopAction(shopId: string): Promise<ActionState> {
   const profile = await getCurrentProfile();
-  if (!profile?.platformAdmin) return;
+  if (!profile?.platformAdmin) return { error: "Not authorized" };
 
   const admin = createAdminClient();
-  await admin.from("shops").update({ suspended_at: new Date().toISOString() }).eq("id", shopId);
+  const { error } = await admin
+    .from("shops")
+    .update({ suspended_at: new Date().toISOString() })
+    .eq("id", shopId);
+  if (error) return { error: error.message };
+
   revalidatePath(`/admin/${shopId}`);
   revalidatePath("/admin");
+  return {};
 }
 
-export async function reactivateShopAction(shopId: string) {
+export async function reactivateShopAction(shopId: string): Promise<ActionState> {
   const profile = await getCurrentProfile();
-  if (!profile?.platformAdmin) return;
+  if (!profile?.platformAdmin) return { error: "Not authorized" };
 
   const admin = createAdminClient();
-  await admin.from("shops").update({ suspended_at: null }).eq("id", shopId);
+  const { error } = await admin.from("shops").update({ suspended_at: null }).eq("id", shopId);
+  if (error) return { error: error.message };
+
   revalidatePath(`/admin/${shopId}`);
   revalidatePath("/admin");
+  return {};
 }
 
 const trialSchema = z.object({

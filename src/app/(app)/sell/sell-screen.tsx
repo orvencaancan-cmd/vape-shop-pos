@@ -13,6 +13,7 @@ import { formatCurrency } from "@/lib/currency";
 import { computePaymentBreakdown } from "@/lib/reports/compute";
 import { Stat } from "@/components/ui/stat";
 import { useRealtimeSalesRefresh } from "@/lib/supabase/use-realtime-sales-refresh";
+import { groupByBrand } from "@/lib/group-by-brand";
 
 type Variant = {
   id: string;
@@ -41,10 +42,6 @@ type RecentSale = {
 };
 
 type CartLine = { variantId: string; quantity: number };
-
-type BrandGroup = { brandKey: string; brandLabel: string; variants: Variant[] };
-
-const NO_BRAND = "__no_brand__";
 
 const PAYMENT_LABELS: Record<"cash" | "gcash", string> = { cash: "Cash", gcash: "GCash" };
 
@@ -173,20 +170,7 @@ export function SellScreen({
     );
   });
 
-  const brandGroupMap = new Map<string, BrandGroup>();
-  for (const v of filtered) {
-    const brandKey = v.brand ?? NO_BRAND;
-    if (!brandGroupMap.has(brandKey)) {
-      brandGroupMap.set(brandKey, { brandKey, brandLabel: v.brand ?? "No brand", variants: [] });
-    }
-    brandGroupMap.get(brandKey)!.variants.push(v);
-  }
-  const brandGroups = [...brandGroupMap.values()];
-  brandGroups.sort((a, b) => {
-    if (a.brandKey === NO_BRAND) return 1;
-    if (b.brandKey === NO_BRAND) return -1;
-    return a.brandLabel.localeCompare(b.brandLabel);
-  });
+  const brandGroups = groupByBrand(filtered);
 
   function addToCart(variantId: string) {
     setMessage(null);
@@ -523,7 +507,7 @@ export function SellScreen({
                 </button>
                 {isExpanded && (
                   <div className="animate-fade-in-up mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {group.variants.map((v) => (
+                    {group.items.map((v) => (
                       <button
                         key={v.id}
                         onClick={() => addToCart(v.id)}

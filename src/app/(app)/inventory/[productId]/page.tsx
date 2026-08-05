@@ -6,6 +6,7 @@ import { VariantForm } from "./variant-form";
 import { BackLink } from "./back-link";
 import { archiveProductAction } from "../actions";
 import { ReceiveStockForm } from "../receive-stock-form";
+import { ActionButton } from "@/components/action-button";
 
 export default async function ProductPage({
   params,
@@ -68,11 +69,11 @@ export default async function ProductPage({
             supplierNames={supplierNames}
           />
         </div>
-        <form action={boundArchive} className="mt-3">
-          <button type="submit" className="text-xs text-error underline">
+        <div className="mt-3">
+          <ActionButton action={boundArchive} className="text-xs text-error underline">
             Archive product
-          </button>
-        </form>
+          </ActionButton>
+        </div>
       </section>
 
       <section className="mt-8">

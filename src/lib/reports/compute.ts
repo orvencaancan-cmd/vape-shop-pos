@@ -1,3 +1,5 @@
+import { variantLabel } from "@/lib/variant-label";
+
 export type SaleItemRow = {
   sale_id: string;
   variant_id: string;
@@ -47,26 +49,6 @@ export type ReceiptRow = {
   unit_cost: number | null;
   suppliers: { name: string } | null;
 };
-
-function variantLabel(v: {
-  flavor: string | null;
-  nicotine_mg: number | null;
-  size: string | null;
-  for_device?: string | null;
-  ohms?: number | null;
-}) {
-  return (
-    [
-      v.flavor,
-      v.nicotine_mg != null ? `${v.nicotine_mg}mg` : null,
-      v.size,
-      v.for_device ? `For ${v.for_device}` : null,
-      v.ohms != null ? `${v.ohms}Ω` : null,
-    ]
-      .filter(Boolean)
-      .join(" · ") || "Default"
-  );
-}
 
 export function computeSalesSummary(sales: { total: number }[]) {
   return {

@@ -14,6 +14,8 @@ import {
   type RestockHistoryRow,
 } from "./actions";
 import { formatCurrency } from "@/lib/currency";
+import { variantLabel } from "@/lib/variant-label";
+import { ActionButton } from "@/components/action-button";
 
 export type InventoryVariant = {
   id: string;
@@ -186,6 +188,26 @@ export function InventoryList({
   const [ohms, setOhms] = useState(ALL);
   const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
   const [addFlavorBrands, setAddFlavorBrands] = useState<Set<string>>(new Set());
+  // Keyed error display for the brand-level Supplier/Cost/Add-flavor forms
+  // below -- those actions used to return void and fail silently (only a
+  // server console.error). Each form's onSubmit calls its bound action
+  // directly instead of relying on <form action> alone, so a returned
+  // {error} can be shown inline right under that specific form.
+  const [formErrors, setFormErrors] = useState<Map<string, string>>(new Map());
+  function handleFormSubmit(key: string, action: (formData: FormData) => Promise<{ error?: string }>) {
+    return async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      setFormErrors((prev) => {
+        const next = new Map(prev);
+        next.delete(key);
+        return next;
+      });
+      const result = await action(new FormData(e.currentTarget));
+      if (result.error) {
+        setFormErrors((prev) => new Map(prev).set(key, result.error!));
+      }
+    };
+  }
   const [brandRestockHistory, setBrandRestockHistory] = useState<Map<string, "loading" | RestockHistoryRow[]>>(
     new Map(),
   );
@@ -457,9 +479,12 @@ export function InventoryList({
               {canEdit && (
                 <div className="-mt-3 flex flex-col gap-2">
                   <form
-                    action={updateBrandSupplierAction.bind(
-                      null,
-                      brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel,
+                    onSubmit={handleFormSubmit(
+                      `supplier-${brandGroup.brandKey}`,
+                      updateBrandSupplierAction.bind(
+                        null,
+                        brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel,
+                      ),
                     )}
                     className="flex items-center gap-2"
                   >
@@ -480,57 +505,80 @@ export function InventoryList({
                       Save
                     </button>
                   </form>
+                  {formErrors.get(`supplier-${brandGroup.brandKey}`) && (
+                    <p className="text-xs text-error">{formErrors.get(`supplier-${brandGroup.brandKey}`)}</p>
+                  )}
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                    {getBrandNicotineLevels(brandGroup.products).map((mg) => (
-                      <form
-                        key={`ejuice-${mg}`}
-                        action={updateBrandCostAction.bind(
-                          null,
-                          brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel,
-                          mg,
-                        )}
-                        className="flex items-center gap-2"
-                      >
-                        <label className="text-xs text-muted">{mg}mg cost</label>
-                        <input
-                          name="cost"
-                          type="number"
-                          step="0.01"
-                          min={0}
-                          defaultValue={getBrandCostForLevel(brandGroup.products, mg) ?? ""}
-                          placeholder="Applies to every flavor"
-                          className="w-36 rounded border border-hairline bg-canvas px-2 py-0.5 text-xs text-ink placeholder:text-muted"
-                        />
-                        <button type="submit" className="text-xs text-primary underline underline-offset-2">
-                          Save
-                        </button>
-                      </form>
-                    ))}
-                    {getAccessorySubcategories(brandGroup.products).map((sub) => (
-                      <form
-                        key={`accessory-${sub ?? "none"}`}
-                        action={updateAccessoryCostAction.bind(
-                          null,
-                          brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel,
-                          sub,
-                        )}
-                        className="flex items-center gap-2"
-                      >
-                        <label className="text-xs text-muted">{sub ? `${sub} cost` : "Unit cost"}</label>
-                        <input
-                          name="cost"
-                          type="number"
-                          step="0.01"
-                          min={0}
-                          defaultValue={getAccessoryCostForSubcategory(brandGroup.products, sub) ?? ""}
-                          placeholder={sub ? `Applies to every ${sub.toLowerCase()}` : "Applies to every item"}
-                          className="w-36 rounded border border-hairline bg-canvas px-2 py-0.5 text-xs text-ink placeholder:text-muted"
-                        />
-                        <button type="submit" className="text-xs text-primary underline underline-offset-2">
-                          Save
-                        </button>
-                      </form>
-                    ))}
+                    {getBrandNicotineLevels(brandGroup.products).map((mg) => {
+                      const errorKey = `cost-${brandGroup.brandKey}-${mg}`;
+                      return (
+                        <div key={`ejuice-${mg}`} className="flex flex-col gap-1">
+                          <form
+                            onSubmit={handleFormSubmit(
+                              errorKey,
+                              updateBrandCostAction.bind(
+                                null,
+                                brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel,
+                                mg,
+                              ),
+                            )}
+                            className="flex items-center gap-2"
+                          >
+                            <label className="text-xs text-muted">{mg}mg cost</label>
+                            <input
+                              name="cost"
+                              type="number"
+                              step="0.01"
+                              min={0}
+                              defaultValue={getBrandCostForLevel(brandGroup.products, mg) ?? ""}
+                              placeholder="Applies to every flavor"
+                              className="w-36 rounded border border-hairline bg-canvas px-2 py-0.5 text-xs text-ink placeholder:text-muted"
+                            />
+                            <button type="submit" className="text-xs text-primary underline underline-offset-2">
+                              Save
+                            </button>
+                          </form>
+                          {formErrors.get(errorKey) && (
+                            <p className="text-xs text-error">{formErrors.get(errorKey)}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {getAccessorySubcategories(brandGroup.products).map((sub) => {
+                      const errorKey = `accessory-cost-${brandGroup.brandKey}-${sub ?? "none"}`;
+                      return (
+                        <div key={`accessory-${sub ?? "none"}`} className="flex flex-col gap-1">
+                          <form
+                            onSubmit={handleFormSubmit(
+                              errorKey,
+                              updateAccessoryCostAction.bind(
+                                null,
+                                brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel,
+                                sub,
+                              ),
+                            )}
+                            className="flex items-center gap-2"
+                          >
+                            <label className="text-xs text-muted">{sub ? `${sub} cost` : "Unit cost"}</label>
+                            <input
+                              name="cost"
+                              type="number"
+                              step="0.01"
+                              min={0}
+                              defaultValue={getAccessoryCostForSubcategory(brandGroup.products, sub) ?? ""}
+                              placeholder={sub ? `Applies to every ${sub.toLowerCase()}` : "Applies to every item"}
+                              className="w-36 rounded border border-hairline bg-canvas px-2 py-0.5 text-xs text-ink placeholder:text-muted"
+                            />
+                            <button type="submit" className="text-xs text-primary underline underline-offset-2">
+                              Save
+                            </button>
+                          </form>
+                          {formErrors.get(errorKey) && (
+                            <p className="text-xs text-error">{formErrors.get(errorKey)}</p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -545,9 +593,12 @@ export function InventoryList({
                   </button>
                   {addFlavorBrands.has(brandGroup.brandKey) && (
                     <form
-                      action={addBrandFlavorsAction.bind(
-                        null,
-                        brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel,
+                      onSubmit={handleFormSubmit(
+                        `add-flavors-${brandGroup.brandKey}`,
+                        addBrandFlavorsAction.bind(
+                          null,
+                          brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel,
+                        ),
                       )}
                       className="mt-2 flex flex-col gap-2"
                     >
@@ -563,6 +614,11 @@ export function InventoryList({
                       >
                         Add
                       </button>
+                      {formErrors.get(`add-flavors-${brandGroup.brandKey}`) && (
+                        <p className="text-xs text-error">
+                          {formErrors.get(`add-flavors-${brandGroup.brandKey}`)}
+                        </p>
+                      )}
                     </form>
                   )}
                 </div>
@@ -626,22 +682,13 @@ export function InventoryList({
                         >
                           Edit
                         </Link>
-                        <form
+                        <ActionButton
                           action={archiveProductAction.bind(null, product.productId)}
-                          onSubmit={(e) => {
-                            if (
-                              !confirm(
-                                `Delete ${product.productName}? This hides it from your inventory but keeps its sales history.`,
-                              )
-                            ) {
-                              e.preventDefault();
-                            }
-                          }}
+                          confirmMessage={`Delete ${product.productName}? This hides it from your inventory but keeps its sales history.`}
+                          className="text-sm text-error underline underline-offset-2"
                         >
-                          <button type="submit" className="text-sm text-error underline underline-offset-2">
-                            Delete
-                          </button>
-                        </form>
+                          Delete
+                        </ActionButton>
                       </div>
                     )}
                   </div>
@@ -658,15 +705,12 @@ export function InventoryList({
                         <div className="mt-1 flex flex-col divide-y divide-hairline">
                           {vs.map((v) => {
                             const isLow = v.stockQty <= v.lowStockThreshold;
-                            const detail =
-                              [
-                                v.nicotineMg != null ? `${v.nicotineMg}mg` : null,
-                                v.size,
-                                v.forDevice ? `For ${v.forDevice}` : null,
-                                v.ohms != null ? `${v.ohms}Ω` : null,
-                              ]
-                                .filter(Boolean)
-                                .join(" · ") || "Default";
+                            const detail = variantLabel({
+                              nicotine_mg: v.nicotineMg,
+                              size: v.size,
+                              for_device: v.forDevice,
+                              ohms: v.ohms,
+                            });
                             return (
                               <div
                                 key={v.id}

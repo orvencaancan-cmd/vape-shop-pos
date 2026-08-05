@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/currency";
 import { ExpenseForm } from "./expense-form";
 import { deleteExpenseAction } from "./actions";
+import { ActionButton } from "@/components/action-button";
 
 export default async function ExpensesPage() {
   const profile = await getCurrentProfile();
@@ -47,11 +48,9 @@ export default async function ExpensesPage() {
                 {formatCurrency(Number(e.amount))}
               </span>
               {profile.role === "owner" && (
-                <form action={boundDelete}>
-                  <button type="submit" className="shrink-0 text-xs text-error underline">
-                    Delete
-                  </button>
-                </form>
+                <ActionButton action={boundDelete} className="shrink-0 text-xs text-error underline">
+                  Delete
+                </ActionButton>
               )}
             </div>
           );

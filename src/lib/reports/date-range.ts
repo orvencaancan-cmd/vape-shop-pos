@@ -2,6 +2,14 @@ export type RangePreset = "today" | "7d" | "30d" | "custom";
 
 export type DateRange = { from: Date; to: Date; preset: RangePreset };
 
+// Presets are inherently bounded (30d max), but a custom range was passed
+// straight through with no upper bound -- a shop with years of sales
+// history picking a multi-year range (or an admin picking "combined"
+// across several such shops) had no limit on rows fetched/held in memory
+// for the report or the XLSX export. One year is generous for a manual
+// look-back; anything longer should be pulled in year-sized chunks instead.
+const MAX_CUSTOM_RANGE_DAYS = 366;
+
 /**
  * Resolves a report date range from URL search params. "to" is always an
  * exclusive upper bound (start of the day after the last included day) so
@@ -17,7 +25,9 @@ export function resolveRange(searchParams: {
   if (searchParams.range === "custom" && searchParams.from && searchParams.to) {
     const from = new Date(`${searchParams.from}T00:00:00.000Z`);
     const to = new Date(new Date(`${searchParams.to}T00:00:00.000Z`).getTime() + 86400000);
-    return { from, to, preset: "custom" };
+    const maxSpanMs = MAX_CUSTOM_RANGE_DAYS * 86400000;
+    const clampedFrom = to.getTime() - from.getTime() > maxSpanMs ? new Date(to.getTime() - maxSpanMs) : from;
+    return { from: clampedFrom, to, preset: "custom" };
   }
 
   const preset: RangePreset =

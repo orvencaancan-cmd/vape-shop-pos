@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, listAllUsers } from "@/lib/supabase/admin";
 import { InviteForm } from "./invite-form";
 import { MemberRow } from "./member-row";
 import { AdminStaffConsole } from "./admin-staff-console";
@@ -27,8 +27,8 @@ export default async function StaffPage() {
 
   // profiles doesn't store email; look it up via the admin API for display.
   const admin = createAdminClient();
-  const { data: userList } = await admin.auth.admin.listUsers();
-  const emailByUserId = new Map(userList?.users.map((u) => [u.id, u.email ?? ""]));
+  const allUsers = await listAllUsers(admin);
+  const emailByUserId = new Map(allUsers.map((u) => [u.id, u.email ?? ""]));
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">

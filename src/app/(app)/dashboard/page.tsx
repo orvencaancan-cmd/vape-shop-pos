@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, listAllUsers } from "@/lib/supabase/admin";
 import {
   computeLowStock,
   computeDailySeries,
@@ -72,8 +72,8 @@ export default async function DashboardPage({
     ]);
 
   const admin = createAdminClient();
-  const { data: userList } = await admin.auth.admin.listUsers();
-  const emailByUserId = new Map(userList?.users.map((u) => [u.id, u.email ?? ""]));
+  const allUsers = await listAllUsers(admin);
+  const emailByUserId = new Map(allUsers.map((u) => [u.id, u.email ?? ""]));
   const staffNames = (staff ?? []).map(
     (m) => m.display_name || emailByUserId.get(m.user_id) || "Unnamed",
   );

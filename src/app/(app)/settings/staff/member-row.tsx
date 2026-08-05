@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { changeRoleAction, removeStaffAction, resendInviteAction, type ActionState } from "./actions";
+import { ActionButton } from "@/components/action-button";
 
 const initialState: ActionState = {};
 
@@ -70,15 +71,13 @@ export function MemberRow({
         </button>
       </form>
 
-      <form action={boundRemove}>
-        <button
-          type="submit"
-          disabled={!canDemoteOrRemove && role === "owner"}
-          className="text-xs text-error underline disabled:cursor-not-allowed disabled:text-muted"
-        >
-          Remove
-        </button>
-      </form>
+      <ActionButton
+        action={boundRemove}
+        disabled={!canDemoteOrRemove && role === "owner"}
+        className="text-xs text-error underline disabled:cursor-not-allowed disabled:text-muted"
+      >
+        Remove
+      </ActionButton>
 
       {state.error && <p className="w-full text-xs text-error">{state.error}</p>}
       {resendState.error && <p className="w-full text-xs text-error">{resendState.error}</p>}

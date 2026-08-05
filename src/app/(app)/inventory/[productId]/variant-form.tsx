@@ -10,6 +10,7 @@ import {
 import { Input, Label } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { getAccessorySubcategoryByDbName } from "@/lib/inventory/accessory-subcategories";
+import { ActionButton } from "@/components/action-button";
 
 const initialState: ActionState = {};
 
@@ -144,11 +145,9 @@ export function VariantForm({
       )}
       {state.error && <p className="text-sm text-error">{state.error}</p>}
       {deleteAction && (
-        <form action={deleteAction}>
-          <button type="submit" className="text-xs text-error underline">
-            Delete variant
-          </button>
-        </form>
+        <ActionButton action={deleteAction} className="text-xs text-error underline">
+          Delete variant
+        </ActionButton>
       )}
     </div>
   );

@@ -86,13 +86,20 @@ export async function changeRoleAction(
   return {};
 }
 
-export async function removeStaffAction(profileId: string) {
+export async function removeStaffAction(profileId: string): Promise<ActionState> {
   const profile = await getCurrentProfile();
-  if (!profile || profile.role !== "owner") return;
+  if (!profile || profile.role !== "owner") return { error: "Not authorized" };
 
   const supabase = await createClient();
-  await supabase.from("profiles").delete().eq("id", profileId).eq("shop_id", profile.shopId);
+  const { error } = await supabase
+    .from("profiles")
+    .delete()
+    .eq("id", profileId)
+    .eq("shop_id", profile.shopId);
+  if (error) return { error: error.message };
+
   revalidatePath("/settings/staff");
+  return {};
 }
 
 const adminInviteSchema = z.object({
@@ -163,14 +170,24 @@ export async function changeRoleInBranchAction(
   return {};
 }
 
-export async function removeStaffFromBranchAction(profileId: string, shopId: string) {
+export async function removeStaffFromBranchAction(
+  profileId: string,
+  shopId: string,
+): Promise<ActionState> {
   const profile = await getCurrentProfile();
   const owns = profile?.shops.some((s) => s.shopId === shopId && s.role === "owner");
-  if (!profile || !owns) return;
+  if (!profile || !owns) return { error: "You must own that branch to remove staff there" };
 
   const supabase = await createClient();
-  await supabase.from("profiles").delete().eq("id", profileId).eq("shop_id", shopId);
+  const { error } = await supabase
+    .from("profiles")
+    .delete()
+    .eq("id", profileId)
+    .eq("shop_id", shopId);
+  if (error) return { error: error.message };
+
   revalidatePath("/settings/staff");
+  return {};
 }
 
 export async function transferStaffAction(

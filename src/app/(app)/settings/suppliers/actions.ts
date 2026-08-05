@@ -70,11 +70,18 @@ export async function updateSupplierAction(
   return {};
 }
 
-export async function deleteSupplierAction(supplierId: string) {
+export async function deleteSupplierAction(supplierId: string): Promise<ActionState> {
   const profile = await getCurrentProfile();
-  if (!profile) return;
+  if (!profile) return { error: "Not signed in" };
 
   const supabase = await createClient();
-  await supabase.from("suppliers").delete().eq("id", supplierId).eq("shop_id", profile.shopId);
+  const { error } = await supabase
+    .from("suppliers")
+    .delete()
+    .eq("id", supplierId)
+    .eq("shop_id", profile.shopId);
+  if (error) return { error: error.message };
+
   revalidatePath("/settings/suppliers");
+  return {};
 }

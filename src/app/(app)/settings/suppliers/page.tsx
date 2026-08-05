@@ -3,6 +3,7 @@ import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { SupplierForm } from "./supplier-form";
 import { deleteSupplierAction } from "./actions";
+import { ActionButton } from "@/components/action-button";
 
 export default async function SuppliersPage() {
   const profile = await getCurrentProfile();
@@ -35,11 +36,9 @@ export default async function SuppliersPage() {
               <div className="flex-1">
                 <SupplierForm supplierId={s.id} name={s.name} contactInfo={s.contact_info} />
               </div>
-              <form action={boundDelete}>
-                <button type="submit" className="text-xs text-error underline">
-                  Delete
-                </button>
-              </form>
+              <ActionButton action={boundDelete} className="text-xs text-error underline">
+                Delete
+              </ActionButton>
             </div>
           );
         })}

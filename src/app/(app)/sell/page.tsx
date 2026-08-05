@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { isSaleActive } from "@/lib/sale-status";
+import { variantLabel } from "@/lib/variant-label";
 import { SellScreen } from "./sell-screen";
 
 export default async function SellPage() {
@@ -39,16 +40,7 @@ export default async function SellPage() {
         productName: product.name as string,
         brand: (product.brand as string | null) ?? null,
         category: product.category as "ejuice" | "accessory",
-        label:
-          [
-            v.flavor,
-            v.nicotine_mg != null ? `${v.nicotine_mg}mg` : null,
-            v.size,
-            v.for_device ? `For ${v.for_device}` : null,
-            v.ohms != null ? `${v.ohms}Ω` : null,
-          ]
-            .filter(Boolean)
-            .join(" · ") || "Default",
+        label: variantLabel(v),
         price: Number(v.price),
         stockQty: v.stock_qty as number,
       };
@@ -105,16 +97,7 @@ export default async function SellPage() {
   for (const row of saleItemsRaw ?? []) {
     const variant = Array.isArray(row.variants) ? row.variants[0] : row.variants;
     const product = variant ? (Array.isArray(variant.products) ? variant.products[0] : variant.products) : null;
-    const label =
-      [
-        variant?.flavor,
-        variant?.nicotine_mg != null ? `${variant.nicotine_mg}mg` : null,
-        variant?.size,
-        variant?.for_device ? `For ${variant.for_device}` : null,
-        variant?.ohms != null ? `${variant.ohms}Ω` : null,
-      ]
-        .filter(Boolean)
-        .join(" · ") || "Default";
+    const label = variantLabel(variant ?? {});
     const line = {
       variantId: row.variant_id as string,
       item: `${product?.brand ? `${product.brand} — ` : ""}${product?.name ?? "Unknown product"} — ${label}`,

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
@@ -48,8 +49,14 @@ export type CurrentProfile = {
  * shop; the "active" one is resolved from the active_shop_id cookie
  * (falling back to the oldest membership if unset/stale) rather than
  * derived from a single row, since profiles is now a membership table.
+ *
+ * Wrapped in React's cache() -- (app)/layout.tsx and almost every page/
+ * action under it call this independently, and without request-scoped
+ * memoization each call was its own round trip to auth.getUser() + the
+ * profiles/shops join. cache() collapses repeat calls within the same
+ * request into one.
  */
-export async function getCurrentProfile(): Promise<CurrentProfile | null> {
+export const getCurrentProfile = cache(async (): Promise<CurrentProfile | null> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -113,4 +120,4 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     },
     shops,
   };
-}
+});

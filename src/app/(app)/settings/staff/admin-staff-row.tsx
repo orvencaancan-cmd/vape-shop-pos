@@ -8,6 +8,7 @@ import {
   type ActionState,
 } from "./actions";
 import type { ShopMembership } from "@/lib/auth/get-current-profile";
+import { ActionButton } from "@/components/action-button";
 
 const initialState: ActionState = {};
 
@@ -109,15 +110,13 @@ export function AdminStaffRow({
         </form>
       )}
 
-      <form action={boundRemove}>
-        <button
-          type="submit"
-          disabled={!canDemoteOrRemove && role === "owner"}
-          className="text-xs text-error underline disabled:cursor-not-allowed disabled:text-muted"
-        >
-          Remove
-        </button>
-      </form>
+      <ActionButton
+        action={boundRemove}
+        disabled={!canDemoteOrRemove && role === "owner"}
+        className="text-xs text-error underline disabled:cursor-not-allowed disabled:text-muted"
+      >
+        Remove
+      </ActionButton>
 
       {roleState.error && <p className="w-full text-xs text-error">{roleState.error}</p>}
       {transferState.error && <p className="w-full text-xs text-error">{transferState.error}</p>}

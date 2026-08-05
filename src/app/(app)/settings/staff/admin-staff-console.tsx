@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, listAllUsers } from "@/lib/supabase/admin";
 import { AdminInviteForm } from "./admin-invite-form";
 import { AdminStaffRow } from "./admin-staff-row";
 import type { ShopMembership } from "@/lib/auth/get-current-profile";
@@ -16,8 +16,8 @@ export async function AdminStaffConsole({ ownedShops }: { ownedShops: ShopMember
     .order("role");
 
   const admin = createAdminClient();
-  const { data: userList } = await admin.auth.admin.listUsers();
-  const emailByUserId = new Map(userList?.users.map((u) => [u.id, u.email ?? ""]));
+  const allUsers = await listAllUsers(admin);
+  const emailByUserId = new Map(allUsers.map((u) => [u.id, u.email ?? ""]));
   const shopNameById = new Map(activeOwnedShops.map((s) => [s.shopId, s.shopName]));
 
   const ownerCountByShop = new Map<string, number>();

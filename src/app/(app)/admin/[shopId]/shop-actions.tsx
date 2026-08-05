@@ -7,6 +7,7 @@ import {
   updateTrialEndAction,
   type ActionState,
 } from "./actions";
+import { ActionButton } from "@/components/action-button";
 
 const initialState: ActionState = {};
 
@@ -28,27 +29,21 @@ export function ShopActions({
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="text-sm font-medium text-muted">Access</h2>
-        <form
+        <ActionButton
           action={suspended ? reactivateShopAction.bind(null, shopId) : suspendShopAction.bind(null, shopId)}
-          onSubmit={(e) => {
-            const message = suspended
+          confirmMessage={
+            suspended
               ? `Reactivate ${shopName}? They'll be able to use the app again immediately.`
-              : `Suspend ${shopName}? Everyone on that shop will be locked out immediately.`;
-            if (!confirm(message)) e.preventDefault();
-          }}
-          className="mt-2"
+              : `Suspend ${shopName}? Everyone on that shop will be locked out immediately.`
+          }
+          className={
+            suspended
+              ? "mt-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
+              : "mt-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-medium text-error transition-colors hover:bg-error/10"
+          }
         >
-          <button
-            type="submit"
-            className={
-              suspended
-                ? "rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active"
-                : "rounded-lg border border-error/40 px-4 py-2 text-sm font-medium text-error transition-colors hover:bg-error/10"
-            }
-          >
-            {suspended ? "Reactivate shop" : "Suspend shop"}
-          </button>
-        </form>
+          {suspended ? "Reactivate shop" : "Suspend shop"}
+        </ActionButton>
       </div>
 
       <div>

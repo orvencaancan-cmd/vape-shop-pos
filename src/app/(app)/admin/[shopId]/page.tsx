@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, listAllUsers } from "@/lib/supabase/admin";
 import { Card } from "@/components/ui/card";
 import { ShopActions } from "./shop-actions";
 import { statusLabel } from "@/lib/billing-status";
@@ -39,8 +39,8 @@ export default async function AdminShopPage({
     .eq("role", "owner");
 
   // profiles doesn't store email; look it up via the admin API for display.
-  const { data: userList } = await admin.auth.admin.listUsers();
-  const emailById = new Map(userList?.users.map((u) => [u.id, u.email ?? ""]));
+  const allUsers = await listAllUsers(admin);
+  const emailById = new Map(allUsers.map((u) => [u.id, u.email ?? ""]));
 
   const suspended = shop.suspended_at != null;
 

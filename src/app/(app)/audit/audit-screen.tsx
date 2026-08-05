@@ -10,6 +10,7 @@ import {
   removeCompletedAuditAction,
 } from "./actions";
 import { formatCurrency } from "@/lib/currency";
+import { groupByBrand } from "@/lib/group-by-brand";
 
 export type AuditVariant = {
   id: string;
@@ -37,10 +38,6 @@ export type AuditHistoryEntry = {
   itemsCounted: number;
   discrepancies: AuditDiscrepancy[];
 };
-
-type BrandGroup = { brandKey: string; brandLabel: string; variants: AuditVariant[] };
-
-const NO_BRAND = "__no_brand__";
 
 function buildDiscrepancies(
   variants: AuditVariant[],
@@ -109,20 +106,7 @@ export function AuditScreen({
     return v.productName.toLowerCase().includes(q) || v.label.toLowerCase().includes(q);
   });
 
-  const brandGroupMap = new Map<string, BrandGroup>();
-  for (const v of filtered) {
-    const brandKey = v.brand ?? NO_BRAND;
-    if (!brandGroupMap.has(brandKey)) {
-      brandGroupMap.set(brandKey, { brandKey, brandLabel: v.brand ?? "No brand", variants: [] });
-    }
-    brandGroupMap.get(brandKey)!.variants.push(v);
-  }
-  const brandGroups = [...brandGroupMap.values()];
-  brandGroups.sort((a, b) => {
-    if (a.brandKey === NO_BRAND) return 1;
-    if (b.brandKey === NO_BRAND) return -1;
-    return a.brandLabel.localeCompare(b.brandLabel);
-  });
+  const brandGroups = groupByBrand(filtered);
 
   const discrepancies = useMemo(() => buildDiscrepancies(variants, counts), [variants, counts]);
 
@@ -285,7 +269,7 @@ export function AuditScreen({
                 </button>
                 {isExpanded && (
                   <div className="animate-fade-in-up mt-3 flex flex-col divide-y divide-hairline">
-                    {group.variants.map((v) => {
+                    {group.items.map((v) => {
                       const counted = counts.get(v.id);
                       const mismatch = counted !== undefined && counted !== v.stockQty;
                       return (

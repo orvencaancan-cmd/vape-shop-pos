@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { getAccessorySubcategory } from "@/lib/inventory/accessory-subcategories";
+import { variantLabel } from "@/lib/variant-label";
 
 export type ActionState = { error?: string };
 
@@ -198,9 +199,12 @@ export async function updateProductAction(
 // Sets (or clears) the supplier for every product sharing a brand at once --
 // the per-product edit form only ever touches one product, which is tedious
 // for a brand with several flavors.
-export async function updateBrandSupplierAction(brand: string | null, formData: FormData) {
+export async function updateBrandSupplierAction(
+  brand: string | null,
+  formData: FormData,
+): Promise<ActionState> {
   const profile = await getCurrentProfile();
-  if (!profile) return;
+  if (!profile) return { error: "Not signed in" };
 
   const supabase = await createClient();
   const resolvedSupplier = await resolveSupplierId(
@@ -208,10 +212,7 @@ export async function updateBrandSupplierAction(brand: string | null, formData: 
     profile.shopId,
     String(formData.get("supplier") ?? ""),
   );
-  if (resolvedSupplier.error) {
-    console.error("updateBrandSupplierAction failed:", resolvedSupplier.error);
-    return;
-  }
+  if (resolvedSupplier.error) return { error: resolvedSupplier.error };
 
   let query = supabase
     .from("products")
@@ -220,12 +221,10 @@ export async function updateBrandSupplierAction(brand: string | null, formData: 
     .eq("archived", false);
   query = brand ? query.eq("brand", brand) : query.is("brand", null);
   const { error } = await query;
-  if (error) {
-    console.error("updateBrandSupplierAction failed:", error.message);
-    return;
-  }
+  if (error) return { error: error.message };
 
   revalidatePath("/inventory");
+  return {};
 }
 
 // Sets the unit cost for every variant at one nicotine level across every
@@ -241,13 +240,13 @@ export async function updateBrandCostAction(
   brand: string | null,
   nicotineMg: number,
   formData: FormData,
-) {
+): Promise<ActionState> {
   const profile = await getCurrentProfile();
-  if (!profile) return;
-  if (profile.role !== "owner") return;
+  if (!profile) return { error: "Not signed in" };
+  if (profile.role !== "owner") return { error: "Only the shop owner can edit cost" };
 
   const cost = Number(formData.get("cost"));
-  if (!Number.isFinite(cost) || cost < 0) return;
+  if (!Number.isFinite(cost) || cost < 0) return { error: "Invalid cost" };
 
   const supabase = await createClient();
 
@@ -260,7 +259,7 @@ export async function updateBrandCostAction(
   productQuery = brand ? productQuery.eq("brand", brand) : productQuery.is("brand", null);
   const { data: products } = await productQuery;
   const productIds = (products ?? []).map((p) => p.id);
-  if (productIds.length === 0) return;
+  if (productIds.length === 0) return {};
 
   const { error } = await supabase
     .from("variants")
@@ -268,12 +267,10 @@ export async function updateBrandCostAction(
     .eq("shop_id", profile.shopId)
     .in("product_id", productIds)
     .eq("nicotine_mg", nicotineMg);
-  if (error) {
-    console.error("updateBrandCostAction failed:", error.message);
-    return;
-  }
+  if (error) return { error: error.message };
 
   revalidatePath("/inventory");
+  return {};
 }
 
 // Accessory counterpart to updateBrandCostAction above -- accessories have no
@@ -288,13 +285,13 @@ export async function updateAccessoryCostAction(
   brand: string | null,
   subcategory: string | null,
   formData: FormData,
-) {
+): Promise<ActionState> {
   const profile = await getCurrentProfile();
-  if (!profile) return;
-  if (profile.role !== "owner") return;
+  if (!profile) return { error: "Not signed in" };
+  if (profile.role !== "owner") return { error: "Only the shop owner can edit cost" };
 
   const cost = Number(formData.get("cost"));
-  if (!Number.isFinite(cost) || cost < 0) return;
+  if (!Number.isFinite(cost) || cost < 0) return { error: "Invalid cost" };
 
   const supabase = await createClient();
 
@@ -308,19 +305,17 @@ export async function updateAccessoryCostAction(
   productQuery = subcategory ? productQuery.eq("subcategory", subcategory) : productQuery.is("subcategory", null);
   const { data: products } = await productQuery;
   const productIds = (products ?? []).map((p) => p.id);
-  if (productIds.length === 0) return;
+  if (productIds.length === 0) return {};
 
   const { error } = await supabase
     .from("variants")
     .update({ cost })
     .eq("shop_id", profile.shopId)
     .in("product_id", productIds);
-  if (error) {
-    console.error("updateAccessoryCostAction failed:", error.message);
-    return;
-  }
+  if (error) return { error: error.message };
 
   revalidatePath("/inventory");
+  return {};
 }
 
 const addBrandFlavorsSchema = z.object({
@@ -336,12 +331,15 @@ const addBrandFlavorsSchema = z.object({
 // inferred from that brand's existing flavors, since a new flavor line
 // almost always just extends what's already there rather than introducing a
 // new strength/size/pricing scheme.
-export async function addBrandFlavorsAction(brand: string | null, formData: FormData) {
+export async function addBrandFlavorsAction(
+  brand: string | null,
+  formData: FormData,
+): Promise<ActionState> {
   const parsed = addBrandFlavorsSchema.safeParse({ flavors: formData.get("flavors") ?? "" });
-  if (!parsed.success || parsed.data.flavors.length === 0) return;
+  if (!parsed.success || parsed.data.flavors.length === 0) return { error: "Enter at least one flavor" };
 
   const profile = await getCurrentProfile();
-  if (!profile) return;
+  if (!profile) return { error: "Not signed in" };
 
   const supabase = await createClient();
   const shopId = profile.shopId;
@@ -355,7 +353,7 @@ export async function addBrandFlavorsAction(brand: string | null, formData: Form
   existingQuery = brand ? existingQuery.eq("brand", brand) : existingQuery.is("brand", null);
   const { data: existingProducts } = await existingQuery;
   const productIds = (existingProducts ?? []).map((p) => p.id);
-  if (productIds.length === 0) return;
+  if (productIds.length === 0) return { error: "No existing flavors for this brand to copy from" };
 
   const { data: existingVariants } = await supabase
     .from("variants")
@@ -366,7 +364,7 @@ export async function addBrandFlavorsAction(brand: string | null, formData: Form
   const levels = [
     ...new Set((existingVariants ?? []).map((v) => v.nicotine_mg).filter((n): n is number => n != null)),
   ];
-  if (levels.length === 0) return;
+  if (levels.length === 0) return { error: "No existing flavors for this brand to copy from" };
 
   const sizes = new Set((existingVariants ?? []).map((v) => v.size).filter((s): s is string => !!s));
   const commonSize = sizes.size === 1 ? [...sizes][0] : null;
@@ -400,10 +398,7 @@ export async function addBrandFlavorsAction(brand: string | null, formData: Form
         })),
       )
       .select("id");
-    if (error) {
-      console.error("addBrandFlavorsAction failed:", error.message);
-      return;
-    }
+    if (error) return { error: error.message };
     newNames.forEach((name, i) => productIdByName.set(name.trim().toLowerCase(), inserted[i].id));
   }
 
@@ -451,13 +446,11 @@ export async function addBrandFlavorsAction(brand: string | null, formData: Form
 
   if (variantRows.length > 0) {
     const { error } = await supabase.from("variants").insert(variantRows);
-    if (error) {
-      console.error("addBrandFlavorsAction failed:", error.message);
-      return;
-    }
+    if (error) return { error: error.message };
   }
 
   revalidatePath("/inventory");
+  return {};
 }
 
 export type RestockHistoryRow = {
@@ -541,9 +534,7 @@ export async function getProductRestockHistoryAction(productId: string): Promise
   const variantInfoById = new Map(
     (variantRows ?? []).map((v) => [
       v.id as string,
-      [v.size, v.for_device ? `For ${v.for_device}` : null, v.ohms != null ? `${v.ohms}Ω` : null]
-        .filter(Boolean)
-        .join(" · ") || "Default",
+      variantLabel(v),
     ]),
   );
   const variantIds = [...variantInfoById.keys()];
@@ -568,9 +559,9 @@ export async function getProductRestockHistoryAction(productId: string): Promise
   });
 }
 
-export async function archiveProductAction(productId: string) {
+export async function archiveProductAction(productId: string): Promise<ActionState> {
   const profile = await getCurrentProfile();
-  if (!profile) return;
+  if (!profile) return { error: "Not signed in" };
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -578,10 +569,8 @@ export async function archiveProductAction(productId: string) {
     .update({ archived: true })
     .eq("id", productId)
     .eq("shop_id", profile.shopId);
-  if (error) {
-    console.error("archiveProductAction failed:", error.message);
-    return;
-  }
+  if (error) return { error: error.message };
+
   revalidatePath("/inventory");
   redirect("/inventory");
 }
@@ -1093,12 +1082,19 @@ export async function updateVariantAction(
   return {};
 }
 
-export async function deleteVariantAction(variantId: string, productId: string) {
+export async function deleteVariantAction(variantId: string, productId: string): Promise<ActionState> {
   const profile = await getCurrentProfile();
-  if (!profile) return;
+  if (!profile) return { error: "Not signed in" };
 
   const supabase = await createClient();
-  await supabase.from("variants").delete().eq("id", variantId).eq("shop_id", profile.shopId);
+  const { error } = await supabase
+    .from("variants")
+    .delete()
+    .eq("id", variantId)
+    .eq("shop_id", profile.shopId);
+  if (error) return { error: error.message };
+
   revalidatePath(`/inventory/${productId}`);
   revalidatePath("/inventory");
+  return {};
 }

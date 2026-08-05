@@ -4,13 +4,11 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { updateSaleSettingsAction, type SaleSettingsState } from "./actions";
 import { Input, Label, Select } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
+import { groupByBrand, type BrandGroup } from "@/lib/group-by-brand";
 
 const initialState: SaleSettingsState = {};
 
-const NO_BRAND = "__no_brand__";
-
 type Product = { id: string; name: string; brand: string | null };
-type BrandGroup = { brandKey: string; brandLabel: string; products: Product[] };
 
 function toDatetimeLocal(iso: string | null): string {
   if (!iso) return "";
@@ -76,19 +74,7 @@ export function SaleForm({
   const [startsAtLocal, setStartsAtLocal] = useState(toDatetimeLocal(startsAt));
   const [endsAtLocal, setEndsAtLocal] = useState(toDatetimeLocal(endsAt));
 
-  const brandGroupMap = new Map<string, BrandGroup>();
-  for (const p of products) {
-    const brandKey = p.brand ?? NO_BRAND;
-    if (!brandGroupMap.has(brandKey)) {
-      brandGroupMap.set(brandKey, { brandKey, brandLabel: p.brand ?? "No brand", products: [] });
-    }
-    brandGroupMap.get(brandKey)!.products.push(p);
-  }
-  const brandGroups = [...brandGroupMap.values()].sort((a, b) => {
-    if (a.brandKey === NO_BRAND) return 1;
-    if (b.brandKey === NO_BRAND) return -1;
-    return a.brandLabel.localeCompare(b.brandLabel);
-  });
+  const brandGroups = groupByBrand(products);
 
   function toggleProduct(id: string, checked: boolean) {
     setSelected((prev) => {
@@ -99,10 +85,10 @@ export function SaleForm({
     });
   }
 
-  function toggleBrand(group: BrandGroup, checked: boolean) {
+  function toggleBrand(group: BrandGroup<Product>, checked: boolean) {
     setSelected((prev) => {
       const next = new Set(prev);
-      for (const p of group.products) {
+      for (const p of group.items) {
         if (checked) next.add(p.id);
         else next.delete(p.id);
       }
@@ -190,19 +176,19 @@ export function SaleForm({
           </p>
           <div className="mt-2 flex max-h-64 flex-col gap-3 overflow-y-auto pr-1">
             {brandGroups.map((group) => {
-              const selectedCount = group.products.filter((p) => selected.has(p.id)).length;
+              const selectedCount = group.items.filter((p) => selected.has(p.id)).length;
               return (
                 <div key={group.brandKey}>
                   <label className="flex items-center gap-1.5 text-sm font-medium text-ink">
                     <BrandCheckbox
-                      checked={selectedCount === group.products.length}
-                      indeterminate={selectedCount > 0 && selectedCount < group.products.length}
+                      checked={selectedCount === group.items.length}
+                      indeterminate={selectedCount > 0 && selectedCount < group.items.length}
                       onChange={(checked) => toggleBrand(group, checked)}
                     />
                     {group.brandLabel}
                   </label>
                   <div className="mt-1 ml-5 flex flex-col gap-1">
-                    {group.products.map((p) => (
+                    {group.items.map((p) => (
                       <label key={p.id} className="flex items-center gap-1.5 text-sm text-body">
                         <input
                           type="checkbox"

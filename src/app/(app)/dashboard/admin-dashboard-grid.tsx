@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, listAllUsers } from "@/lib/supabase/admin";
 import {
   computeLowStock,
   computeDailySeries,
@@ -18,8 +18,8 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
   const chartWindowStart = new Date(new Date().getTime() - 7 * 86400000).toISOString();
 
   const admin = createAdminClient();
-  const { data: userList } = await admin.auth.admin.listUsers();
-  const emailByUserId = new Map(userList?.users.map((u) => [u.id, u.email ?? ""]));
+  const allUsers = await listAllUsers(admin);
+  const emailByUserId = new Map(allUsers.map((u) => [u.id, u.email ?? ""]));
 
   const cards = await Promise.all(
     ownedShops.map(async (s) => {

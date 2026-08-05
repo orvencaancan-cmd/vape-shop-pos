@@ -46,6 +46,19 @@ export async function saveCountAction(
 
   const supabase = await createClient();
 
+  // stock_audit_lines is written by shop_id, not audit_id, so RLS alone
+  // doesn't stop this upsert from attaching a count line to another shop's
+  // audit (the row itself would still carry the caller's own shop_id, just
+  // pointed at a foreign audit_id) -- verify the audit actually belongs to
+  // this shop first.
+  const { data: audit } = await supabase
+    .from("stock_audits")
+    .select("id")
+    .eq("id", auditId)
+    .eq("shop_id", profile.shopId)
+    .maybeSingle();
+  if (!audit) return { error: "Audit not found" };
+
   if (countedQty === null) {
     const { error } = await supabase
       .from("stock_audit_lines")
