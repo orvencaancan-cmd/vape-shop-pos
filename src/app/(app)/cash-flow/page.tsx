@@ -3,6 +3,8 @@ import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { fetchTodayCashSession, computeCashInDrawer } from "@/lib/cash-flow";
 import { computePaymentBreakdown } from "@/lib/reports/compute";
+import { formatCurrency } from "@/lib/currency";
+import { Stat } from "@/components/ui/stat";
 import { FloatingCashPanel } from "./floating-cash-panel";
 import { BranchCashCard } from "./branch-cash-card";
 
@@ -60,6 +62,10 @@ export default async function CashFlowPage() {
       ]);
       const cashSalesToday = computePaymentBreakdown(todaySales ?? []).cash;
       const cashInDrawer = computeCashInDrawer(session, cashSalesToday, movements);
+      // Whatever's currently known to be sitting in this branch's drawer --
+      // the live total while open, the counted amount once closed, or
+      // nothing tracked yet if the register hasn't been opened today.
+      const drawerNow = session?.status === "closed" ? (session.closingCash ?? 0) : cashInDrawer;
       return {
         shopId: s.shopId,
         shopName: s.shopName,
@@ -67,9 +73,13 @@ export default async function CashFlowPage() {
         movements,
         cashSalesToday,
         cashInDrawer,
+        drawerNow,
       };
     }),
   );
+
+  const totalInDrawers = branchCards.reduce((sum, b) => sum + b.drawerNow, 0);
+  const totalCashAvailable = floatingBalance + totalInDrawers;
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-4xl px-4 py-8">
@@ -78,6 +88,12 @@ export default async function CashFlowPage() {
         Open or close any branch&apos;s register, log cash in/out, and manage your shared floating
         cash — all from one place.
       </p>
+
+      <div className="mt-6 flex flex-wrap gap-4">
+        <Stat label="Floating cash" value={formatCurrency(floatingBalance)} />
+        <Stat label="In branch drawers" value={formatCurrency(totalInDrawers)} />
+        <Stat label="Total cash available" value={formatCurrency(totalCashAvailable)} />
+      </div>
 
       <div className="mt-6">
         <FloatingCashPanel
