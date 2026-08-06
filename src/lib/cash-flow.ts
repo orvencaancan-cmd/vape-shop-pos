@@ -79,6 +79,55 @@ export async function fetchTodayCashSession(
   return { session, movements };
 }
 
+export type PendingTransfer = {
+  id: string;
+  sourceType: "branch" | "floating";
+  sourceShopId: string | null;
+  sourceShopName: string | null;
+  destinationType: "branch" | "floating";
+  destinationShopId: string | null;
+  destinationShopName: string | null;
+  amount: number;
+  note: string | null;
+  createdAt: string;
+  initiatedByName: string | null;
+};
+
+// RLS already limits this to transfers touching a shop the caller belongs
+// to (or that they personally initiated) -- see cash_transfers_select in
+// 0044_cash_transfers.sql -- so a single unfiltered query is safe; callers
+// slice it into "incoming to X" / "outgoing from X" themselves.
+export async function fetchPendingTransfers(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<PendingTransfer[]> {
+  const { data } = await supabase
+    .from("cash_transfers")
+    .select(
+      "id, source_type, source_shop_id, destination_type, destination_shop_id, amount, note, created_at, source_shop:source_shop_id(name), destination_shop:destination_shop_id(name), initiator:initiated_by(display_name)",
+    )
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
+  return (data ?? []).map((t) => {
+    const sourceShop = Array.isArray(t.source_shop) ? t.source_shop[0] : t.source_shop;
+    const destinationShop = Array.isArray(t.destination_shop) ? t.destination_shop[0] : t.destination_shop;
+    const initiator = Array.isArray(t.initiator) ? t.initiator[0] : t.initiator;
+    return {
+      id: t.id as string,
+      sourceType: t.source_type as "branch" | "floating",
+      sourceShopId: t.source_shop_id as string | null,
+      sourceShopName: (sourceShop?.name as string | null) ?? null,
+      destinationType: t.destination_type as "branch" | "floating",
+      destinationShopId: t.destination_shop_id as string | null,
+      destinationShopName: (destinationShop?.name as string | null) ?? null,
+      amount: Number(t.amount),
+      note: t.note as string | null,
+      createdAt: t.created_at as string,
+      initiatedByName: (initiator?.display_name as string | null) ?? null,
+    };
+  });
+}
+
 // Same formula close_cash_session computes server-side -- this is a
 // convenience for live display only, never written anywhere.
 export function computeCashInDrawer(

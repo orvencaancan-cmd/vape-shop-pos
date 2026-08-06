@@ -10,6 +10,8 @@ import {
   openCashSessionAction,
   closeCashSessionAction,
   recordCashMovementAction,
+  receiveCashTransferAction,
+  cancelCashTransferAction,
   type LoyaltyCustomer,
 } from "./actions";
 import { formatCurrency } from "@/lib/currency";
@@ -71,6 +73,20 @@ type CashMovement = {
 
 type OwnedBranch = { shopId: string; shopName: string };
 
+type PendingTransfer = {
+  id: string;
+  sourceType: "branch" | "floating";
+  sourceShopId: string | null;
+  sourceShopName: string | null;
+  destinationType: "branch" | "floating";
+  destinationShopId: string | null;
+  destinationShopName: string | null;
+  amount: number;
+  note: string | null;
+  createdAt: string;
+  initiatedByName: string | null;
+};
+
 const PAYMENT_LABELS: Record<"cash" | "gcash", string> = { cash: "Cash", gcash: "GCash" };
 
 const MOVEMENT_TYPE_LABELS: Record<CashMovement["movementType"], string> = {
@@ -96,6 +112,8 @@ export function SellScreen({
   cashSession,
   cashMovements,
   otherOwnedBranches,
+  incomingTransfers,
+  outgoingTransfers,
 }: {
   shopId: string;
   shopName: string;
@@ -113,6 +131,8 @@ export function SellScreen({
   cashSession: CashSession | null;
   cashMovements: CashMovement[];
   otherOwnedBranches: OwnedBranch[];
+  incomingTransfers: PendingTransfer[];
+  outgoingTransfers: PendingTransfer[];
 }) {
   const router = useRouter();
   useRealtimeSalesRefresh(shopId);
@@ -159,6 +179,7 @@ export function SellScreen({
   const [showCloseForm, setShowCloseForm] = useState(false);
   const [closingCashInput, setClosingCashInput] = useState("");
   const [closeNoteInput, setCloseNoteInput] = useState("");
+  const [transferActionId, setTransferActionId] = useState<string | null>(null);
   // Own state rather than deriving straight from props -- a completed sale
   // updates these directly (new stock counts, the new sale prepended) since
   // we already know exactly what changed, instead of re-fetching the whole
@@ -556,6 +577,34 @@ export function SellScreen({
     });
   }
 
+  function receiveTransfer(transferId: string) {
+    setCashMessage(null);
+    setTransferActionId(transferId);
+    startCashTransition(async () => {
+      const result = await receiveCashTransferAction(transferId);
+      setTransferActionId(null);
+      if (result.error) {
+        setCashMessage({ type: "error", text: result.error });
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function cancelTransfer(transferId: string) {
+    setCashMessage(null);
+    setTransferActionId(transferId);
+    startCashTransition(async () => {
+      const result = await cancelCashTransferAction(transferId);
+      setTransferActionId(null);
+      if (result.error) {
+        setCashMessage({ type: "error", text: result.error });
+        return;
+      }
+      router.refresh();
+    });
+  }
+
   function closeRegister() {
     const amount = Number(closingCashInput);
     if (!closingCashInput.trim() || Number.isNaN(amount) || amount < 0) {
@@ -733,6 +782,66 @@ export function SellScreen({
           </div>
         </div>
 
+        {incomingTransfers.length > 0 && (
+          <div className="animate-fade-in-up mt-2 rounded-xl border border-hairline bg-canvas-soft p-4">
+            <h3 className="text-sm font-medium text-ink">Incoming cash</h3>
+            <p className="mt-1 text-xs text-muted">
+              Sent your way, but not yet counted into this drawer. Confirm once you actually have it
+              in hand.
+            </p>
+            <div className="mt-2 flex flex-col divide-y divide-hairline">
+              {incomingTransfers.map((t) => (
+                <div key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                  <span className="min-w-0 truncate">
+                    <span className="text-ink">{formatCurrency(t.amount)}</span>
+                    <span className="ml-2 text-xs text-muted">
+                      from {t.sourceType === "floating" ? "Floating Cash" : t.sourceShopName}
+                    </span>
+                    {t.note && <span className="ml-2 text-xs text-muted">{t.note}</span>}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => receiveTransfer(t.id)}
+                    disabled={cashPending}
+                    className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-on-primary transition-colors hover:bg-primary-active disabled:opacity-50"
+                  >
+                    {cashPending && transferActionId === t.id ? "Receiving…" : "Receive"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {outgoingTransfers.length > 0 && (
+          <div className="animate-fade-in-up mt-2 rounded-xl border border-hairline bg-canvas-soft p-4">
+            <h3 className="text-sm font-medium text-ink">Sent, awaiting receipt</h3>
+            <div className="mt-2 flex flex-col divide-y divide-hairline">
+              {outgoingTransfers.map((t) => (
+                <div key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                  <span className="min-w-0 truncate">
+                    <span className="text-ink">{formatCurrency(t.amount)}</span>
+                    <span className="ml-2 text-xs text-muted">
+                      to {t.destinationType === "floating" ? "Floating Cash" : t.destinationShopName}
+                    </span>
+                    {t.note && <span className="ml-2 text-xs text-muted">{t.note}</span>}
+                  </span>
+                  {isOwner && (
+                    <button
+                      type="button"
+                      onClick={() => cancelTransfer(t.id)}
+                      disabled={cashPending}
+                      className="text-xs text-muted underline underline-offset-2 disabled:opacity-50"
+                    >
+                      {cashPending && transferActionId === t.id ? "Cancelling…" : "Cancel"}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {showCashMovementForm && (
           <div className="animate-fade-in-up mt-2 rounded-xl border border-hairline bg-canvas-soft p-4">
             <h3 className="text-sm font-medium text-ink">
@@ -748,7 +857,7 @@ export function SellScreen({
                 onChange={(e) => setMovementAmount(e.target.value)}
                 className="w-32 rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
               />
-              {isOwner && (
+              {isOwner && showCashMovementForm === "out" && (
                 <select
                   value={movementType}
                   onChange={(e) => {
@@ -758,11 +867,11 @@ export function SellScreen({
                   className="rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
                 >
                   <option value="general">General</option>
-                  <option value="branch_transfer">Branch transfer</option>
-                  <option value="floating_pool">Floating cash pool</option>
+                  <option value="branch_transfer">Send to another branch</option>
+                  <option value="floating_pool">Send to floating cash pool</option>
                 </select>
               )}
-              {movementType === "branch_transfer" && (
+              {showCashMovementForm === "out" && movementType === "branch_transfer" && (
                 <select
                   value={movementCounterparty}
                   onChange={(e) => setMovementCounterparty(e.target.value)}

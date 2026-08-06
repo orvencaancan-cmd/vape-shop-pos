@@ -3,7 +3,11 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/currency";
-import { recordFloatingCashMovementAction } from "./actions";
+import {
+  recordFloatingCashMovementAction,
+  receiveCashTransferAction,
+  cancelCashTransferAction,
+} from "./actions";
 
 type Movement = {
   id: string;
@@ -15,14 +19,32 @@ type Movement = {
   counterpartyName: string | null;
 };
 
+type PendingTransfer = {
+  id: string;
+  sourceType: "branch" | "floating";
+  sourceShopId: string | null;
+  sourceShopName: string | null;
+  destinationType: "branch" | "floating";
+  destinationShopId: string | null;
+  destinationShopName: string | null;
+  amount: number;
+  note: string | null;
+  createdAt: string;
+  initiatedByName: string | null;
+};
+
 export function FloatingCashPanel({
   balance,
   movements,
   branches,
+  incomingTransfers,
+  outgoingTransfers,
 }: {
   balance: number;
   movements: Movement[];
   branches: { shopId: string; shopName: string }[];
+  incomingTransfers: PendingTransfer[];
+  outgoingTransfers: PendingTransfer[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -31,12 +53,41 @@ export function FloatingCashPanel({
   const [counterpartyShopId, setCounterpartyShopId] = useState("");
   const [note, setNote] = useState("");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [transferActionId, setTransferActionId] = useState<string | null>(null);
 
   function resetForm() {
     setShowForm(null);
     setAmount("");
     setCounterpartyShopId("");
     setNote("");
+  }
+
+  function receiveTransfer(transferId: string) {
+    setMessage(null);
+    setTransferActionId(transferId);
+    startTransition(async () => {
+      const result = await receiveCashTransferAction(transferId);
+      setTransferActionId(null);
+      if (result.error) {
+        setMessage({ type: "error", text: result.error });
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function cancelTransfer(transferId: string) {
+    setMessage(null);
+    setTransferActionId(transferId);
+    startTransition(async () => {
+      const result = await cancelCashTransferAction(transferId);
+      setTransferActionId(null);
+      if (result.error) {
+        setMessage({ type: "error", text: result.error });
+        return;
+      }
+      router.refresh();
+    });
   }
 
   function submit() {
@@ -97,6 +148,56 @@ export function FloatingCashPanel({
         </button>
       </div>
 
+      {incomingTransfers.length > 0 && (
+        <div className="animate-fade-in-up mt-3 rounded-lg bg-canvas p-3">
+          <h3 className="text-xs font-medium text-ink">Incoming cash</h3>
+          <div className="mt-2 flex flex-col divide-y divide-hairline">
+            {incomingTransfers.map((t) => (
+              <div key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs">
+                <span className="min-w-0 truncate">
+                  <span className="text-ink">{formatCurrency(t.amount)}</span>
+                  <span className="ml-2 text-muted">from {t.sourceShopName}</span>
+                  {t.note && <span className="ml-2 text-muted">{t.note}</span>}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => receiveTransfer(t.id)}
+                  disabled={pending}
+                  className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-on-primary transition-colors hover:bg-primary-active disabled:opacity-50"
+                >
+                  {pending && transferActionId === t.id ? "Receiving…" : "Receive"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {outgoingTransfers.length > 0 && (
+        <div className="animate-fade-in-up mt-3 rounded-lg bg-canvas p-3">
+          <h3 className="text-xs font-medium text-ink">Sent, awaiting receipt</h3>
+          <div className="mt-2 flex flex-col divide-y divide-hairline">
+            {outgoingTransfers.map((t) => (
+              <div key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs">
+                <span className="min-w-0 truncate">
+                  <span className="text-ink">{formatCurrency(t.amount)}</span>
+                  <span className="ml-2 text-muted">to {t.destinationShopName}</span>
+                  {t.note && <span className="ml-2 text-muted">{t.note}</span>}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => cancelTransfer(t.id)}
+                  disabled={pending}
+                  className="text-muted underline underline-offset-2 disabled:opacity-50"
+                >
+                  {pending && transferActionId === t.id ? "Cancelling…" : "Cancel"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {showForm && (
         <div className="animate-fade-in-up mt-3 rounded-lg bg-canvas p-3">
           <h3 className="text-xs font-medium text-ink">
@@ -112,15 +213,13 @@ export function FloatingCashPanel({
               onChange={(e) => setAmount(e.target.value)}
               className="w-32 rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
             />
-            {branches.length > 0 && (
+            {showForm === "out" && branches.length > 0 && (
               <select
                 value={counterpartyShopId}
                 onChange={(e) => setCounterpartyShopId(e.target.value)}
                 className="rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
               >
-                <option value="">
-                  {showForm === "in" ? "Not from a branch" : "Not going to a branch"}
-                </option>
+                <option value="">Not going to a branch</option>
                 {branches.map((b) => (
                   <option key={b.shopId} value={b.shopId}>
                     {b.shopName}

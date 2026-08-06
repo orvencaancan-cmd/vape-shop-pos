@@ -171,6 +171,11 @@ export async function closeCashSessionAction(
   return {};
 }
 
+// A Cash Out tagged branch_transfer/floating_pool no longer debits this
+// branch directly -- it creates a pending transfer (create_cash_transfer)
+// that stays counted here until the other side receives it. Cash In is
+// 'general' only now: receiving a transfer happens through
+// receiveCashTransferAction, not by manually asserting a source here.
 export async function recordCashMovementAction(
   direction: "in" | "out",
   amount: number,
@@ -182,16 +187,61 @@ export async function recordCashMovementAction(
   if (!profile) return { error: "Not signed in" };
 
   const supabase = await createClient();
+
+  if (movementType !== "general") {
+    if (direction !== "out") {
+      return { error: "Receive incoming cash from the Incoming cash section instead" };
+    }
+    const { error } = await supabase.rpc("create_cash_transfer", {
+      p_source_type: "branch",
+      p_source_shop_id: profile.shopId,
+      p_destination_type: movementType === "floating_pool" ? "floating" : "branch",
+      p_destination_shop_id: movementType === "branch_transfer" ? counterpartyShopId : null,
+      p_amount: amount,
+      p_note: note,
+    });
+    if (error) return { error: error.message };
+    revalidatePath("/sell");
+    revalidatePath("/cash-flow");
+    return {};
+  }
+
   const { error } = await supabase.rpc("record_cash_movement", {
     p_shop_id: profile.shopId,
     p_direction: direction,
     p_amount: amount,
-    p_movement_type: movementType,
-    p_counterparty_shop_id: counterpartyShopId,
+    p_movement_type: "general",
     p_note: note,
   });
   if (error) return { error: error.message };
 
   revalidatePath("/sell");
+  return {};
+}
+
+export async function receiveCashTransferAction(transferId: string): Promise<CashActionResult> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("receive_cash_transfer", { p_transfer_id: transferId });
+  if (error) return { error: error.message };
+
+  revalidatePath("/sell");
+  revalidatePath("/cash-flow");
+  revalidatePath("/dashboard");
+  return {};
+}
+
+export async function cancelCashTransferAction(transferId: string): Promise<CashActionResult> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cancel_cash_transfer", { p_transfer_id: transferId });
+  if (error) return { error: error.message };
+
+  revalidatePath("/sell");
+  revalidatePath("/cash-flow");
   return {};
 }

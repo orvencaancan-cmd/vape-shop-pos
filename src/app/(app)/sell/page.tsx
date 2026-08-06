@@ -3,7 +3,7 @@ import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { isSaleActive } from "@/lib/sale-status";
 import { variantLabel } from "@/lib/variant-label";
-import { fetchTodayCashSession } from "@/lib/cash-flow";
+import { fetchTodayCashSession, fetchPendingTransfers } from "@/lib/cash-flow";
 import { SellScreen } from "./sell-screen";
 
 export default async function SellPage() {
@@ -105,6 +105,14 @@ export default async function SellPage() {
           .map((s) => ({ shopId: s.shopId, shopName: s.shopName }))
       : [];
 
+  const pendingTransfers = await fetchPendingTransfers(supabase);
+  const incomingTransfers = pendingTransfers.filter(
+    (t) => t.destinationType === "branch" && t.destinationShopId === profile.shopId,
+  );
+  const outgoingTransfers = pendingTransfers.filter(
+    (t) => t.sourceType === "branch" && t.sourceShopId === profile.shopId,
+  );
+
   const linesBySaleId = new Map<
     string,
     { variantId: string; item: string; quantity: number; price: number }[]
@@ -161,6 +169,8 @@ export default async function SellPage() {
         cashSession={cashSession}
         cashMovements={cashMovements}
         otherOwnedBranches={otherOwnedBranches}
+        incomingTransfers={incomingTransfers}
+        outgoingTransfers={outgoingTransfers}
       />
     </main>
   );

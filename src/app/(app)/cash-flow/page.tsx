@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
-import { fetchTodayCashSession, computeCashInDrawer } from "@/lib/cash-flow";
+import { fetchTodayCashSession, computeCashInDrawer, fetchPendingTransfers } from "@/lib/cash-flow";
 import { computePaymentBreakdown } from "@/lib/reports/compute";
 import { formatCurrency } from "@/lib/currency";
 import { Stat } from "@/components/ui/stat";
@@ -81,6 +81,10 @@ export default async function CashFlowPage() {
   const totalInDrawers = branchCards.reduce((sum, b) => sum + b.drawerNow, 0);
   const totalCashAvailable = floatingBalance + totalInDrawers;
 
+  const pendingTransfers = await fetchPendingTransfers(supabase);
+  const floatingIncoming = pendingTransfers.filter((t) => t.destinationType === "floating");
+  const floatingOutgoing = pendingTransfers.filter((t) => t.sourceType === "floating");
+
   return (
     <main className="animate-fade-in-up mx-auto max-w-4xl px-4 py-8">
       <h1 className="heading text-2xl">Cash Flow</h1>
@@ -100,6 +104,8 @@ export default async function CashFlowPage() {
           balance={floatingBalance}
           movements={floatingMovements}
           branches={activeShops.map((s) => ({ shopId: s.shopId, shopName: s.shopName }))}
+          incomingTransfers={floatingIncoming}
+          outgoingTransfers={floatingOutgoing}
         />
       </div>
 
@@ -117,6 +123,12 @@ export default async function CashFlowPage() {
             otherBranches={activeShops
               .filter((s) => s.shopId !== b.shopId)
               .map((s) => ({ shopId: s.shopId, shopName: s.shopName }))}
+            incomingTransfers={pendingTransfers.filter(
+              (t) => t.destinationType === "branch" && t.destinationShopId === b.shopId,
+            )}
+            outgoingTransfers={pendingTransfers.filter(
+              (t) => t.sourceType === "branch" && t.sourceShopId === b.shopId,
+            )}
           />
         ))}
       </div>

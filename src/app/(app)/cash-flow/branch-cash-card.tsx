@@ -8,6 +8,8 @@ import {
   openCashSessionForBranchAction,
   recordCashMovementForBranchAction,
   closeCashSessionForBranchAction,
+  receiveCashTransferAction,
+  cancelCashTransferAction,
 } from "./actions";
 
 type CashSession = {
@@ -38,6 +40,20 @@ const MOVEMENT_TYPE_LABELS: Record<CashMovement["movementType"], string> = {
   floating_pool: "Floating pool",
 };
 
+type PendingTransfer = {
+  id: string;
+  sourceType: "branch" | "floating";
+  sourceShopId: string | null;
+  sourceShopName: string | null;
+  destinationType: "branch" | "floating";
+  destinationShopId: string | null;
+  destinationShopName: string | null;
+  amount: number;
+  note: string | null;
+  createdAt: string;
+  initiatedByName: string | null;
+};
+
 export function BranchCashCard({
   shopId,
   shopName,
@@ -46,6 +62,8 @@ export function BranchCashCard({
   cashSalesToday,
   cashInDrawer,
   otherBranches,
+  incomingTransfers,
+  outgoingTransfers,
 }: {
   shopId: string;
   shopName: string;
@@ -54,10 +72,13 @@ export function BranchCashCard({
   cashSalesToday: number;
   cashInDrawer: number;
   otherBranches: { shopId: string; shopName: string }[];
+  incomingTransfers: PendingTransfer[];
+  outgoingTransfers: PendingTransfer[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [transferActionId, setTransferActionId] = useState<string | null>(null);
 
   const [showOpenForm, setShowOpenForm] = useState(false);
   const [openingCashInput, setOpeningCashInput] = useState("");
@@ -128,6 +149,34 @@ export function BranchCashCard({
         return;
       }
       resetMovementForm();
+      router.refresh();
+    });
+  }
+
+  function receiveTransfer(transferId: string) {
+    setMessage(null);
+    setTransferActionId(transferId);
+    startTransition(async () => {
+      const result = await receiveCashTransferAction(transferId);
+      setTransferActionId(null);
+      if (result.error) {
+        setMessage({ type: "error", text: result.error });
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function cancelTransfer(transferId: string) {
+    setMessage(null);
+    setTransferActionId(transferId);
+    startTransition(async () => {
+      const result = await cancelCashTransferAction(transferId);
+      setTransferActionId(null);
+      if (result.error) {
+        setMessage({ type: "error", text: result.error });
+        return;
+      }
       router.refresh();
     });
   }
@@ -313,6 +362,60 @@ export function BranchCashCard({
         <Stat label="Cash in drawer" value={formatCurrency(cashInDrawer)} />
       </div>
 
+      {incomingTransfers.length > 0 && (
+        <div className="animate-fade-in-up mt-3 rounded-lg bg-canvas p-3">
+          <h4 className="text-xs font-medium text-ink">Incoming cash</h4>
+          <div className="mt-2 flex flex-col divide-y divide-hairline">
+            {incomingTransfers.map((t) => (
+              <div key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs">
+                <span className="min-w-0 truncate">
+                  <span className="text-ink">{formatCurrency(t.amount)}</span>
+                  <span className="ml-2 text-muted">
+                    from {t.sourceType === "floating" ? "Floating Cash" : t.sourceShopName}
+                  </span>
+                  {t.note && <span className="ml-2 text-muted">{t.note}</span>}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => receiveTransfer(t.id)}
+                  disabled={pending}
+                  className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-on-primary transition-colors hover:bg-primary-active disabled:opacity-50"
+                >
+                  {pending && transferActionId === t.id ? "Receiving…" : "Receive"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {outgoingTransfers.length > 0 && (
+        <div className="animate-fade-in-up mt-3 rounded-lg bg-canvas p-3">
+          <h4 className="text-xs font-medium text-ink">Sent, awaiting receipt</h4>
+          <div className="mt-2 flex flex-col divide-y divide-hairline">
+            {outgoingTransfers.map((t) => (
+              <div key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs">
+                <span className="min-w-0 truncate">
+                  <span className="text-ink">{formatCurrency(t.amount)}</span>
+                  <span className="ml-2 text-muted">
+                    to {t.destinationType === "floating" ? "Floating Cash" : t.destinationShopName}
+                  </span>
+                  {t.note && <span className="ml-2 text-muted">{t.note}</span>}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => cancelTransfer(t.id)}
+                  disabled={pending}
+                  className="text-muted underline underline-offset-2 disabled:opacity-50"
+                >
+                  {pending && transferActionId === t.id ? "Cancelling…" : "Cancel"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {showCashMovementForm && (
         <div className="animate-fade-in-up mt-3 rounded-lg bg-canvas p-3">
           <h4 className="text-xs font-medium text-ink">
@@ -328,19 +431,21 @@ export function BranchCashCard({
               onChange={(e) => setMovementAmount(e.target.value)}
               className="w-32 rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
             />
-            <select
-              value={movementType}
-              onChange={(e) => {
-                setMovementType(e.target.value as CashMovement["movementType"]);
-                setMovementCounterparty("");
-              }}
-              className="rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
-            >
-              <option value="general">General</option>
-              <option value="branch_transfer">Branch transfer</option>
-              <option value="floating_pool">Floating cash pool</option>
-            </select>
-            {movementType === "branch_transfer" && (
+            {showCashMovementForm === "out" && (
+              <select
+                value={movementType}
+                onChange={(e) => {
+                  setMovementType(e.target.value as CashMovement["movementType"]);
+                  setMovementCounterparty("");
+                }}
+                className="rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
+              >
+                <option value="general">General</option>
+                <option value="branch_transfer">Send to another branch</option>
+                <option value="floating_pool">Send to floating cash pool</option>
+              </select>
+            )}
+            {showCashMovementForm === "out" && movementType === "branch_transfer" && (
               <select
                 value={movementCounterparty}
                 onChange={(e) => setMovementCounterparty(e.target.value)}
