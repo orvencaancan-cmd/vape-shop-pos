@@ -664,6 +664,19 @@ export function SellScreen({
     );
   }
 
+  // Live view of what should currently be in the drawer -- same formula
+  // close_cash_session computes server-side at close time, just derived
+  // here from data already on the page for display only (not written
+  // anywhere; the authoritative expected_cash is always recomputed by the
+  // RPC when the register actually closes).
+  const cashInSum = cashMovements
+    .filter((m) => m.direction === "in")
+    .reduce((sum, m) => sum + m.amount, 0);
+  const cashOutSum = cashMovements
+    .filter((m) => m.direction === "out")
+    .reduce((sum, m) => sum + m.amount, 0);
+  const cashInDrawer = cashSession.openingCash + paymentBreakdown.cash + cashInSum - cashOutSum;
+
   return (
     <>
       <div className="mx-auto max-w-5xl px-4 pt-6">
@@ -719,6 +732,14 @@ export function SellScreen({
             >
               Close register
             </button>
+          </div>
+
+          <div className="mt-1 flex w-full flex-wrap gap-4 border-t border-hairline pt-3">
+            <Stat label="Starting cash" value={formatCurrency(cashSession.openingCash)} />
+            <Stat label="Cash sales" value={formatCurrency(paymentBreakdown.cash)} />
+            <Stat label="Cash in" value={formatCurrency(cashInSum)} />
+            <Stat label="Cash out" value={formatCurrency(cashOutSum)} />
+            <Stat label="Cash in drawer" value={formatCurrency(cashInDrawer)} />
           </div>
         </div>
 
