@@ -4,13 +4,9 @@ import { useActionState, useRef } from "react";
 import { inviteStaffAction, type ActionState } from "./actions";
 import { Input, Label } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
+import { ROLE_LABEL_WITH_DESCRIPTION } from "@/lib/role-labels";
 
 const initialState: ActionState = {};
-
-const ROLE_LABEL: Record<string, string> = {
-  staff: "Staff — sell & restock only",
-  owner: "Owner — full access including reports, pricing, and billing",
-};
 
 export function InviteForm() {
   const [state, formAction, pending] = useActionState(inviteStaffAction, initialState);
@@ -25,7 +21,11 @@ export function InviteForm() {
         const form = e.currentTarget;
         const email = (form.elements.namedItem("email") as HTMLInputElement)?.value;
         const role = (form.elements.namedItem("role") as HTMLSelectElement)?.value;
-        if (!confirm(`Invite ${email} with ${ROLE_LABEL[role] ?? role} access?`)) {
+        if (
+          !confirm(
+            `Invite ${email} with ${ROLE_LABEL_WITH_DESCRIPTION[role as "owner" | "staff"] ?? role} access?`,
+          )
+        ) {
           e.preventDefault();
         }
       }}
@@ -46,7 +46,7 @@ export function InviteForm() {
           className="rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink"
         >
           <option value="staff">Staff — sell & restock only</option>
-          <option value="owner">Owner — full access</option>
+          <option value="owner">Admin — full access</option>
         </select>
       </label>
       <Button type="submit" size="sm" disabled={pending}>

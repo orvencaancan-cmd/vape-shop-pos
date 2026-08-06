@@ -119,7 +119,7 @@ export async function correctStockAction(
 
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in" };
-  if (profile.role !== "owner") return { error: "Only the shop owner can correct stock" };
+  if (profile.role !== "owner") return { error: "Only the shop admin can correct stock" };
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("correct_stock", {
@@ -284,7 +284,7 @@ export async function updateBrandCostAction(
 ): Promise<ActionState> {
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in" };
-  if (profile.role !== "owner") return { error: "Only the shop owner can edit cost" };
+  if (profile.role !== "owner") return { error: "Only the shop admin can edit cost" };
 
   const cost = Number(formData.get("cost"));
   if (!Number.isFinite(cost) || cost < 0) return { error: "Invalid cost" };
@@ -329,7 +329,7 @@ export async function updateAccessoryCostAction(
 ): Promise<ActionState> {
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in" };
-  if (profile.role !== "owner") return { error: "Only the shop owner can edit cost" };
+  if (profile.role !== "owner") return { error: "Only the shop admin can edit cost" };
 
   const cost = Number(formData.get("cost"));
   if (!Number.isFinite(cost) || cost < 0) return { error: "Invalid cost" };

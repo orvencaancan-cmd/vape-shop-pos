@@ -58,7 +58,7 @@ export function AdminStaffRow({
           className="rounded-lg border border-hairline bg-canvas px-2 py-1 text-xs text-ink disabled:opacity-50"
         >
           <option value="staff">Staff</option>
-          <option value="owner">Owner</option>
+          <option value="owner">Admin</option>
         </select>
         <button
           type="submit"
@@ -125,7 +125,7 @@ export function AdminStaffRow({
       )}
       {!canDemoteOrRemove && role === "owner" && (
         <p className="w-full text-xs text-muted">
-          Can&apos;t change or remove this branch&apos;s last owner.
+          Can&apos;t change or remove this branch&apos;s last admin.
         </p>
       )}
     </div>

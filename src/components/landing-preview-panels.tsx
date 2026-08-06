@@ -231,7 +231,7 @@ export function StaffPreview() {
         <div className="flex items-center justify-between text-sm">
           <span className="text-ink">Jamie Rivera</span>
           <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
-            Owner
+            Admin
           </span>
         </div>
         <div className="mt-2 flex items-center justify-between border-t border-hairline pt-2 text-sm">

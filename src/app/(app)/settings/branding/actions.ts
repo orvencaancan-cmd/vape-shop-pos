@@ -22,7 +22,7 @@ export async function updateColorAction(
 
   const profile = await getCurrentProfile();
   if (!profile || profile.role !== "owner") {
-    return { error: "Only the shop owner can update branding" };
+    return { error: "Only the shop admin can update branding" };
   }
 
   const supabase = await createClient();
@@ -48,7 +48,7 @@ export async function updateLogoAction(
 ): Promise<ActionState> {
   const profile = await getCurrentProfile();
   if (!profile || profile.role !== "owner") {
-    return { error: "Only the shop owner can update branding" };
+    return { error: "Only the shop admin can update branding" };
   }
 
   const file = formData.get("logo");
@@ -91,7 +91,7 @@ export async function updateLogoAction(
 export async function removeLogoAction(): Promise<ActionState> {
   const profile = await getCurrentProfile();
   if (!profile || profile.role !== "owner") {
-    return { error: "Only the shop owner can update branding" };
+    return { error: "Only the shop admin can update branding" };
   }
 
   const supabase = await createClient();

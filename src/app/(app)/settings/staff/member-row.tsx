@@ -60,7 +60,7 @@ export function MemberRow({
           className="rounded-lg border border-hairline bg-canvas px-2 py-1 text-sm text-ink disabled:opacity-50"
         >
           <option value="staff">Staff</option>
-          <option value="owner">Owner</option>
+          <option value="owner">Admin</option>
         </select>
         <button
           type="submit"
@@ -86,7 +86,7 @@ export function MemberRow({
       )}
       {!canDemoteOrRemove && role === "owner" && (
         <p className="w-full text-xs text-muted">
-          Can&apos;t change or remove the shop&apos;s last owner.
+          Can&apos;t change or remove the shop&apos;s last admin.
         </p>
       )}
     </div>

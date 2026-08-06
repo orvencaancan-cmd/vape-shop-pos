@@ -21,7 +21,7 @@ export default function AcceptInviteConfirmPage() {
 
     if (!tokenHash || type !== "invite") {
       setStatus("error");
-      setError("This link is missing some information. Ask your shop owner to resend the invite.");
+      setError("This link is missing some information. Ask your shop admin to resend the invite.");
       return;
     }
 
@@ -33,7 +33,7 @@ export default function AcceptInviteConfirmPage() {
     });
     if (verifyError) {
       setStatus("error");
-      setError("That invite link has expired or was already used. Ask your shop owner to resend it.");
+      setError("That invite link has expired or was already used. Ask your shop admin to resend it.");
       return;
     }
     window.location.replace("/accept-invite");

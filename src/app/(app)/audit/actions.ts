@@ -111,7 +111,7 @@ export async function removeCompletedAuditAction(
 ): Promise<RemoveCompletedAuditResult> {
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in" };
-  if (profile.role !== "owner") return { error: "Only the shop owner can remove an audit" };
+  if (profile.role !== "owner") return { error: "Only the shop admin can remove an audit" };
 
   const supabase = await createClient();
   const { error } = await supabase

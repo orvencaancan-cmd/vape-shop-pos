@@ -29,7 +29,7 @@ export async function inviteStaffAction(
 
   const profile = await getCurrentProfile();
   if (!profile || profile.role !== "owner") {
-    return { error: "Only the shop owner can invite staff" };
+    return { error: "Only the shop admin can invite staff" };
   }
 
   const result = await inviteStaffToShop({
@@ -47,7 +47,7 @@ export async function inviteStaffAction(
 export async function resendInviteAction(email: string): Promise<ActionState> {
   const profile = await getCurrentProfile();
   if (!profile || profile.role !== "owner") {
-    return { error: "Only the shop owner can resend invites" };
+    return { error: "Only the shop admin can resend invites" };
   }
 
   const supabase = await createClient();
@@ -71,7 +71,7 @@ export async function changeRoleAction(
 
   const profile = await getCurrentProfile();
   if (!profile || profile.role !== "owner") {
-    return { error: "Only the shop owner can change roles" };
+    return { error: "Only the shop admin can change roles" };
   }
 
   const supabase = await createClient();
@@ -128,7 +128,7 @@ export async function inviteStaffToBranchAction(
     (s) => s.shopId === parsed.data.shopId && s.role === "owner",
   );
   if (!profile || !owns) {
-    return { error: "You must be an owner of that branch to invite staff there" };
+    return { error: "You must be that branch's admin to invite staff there" };
   }
 
   const result = await inviteStaffToShop({
