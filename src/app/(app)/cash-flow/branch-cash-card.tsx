@@ -153,11 +153,15 @@ export function BranchCashCard({
     });
   }
 
-  function receiveTransfer(transferId: string) {
+  function receiveTransfer(transfer: PendingTransfer) {
+    const from = transfer.sourceType === "floating" ? "Floating Cash" : transfer.sourceShopName;
+    if (!confirm(`Receive ${formatCurrency(transfer.amount)} from ${from}? This can't be undone.`)) {
+      return;
+    }
     setMessage(null);
-    setTransferActionId(transferId);
+    setTransferActionId(transfer.id);
     startTransition(async () => {
-      const result = await receiveCashTransferAction(transferId);
+      const result = await receiveCashTransferAction(transfer.id);
       setTransferActionId(null);
       if (result.error) {
         setMessage({ type: "error", text: result.error });
@@ -377,7 +381,7 @@ export function BranchCashCard({
                 </span>
                 <button
                   type="button"
-                  onClick={() => receiveTransfer(t.id)}
+                  onClick={() => receiveTransfer(t)}
                   disabled={pending}
                   className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-on-primary transition-colors hover:bg-primary-active disabled:opacity-50"
                 >

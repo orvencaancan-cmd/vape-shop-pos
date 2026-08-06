@@ -577,11 +577,15 @@ export function SellScreen({
     });
   }
 
-  function receiveTransfer(transferId: string) {
+  function receiveTransfer(transfer: PendingTransfer) {
+    const from = transfer.sourceType === "floating" ? "Floating Cash" : transfer.sourceShopName;
+    if (!confirm(`Receive ${formatCurrency(transfer.amount)} from ${from}? This can't be undone.`)) {
+      return;
+    }
     setCashMessage(null);
-    setTransferActionId(transferId);
+    setTransferActionId(transfer.id);
     startCashTransition(async () => {
-      const result = await receiveCashTransferAction(transferId);
+      const result = await receiveCashTransferAction(transfer.id);
       setTransferActionId(null);
       if (result.error) {
         setCashMessage({ type: "error", text: result.error });
@@ -801,7 +805,7 @@ export function SellScreen({
                   </span>
                   <button
                     type="button"
-                    onClick={() => receiveTransfer(t.id)}
+                    onClick={() => receiveTransfer(t)}
                     disabled={cashPending}
                     className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-on-primary transition-colors hover:bg-primary-active disabled:opacity-50"
                   >
