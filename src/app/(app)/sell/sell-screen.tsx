@@ -680,19 +680,9 @@ export function SellScreen({
   return (
     <>
       <div className="mx-auto max-w-5xl px-4 pt-6">
-        <h1 className="heading text-2xl">{shopName} — Sales</h1>
-        {nonVoidedSales.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-4">
-            <Stat label="Sales" value={nonVoidedSales.length.toString()} />
-            <Stat label="Cash" value={formatCurrency(paymentBreakdown.cash)} />
-            <Stat label="GCash" value={formatCurrency(paymentBreakdown.gcash)} />
-            <Stat label="Total" value={formatCurrency(paymentBreakdown.total)} />
-          </div>
-        )}
-
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-hairline bg-canvas-soft px-4 py-3">
-          <p className="text-sm text-body">
-            <span className="text-ink">Register open</span> since{" "}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-hairline bg-canvas-soft px-4 py-3">
+          <p className="text-lg font-medium text-ink">
+            Register open since{" "}
             {new Date(cashSession.openedAt).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
@@ -860,6 +850,16 @@ export function SellScreen({
           >
             {cashMessage.text}
           </p>
+        )}
+
+        <h1 className="heading mt-6 text-2xl">Sales</h1>
+        {nonVoidedSales.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-4">
+            <Stat label="Sales" value={nonVoidedSales.length.toString()} />
+            <Stat label="Cash" value={formatCurrency(paymentBreakdown.cash)} />
+            <Stat label="GCash" value={formatCurrency(paymentBreakdown.gcash)} />
+            <Stat label="Total" value={formatCurrency(paymentBreakdown.total)} />
+          </div>
         )}
       </div>
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-3">
