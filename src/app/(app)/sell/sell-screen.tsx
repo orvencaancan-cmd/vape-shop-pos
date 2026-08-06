@@ -7,6 +7,9 @@ import {
   voidSaleAction,
   searchLoyaltyCustomersAction,
   registerLoyaltyCustomerAction,
+  openCashSessionAction,
+  closeCashSessionAction,
+  recordCashMovementAction,
   type LoyaltyCustomer,
 } from "./actions";
 import { formatCurrency } from "@/lib/currency";
@@ -44,7 +47,37 @@ type RecentSale = {
 
 type CartLine = { variantId: string; quantity: number };
 
+type CashSession = {
+  id: string;
+  openingCash: number;
+  openedAt: string;
+  closingCash: number | null;
+  expectedCash: number | null;
+  variance: number | null;
+  closedAt: string | null;
+  status: "open" | "closed";
+};
+
+type CashMovement = {
+  id: string;
+  direction: "in" | "out";
+  movementType: "general" | "branch_transfer" | "floating_pool";
+  amount: number;
+  note: string | null;
+  createdAt: string;
+  createdByName: string | null;
+  counterpartyName: string | null;
+};
+
+type OwnedBranch = { shopId: string; shopName: string };
+
 const PAYMENT_LABELS: Record<"cash" | "gcash", string> = { cash: "Cash", gcash: "GCash" };
+
+const MOVEMENT_TYPE_LABELS: Record<CashMovement["movementType"], string> = {
+  general: "Cash",
+  branch_transfer: "Branch transfer",
+  floating_pool: "Floating pool",
+};
 
 export function SellScreen({
   shopId,
@@ -59,6 +92,10 @@ export function SellScreen({
   salePercent,
   saleScope,
   saleProductIds,
+  isOwner,
+  cashSession,
+  cashMovements,
+  otherOwnedBranches,
 }: {
   shopId: string;
   shopName: string;
@@ -72,6 +109,10 @@ export function SellScreen({
   salePercent: number;
   saleScope: "branch" | "items";
   saleProductIds: string[];
+  isOwner: boolean;
+  cashSession: CashSession | null;
+  cashMovements: CashMovement[];
+  otherOwnedBranches: OwnedBranch[];
 }) {
   const router = useRouter();
   useRealtimeSalesRefresh(shopId);
@@ -104,6 +145,20 @@ export function SellScreen({
   const [loyaltyRegisterPending, setLoyaltyRegisterPending] = useState(false);
   const [loyaltyCustomer, setLoyaltyCustomer] = useState<LoyaltyCustomer | null>(null);
   const [loyaltyUseCredit, setLoyaltyUseCredit] = useState(false);
+  const [cashPending, startCashTransition] = useTransition();
+  const [cashMessage, setCashMessage] = useState<{ type: "error" | "success"; text: string } | null>(
+    null,
+  );
+  const [openingCashInput, setOpeningCashInput] = useState("");
+  const [openNoteInput, setOpenNoteInput] = useState("");
+  const [showCashMovementForm, setShowCashMovementForm] = useState<"in" | "out" | null>(null);
+  const [movementAmount, setMovementAmount] = useState("");
+  const [movementType, setMovementType] = useState<CashMovement["movementType"]>("general");
+  const [movementCounterparty, setMovementCounterparty] = useState("");
+  const [movementNote, setMovementNote] = useState("");
+  const [showCloseForm, setShowCloseForm] = useState(false);
+  const [closingCashInput, setClosingCashInput] = useState("");
+  const [closeNoteInput, setCloseNoteInput] = useState("");
   // Own state rather than deriving straight from props -- a completed sale
   // updates these directly (new stock counts, the new sale prepended) since
   // we already know exactly what changed, instead of re-fetching the whole
@@ -444,6 +499,171 @@ export function SellScreen({
     });
   }
 
+  function resetMovementForm() {
+    setShowCashMovementForm(null);
+    setMovementAmount("");
+    setMovementType("general");
+    setMovementCounterparty("");
+    setMovementNote("");
+  }
+
+  function openRegister() {
+    const amount = Number(openingCashInput);
+    if (!openingCashInput.trim() || Number.isNaN(amount) || amount < 0) {
+      setCashMessage({ type: "error", text: "Enter a starting cash amount" });
+      return;
+    }
+    setCashMessage(null);
+    startCashTransition(async () => {
+      const result = await openCashSessionAction(amount, openNoteInput.trim() || null);
+      if (result.error) {
+        setCashMessage({ type: "error", text: result.error });
+        return;
+      }
+      setOpeningCashInput("");
+      setOpenNoteInput("");
+      router.refresh();
+    });
+  }
+
+  function submitCashMovement() {
+    const direction = showCashMovementForm;
+    if (!direction) return;
+    const amount = Number(movementAmount);
+    if (!movementAmount.trim() || Number.isNaN(amount) || amount <= 0) {
+      setCashMessage({ type: "error", text: "Enter an amount" });
+      return;
+    }
+    if (movementType === "branch_transfer" && !movementCounterparty) {
+      setCashMessage({ type: "error", text: "Pick which branch" });
+      return;
+    }
+    setCashMessage(null);
+    startCashTransition(async () => {
+      const result = await recordCashMovementAction(
+        direction,
+        amount,
+        movementType,
+        movementType === "branch_transfer" ? movementCounterparty : null,
+        movementNote.trim() || null,
+      );
+      if (result.error) {
+        setCashMessage({ type: "error", text: result.error });
+        return;
+      }
+      resetMovementForm();
+      router.refresh();
+    });
+  }
+
+  function closeRegister() {
+    const amount = Number(closingCashInput);
+    if (!closingCashInput.trim() || Number.isNaN(amount) || amount < 0) {
+      setCashMessage({ type: "error", text: "Enter the counted cash amount" });
+      return;
+    }
+    setCashMessage(null);
+    startCashTransition(async () => {
+      const result = await closeCashSessionAction(amount, closeNoteInput.trim() || null);
+      if (result.error) {
+        setCashMessage({ type: "error", text: result.error });
+        return;
+      }
+      setShowCloseForm(false);
+      setClosingCashInput("");
+      setCloseNoteInput("");
+      router.refresh();
+    });
+  }
+
+  if (!cashSession) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-10">
+        <h1 className="heading text-2xl">{shopName} — POS</h1>
+        <div className="mt-6 rounded-xl border border-hairline bg-canvas-soft p-5">
+          <h2 className="text-sm font-medium text-ink">Open the register</h2>
+          <p className="mt-1 text-xs text-muted">
+            Count the cash in the drawer before selling today.
+          </p>
+          <input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            placeholder="Starting cash"
+            value={openingCashInput}
+            onChange={(e) => setOpeningCashInput(e.target.value)}
+            className="mt-3 w-full rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+          />
+          <input
+            type="text"
+            placeholder="Note (optional)"
+            value={openNoteInput}
+            onChange={(e) => setOpenNoteInput(e.target.value)}
+            className="mt-2 w-full rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={openRegister}
+            disabled={cashPending}
+            className="mt-3 w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary-active disabled:opacity-50"
+          >
+            {cashPending ? "Opening…" : "Open register"}
+          </button>
+          {cashMessage && (
+            <p
+              className={`mt-2 text-sm ${cashMessage.type === "error" ? "text-error" : "text-success"}`}
+            >
+              {cashMessage.text}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (cashSession.status === "closed") {
+    return (
+      <div className="mx-auto max-w-md px-4 py-10">
+        <h1 className="heading text-2xl">{shopName} — POS</h1>
+        <div className="mt-6 rounded-xl border border-hairline bg-canvas-soft p-5">
+          <h2 className="text-sm font-medium text-ink">Register closed for today</h2>
+          <p className="mt-1 text-xs text-muted">
+            Come back tomorrow to open the register and start selling again.
+          </p>
+          <div className="mt-3 flex flex-col gap-1.5 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted">Starting cash</span>
+              <span className="text-ink">{formatCurrency(cashSession.openingCash)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted">Expected cash</span>
+              <span className="text-ink">{formatCurrency(cashSession.expectedCash ?? 0)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted">Counted cash</span>
+              <span className="text-ink">{formatCurrency(cashSession.closingCash ?? 0)}</span>
+            </div>
+            <div className="flex items-center justify-between border-t border-hairline pt-1.5 font-medium">
+              <span className="text-body">Variance</span>
+              <span
+                className={
+                  (cashSession.variance ?? 0) === 0
+                    ? "text-ink"
+                    : (cashSession.variance ?? 0) > 0
+                      ? "text-success"
+                      : "text-error"
+                }
+              >
+                {(cashSession.variance ?? 0) > 0 ? "+" : ""}
+                {formatCurrency(cashSession.variance ?? 0)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="mx-auto max-w-5xl px-4 pt-6">
@@ -455,6 +675,170 @@ export function SellScreen({
             <Stat label="GCash" value={formatCurrency(paymentBreakdown.gcash)} />
             <Stat label="Total" value={formatCurrency(paymentBreakdown.total)} />
           </div>
+        )}
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-hairline bg-canvas-soft px-4 py-3">
+          <p className="text-sm text-body">
+            <span className="text-ink">Register open</span> since{" "}
+            {new Date(cashSession.openedAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}{" "}
+            · started with {formatCurrency(cashSession.openingCash)}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                resetMovementForm();
+                setShowCloseForm(false);
+                setShowCashMovementForm("in");
+              }}
+              className="rounded-lg bg-canvas-strong px-3 py-1.5 text-xs text-body transition-colors hover:text-ink"
+            >
+              Cash In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                resetMovementForm();
+                setShowCloseForm(false);
+                setShowCashMovementForm("out");
+              }}
+              className="rounded-lg bg-canvas-strong px-3 py-1.5 text-xs text-body transition-colors hover:text-ink"
+            >
+              Cash Out
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                resetMovementForm();
+                setShowCloseForm(true);
+              }}
+              className="rounded-lg bg-canvas-strong px-3 py-1.5 text-xs text-body transition-colors hover:text-ink"
+            >
+              Close register
+            </button>
+          </div>
+        </div>
+
+        {showCashMovementForm && (
+          <div className="animate-fade-in-up mt-2 rounded-xl border border-hairline bg-canvas-soft p-4">
+            <h3 className="text-sm font-medium text-ink">
+              {showCashMovementForm === "in" ? "Cash In" : "Cash Out"}
+            </h3>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                placeholder="Amount"
+                value={movementAmount}
+                onChange={(e) => setMovementAmount(e.target.value)}
+                className="w-32 rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+              />
+              {isOwner && (
+                <select
+                  value={movementType}
+                  onChange={(e) => {
+                    setMovementType(e.target.value as CashMovement["movementType"]);
+                    setMovementCounterparty("");
+                  }}
+                  className="rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
+                >
+                  <option value="general">General</option>
+                  <option value="branch_transfer">Branch transfer</option>
+                  <option value="floating_pool">Floating cash pool</option>
+                </select>
+              )}
+              {movementType === "branch_transfer" && (
+                <select
+                  value={movementCounterparty}
+                  onChange={(e) => setMovementCounterparty(e.target.value)}
+                  className="rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
+                >
+                  <option value="">Which branch?</option>
+                  {otherOwnedBranches.map((b) => (
+                    <option key={b.shopId} value={b.shopId}>
+                      {b.shopName}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <input
+              type="text"
+              placeholder="Note"
+              value={movementNote}
+              onChange={(e) => setMovementNote(e.target.value)}
+              className="mt-2 w-full rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+            />
+            <div className="mt-2 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={submitCashMovement}
+                disabled={cashPending}
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-on-primary transition-colors hover:bg-primary-active disabled:opacity-50"
+              >
+                {cashPending ? "Saving…" : "Save"}
+              </button>
+              <button
+                type="button"
+                onClick={resetMovementForm}
+                className="text-xs text-muted underline underline-offset-2"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showCloseForm && (
+          <div className="animate-fade-in-up mt-2 rounded-xl border border-hairline bg-canvas-soft p-4">
+            <h3 className="text-sm font-medium text-ink">Close register</h3>
+            <p className="mt-1 text-xs text-muted">Count the cash in the drawer and enter it below.</p>
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              placeholder="Counted cash"
+              value={closingCashInput}
+              onChange={(e) => setClosingCashInput(e.target.value)}
+              className="mt-2 w-full rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+            />
+            <input
+              type="text"
+              placeholder="Note (optional)"
+              value={closeNoteInput}
+              onChange={(e) => setCloseNoteInput(e.target.value)}
+              className="mt-2 w-full rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+            />
+            <div className="mt-2 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={closeRegister}
+                disabled={cashPending}
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-on-primary transition-colors hover:bg-primary-active disabled:opacity-50"
+              >
+                {cashPending ? "Closing…" : "Close register"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCloseForm(false)}
+                className="text-xs text-muted underline underline-offset-2"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {cashMessage && (
+          <p
+            className={`mt-2 text-sm ${cashMessage.type === "error" ? "text-error" : "text-success"}`}
+          >
+            {cashMessage.text}
+          </p>
         )}
       </div>
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-3">
@@ -868,6 +1252,41 @@ export function SellScreen({
           )}
         </div>
       </div>
+
+      {cashMovements.length > 0 && (
+        <div className="md:col-span-3">
+          <div className="rounded-xl border border-hairline bg-canvas-soft p-4">
+            <h2 className="text-sm font-medium text-muted">Today&apos;s cash movements</h2>
+            <div className="mt-2 flex flex-col divide-y divide-hairline">
+              {cashMovements.map((m) => (
+                <div key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                  <span className="min-w-0 truncate">
+                    <span className={m.direction === "in" ? "text-success" : "text-error"}>
+                      {m.direction === "in" ? "+" : "−"}
+                      {formatCurrency(m.amount)}
+                    </span>
+                    <span className="ml-2 rounded-full bg-canvas-strong px-2 py-0.5 text-xs text-body">
+                      {MOVEMENT_TYPE_LABELS[m.movementType]}
+                    </span>
+                    {m.counterpartyName && (
+                      <span className="ml-2 text-xs text-muted">
+                        {m.direction === "out" ? "to" : "from"} {m.counterpartyName}
+                      </span>
+                    )}
+                    {m.note && <span className="ml-2 text-xs text-muted">{m.note}</span>}
+                    {m.createdByName && (
+                      <span className="ml-2 text-xs text-muted">{m.createdByName}</span>
+                    )}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted">
+                    {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="md:col-span-3">
         <div className="rounded-xl border border-hairline bg-canvas-soft p-4">

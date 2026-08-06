@@ -130,3 +130,68 @@ export async function voidSaleAction(saleId: string, reason: string): Promise<Vo
   revalidatePath("/reports");
   return {};
 }
+
+export type CashActionResult = { error?: string };
+
+export async function openCashSessionAction(
+  openingCash: number,
+  note: string | null,
+): Promise<CashActionResult> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("open_cash_session", {
+    p_shop_id: profile.shopId,
+    p_opening_cash: openingCash,
+    p_note: note,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/sell");
+  return {};
+}
+
+export async function closeCashSessionAction(
+  closingCash: number,
+  note: string | null,
+): Promise<CashActionResult> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("close_cash_session", {
+    p_shop_id: profile.shopId,
+    p_closing_cash: closingCash,
+    p_note: note,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/sell");
+  return {};
+}
+
+export async function recordCashMovementAction(
+  direction: "in" | "out",
+  amount: number,
+  movementType: "general" | "branch_transfer" | "floating_pool",
+  counterpartyShopId: string | null,
+  note: string | null,
+): Promise<CashActionResult> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("record_cash_movement", {
+    p_shop_id: profile.shopId,
+    p_direction: direction,
+    p_amount: amount,
+    p_movement_type: movementType,
+    p_counterparty_shop_id: counterpartyShopId,
+    p_note: note,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/sell");
+  return {};
+}
