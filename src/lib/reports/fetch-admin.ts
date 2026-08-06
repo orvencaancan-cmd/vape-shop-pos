@@ -18,8 +18,11 @@ import {
   computeSaleDiscounts,
   computeLoyaltySummary,
   computeExpenseSummary,
+  computeCashMovementsSummary,
   type SaleItemRow,
   type ExpenseRow,
+  type CashSessionRow,
+  type CashMovementRow,
 } from "./compute";
 import { normalizeSaleItems, normalizeVariants, normalizeReceipts } from "./normalize";
 
@@ -56,6 +59,9 @@ export type AdminReportData = {
   inventoryPerBranch: BranchInventory[];
   expenses: ExpenseRow[];
   expenseSummary: ReturnType<typeof computeExpenseSummary>;
+  cashSessions: CashSessionRow[];
+  cashMovements: CashMovementRow[];
+  cashMovementsSummary: ReturnType<typeof computeCashMovementsSummary>;
 };
 
 export async function fetchAdminReportData(
@@ -112,12 +118,30 @@ export async function fetchAdminReportData(
         .gte("created_at", from.toISOString())
         .lt("created_at", to.toISOString())
         .order("created_at", { ascending: false });
+      const { data: cashSessionRows } = await supabase
+        .from("cash_sessions")
+        .select("id, business_date, opening_cash, closing_cash, expected_cash, variance, status")
+        .eq("shop_id", shopId)
+        .gte("business_date", from.toISOString().slice(0, 10))
+        .lt("business_date", to.toISOString().slice(0, 10))
+        .order("business_date", { ascending: false });
+      const { data: cashMovementRows } = await supabase
+        .from("cash_movements")
+        .select(
+          "id, direction, movement_type, amount, note, created_at, profiles(display_name), counterparty:counterparty_shop_id(name)",
+        )
+        .eq("shop_id", shopId)
+        .gte("created_at", from.toISOString())
+        .lt("created_at", to.toISOString())
+        .order("created_at", { ascending: false });
       return {
         sales: sales ?? [],
         saleItems: saleItems ?? [],
         receipts: receipts ?? [],
         staffSales: staffSales ?? [],
         expenses: expenseRows ?? [],
+        cashSessions: cashSessionRows ?? [],
+        cashMovements: cashMovementRows ?? [],
       };
     }),
   );
@@ -135,6 +159,44 @@ export async function fetchAdminReportData(
       createdAt: e.created_at,
     })),
   );
+
+  // Cash sessions/movements are transactional per-event rows, just like
+  // sales -- no blending-across-branches concern the way inventory has
+  // (two branches can't collide on the same day/movement the way two
+  // identically-named products could), so a Branch column on one shared
+  // table is enough; no separate per-branch subsection needed.
+  const shopNameById = new Map(ownedShops.map((s) => [s.shopId, s.shopName]));
+  const cashSessions: CashSessionRow[] = salesPerShop.flatMap((r, i) => {
+    const shopName = shopNameById.get(salesShopIds[i]) ?? "";
+    return r.cashSessions.map((s) => ({
+      id: s.id,
+      businessDate: s.business_date,
+      openingCash: Number(s.opening_cash),
+      closingCash: s.closing_cash != null ? Number(s.closing_cash) : null,
+      expectedCash: s.expected_cash != null ? Number(s.expected_cash) : null,
+      variance: s.variance != null ? Number(s.variance) : null,
+      status: s.status,
+      shopName,
+    }));
+  });
+  const cashMovements: CashMovementRow[] = salesPerShop.flatMap((r, i) => {
+    const shopName = shopNameById.get(salesShopIds[i]) ?? "";
+    return r.cashMovements.map((m) => {
+      const creator = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
+      const counterparty = Array.isArray(m.counterparty) ? m.counterparty[0] : m.counterparty;
+      return {
+        id: m.id,
+        createdAt: m.created_at,
+        direction: m.direction,
+        movementType: m.movement_type,
+        amount: Number(m.amount),
+        note: m.note,
+        createdByName: (creator?.display_name as string | null) ?? null,
+        counterpartyName: (counterparty?.name as string | null) ?? null,
+        shopName,
+      };
+    });
+  });
 
   const { data: staffProfiles } = await supabase
     .from("profiles")
@@ -230,5 +292,8 @@ export async function fetchAdminReportData(
     inventoryPerBranch,
     expenses,
     expenseSummary: computeExpenseSummary(expenses),
+    cashSessions,
+    cashMovements,
+    cashMovementsSummary: computeCashMovementsSummary(cashMovements),
   };
 }

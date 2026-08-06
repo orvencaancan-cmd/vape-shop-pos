@@ -350,6 +350,39 @@ export function computeStaffActivity(
     .sort((a, b) => b.revenue - a.revenue);
 }
 
+export type CashSessionRow = {
+  id: string;
+  businessDate: string;
+  openingCash: number;
+  closingCash: number | null;
+  expectedCash: number | null;
+  variance: number | null;
+  status: "open" | "closed";
+  shopName?: string;
+};
+
+export type CashMovementRow = {
+  id: string;
+  createdAt: string;
+  direction: "in" | "out";
+  movementType: "general" | "branch_transfer" | "floating_pool";
+  amount: number;
+  note: string | null;
+  createdByName: string | null;
+  counterpartyName: string | null;
+  shopName?: string;
+};
+
+export function computeCashMovementsSummary(movements: { direction: "in" | "out"; amount: number }[]) {
+  let cashIn = 0;
+  let cashOut = 0;
+  for (const m of movements) {
+    if (m.direction === "in") cashIn += Number(m.amount);
+    else cashOut += Number(m.amount);
+  }
+  return { cashIn, cashOut, net: cashIn - cashOut };
+}
+
 export function computeSupplierActivity(receipts: ReceiptRow[]) {
   const bySupplier = new Map<string, { name: string; quantity: number; cost: number }>();
   for (const r of receipts) {

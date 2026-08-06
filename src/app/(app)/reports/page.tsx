@@ -8,6 +8,7 @@ import { RangeLink, Stat, Empty, Table, PromosDetail } from "./report-ui";
 import { CustomRangeForm } from "./custom-range-form";
 import { CollapsibleSection } from "./collapsible-section";
 import { SaleDetailTable } from "./sale-detail-table";
+import { CashSessionsTable, CashMovementsTable } from "./cash-flow-tables";
 import { AdminReportsPage } from "./admin-reports";
 
 export default async function ReportsPage({
@@ -50,6 +51,9 @@ export default async function ReportsPage({
     staffActivity,
     expenses,
     expenseSummary,
+    cashSessions,
+    cashMovements,
+    cashMovementsSummary,
   } = await fetchSingleShopReportData(supabase, profile.shopId, range);
 
   const exportQuery = new URLSearchParams(
@@ -216,6 +220,24 @@ export default async function ReportsPage({
             ])}
           />
         )}
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Cash flow">
+        <Stat label="Cash in" value={formatCurrency(cashMovementsSummary.cashIn)} />
+        <Stat label="Cash out" value={formatCurrency(cashMovementsSummary.cashOut)} />
+        <Stat label="Net" value={formatCurrency(cashMovementsSummary.net)} />
+        <div className="w-full">
+          <p className="text-xs font-medium uppercase text-muted">Register sessions</p>
+          <div className="mt-2">
+            <CashSessionsTable sessions={cashSessions} />
+          </div>
+        </div>
+        <div className="w-full">
+          <p className="mt-3 text-xs font-medium uppercase text-muted">Cash movements</p>
+          <div className="mt-2">
+            <CashMovementsTable movements={cashMovements} />
+          </div>
+        </div>
       </CollapsibleSection>
 
       <CollapsibleSection title="Promos">

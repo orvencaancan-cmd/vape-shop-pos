@@ -17,8 +17,11 @@ import {
   computeSaleDiscounts,
   computeLoyaltySummary,
   computeExpenseSummary,
+  computeCashMovementsSummary,
   type SaleItemRow,
   type ExpenseRow,
+  type CashSessionRow,
+  type CashMovementRow,
 } from "./compute";
 import { normalizeSaleItems, normalizeVariants, normalizeReceipts } from "./normalize";
 
@@ -41,6 +44,9 @@ export type SingleShopReportData = {
   staffActivity: ReturnType<typeof computeStaffActivity>;
   expenses: ExpenseRow[];
   expenseSummary: ReturnType<typeof computeExpenseSummary>;
+  cashSessions: CashSessionRow[];
+  cashMovements: CashMovementRow[];
+  cashMovementsSummary: ReturnType<typeof computeCashMovementsSummary>;
 };
 
 export async function fetchSingleShopReportData(
@@ -116,6 +122,49 @@ export async function fetchSingleShopReportData(
     createdAt: e.created_at,
   }));
 
+  const { data: cashSessionRows } = await supabase
+    .from("cash_sessions")
+    .select("id, business_date, opening_cash, closing_cash, expected_cash, variance, status")
+    .eq("shop_id", shopId)
+    .gte("business_date", from.toISOString().slice(0, 10))
+    .lt("business_date", to.toISOString().slice(0, 10))
+    .order("business_date", { ascending: false });
+
+  const cashSessions: CashSessionRow[] = (cashSessionRows ?? []).map((s) => ({
+    id: s.id,
+    businessDate: s.business_date,
+    openingCash: Number(s.opening_cash),
+    closingCash: s.closing_cash != null ? Number(s.closing_cash) : null,
+    expectedCash: s.expected_cash != null ? Number(s.expected_cash) : null,
+    variance: s.variance != null ? Number(s.variance) : null,
+    status: s.status,
+  }));
+
+  const { data: cashMovementRows } = await supabase
+    .from("cash_movements")
+    .select(
+      "id, direction, movement_type, amount, note, created_at, profiles(display_name), counterparty:counterparty_shop_id(name)",
+    )
+    .eq("shop_id", shopId)
+    .gte("created_at", from.toISOString())
+    .lt("created_at", to.toISOString())
+    .order("created_at", { ascending: false });
+
+  const cashMovements: CashMovementRow[] = (cashMovementRows ?? []).map((m) => {
+    const creator = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
+    const counterparty = Array.isArray(m.counterparty) ? m.counterparty[0] : m.counterparty;
+    return {
+      id: m.id,
+      createdAt: m.created_at,
+      direction: m.direction,
+      movementType: m.movement_type,
+      amount: Number(m.amount),
+      note: m.note,
+      createdByName: (creator?.display_name as string | null) ?? null,
+      counterpartyName: (counterparty?.name as string | null) ?? null,
+    };
+  });
+
   const items = normalizeSaleItems(saleItems ?? []);
   const variantRows = normalizeVariants(variants ?? []);
   const receiptRows = normalizeReceipts(receipts ?? []);
@@ -141,5 +190,8 @@ export async function fetchSingleShopReportData(
     staffActivity: computeStaffActivity(staffSales ?? [], staffProfiles ?? []),
     expenses,
     expenseSummary: computeExpenseSummary(expenses),
+    cashSessions,
+    cashMovements,
+    cashMovementsSummary: computeCashMovementsSummary(cashMovements),
   };
 }

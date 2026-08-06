@@ -34,6 +34,9 @@ type SalesSideReportData = Pick<
   | "staffActivity"
   | "expenses"
   | "expenseSummary"
+  | "cashSessions"
+  | "cashMovements"
+  | "cashMovementsSummary"
 >;
 
 function formatRangeLabel(from: Date, to: Date): string {
@@ -95,6 +98,69 @@ function addSalesByCategorySheet(wb: ExcelJS.Workbook, data: SalesSideReportData
       sheet.addRow([n.mg, n.revenue]).getCell(2).numFmt = CURRENCY_FMT;
     }
   }
+}
+
+// Branch column is always present (blank for a single-shop export) rather
+// than making the sheet shape conditional on scope -- simpler, and a blank
+// column is harmless in a single-shop workbook that only ever has one shop
+// anyway. Unlike Sales Detail (a revenue sum where blending across branches
+// with no per-row attribution is fine), cash sessions/movements are
+// item-level accountability data -- worth keeping traceable to a branch
+// even when "combined" is selected.
+function addCashFlowSheets(wb: ExcelJS.Workbook, data: SalesSideReportData) {
+  addKeyValueSheet(wb, "Cash Flow Summary", [
+    ["Cash in", data.cashMovementsSummary.cashIn, "currency"],
+    ["Cash out", data.cashMovementsSummary.cashOut, "currency"],
+    ["Net", data.cashMovementsSummary.net, "currency"],
+  ]);
+
+  addTableSheet(
+    wb,
+    "Cash Sessions",
+    [
+      { header: "Branch", width: 22 },
+      { header: "Date", width: 14 },
+      { header: "Status", width: 10 },
+      { header: "Opening Cash", width: 14, numFmt: CURRENCY_FMT },
+      { header: "Closing Cash", width: 14, numFmt: CURRENCY_FMT },
+      { header: "Expected Cash", width: 14, numFmt: CURRENCY_FMT },
+      { header: "Variance", width: 14, numFmt: CURRENCY_FMT },
+    ],
+    data.cashSessions.map((s) => [
+      s.shopName ?? "",
+      s.businessDate,
+      s.status,
+      s.openingCash,
+      s.closingCash ?? "",
+      s.expectedCash ?? "",
+      s.variance ?? "",
+    ]),
+  );
+
+  addTableSheet(
+    wb,
+    "Cash Movements",
+    [
+      { header: "Branch", width: 22 },
+      { header: "Date/Time", width: 20 },
+      { header: "Direction", width: 10 },
+      { header: "Type", width: 16 },
+      { header: "Counterparty", width: 22 },
+      { header: "Note", width: 30 },
+      { header: "Staff", width: 20 },
+      { header: "Amount", width: 14, numFmt: CURRENCY_FMT },
+    ],
+    data.cashMovements.map((m) => [
+      m.shopName ?? "",
+      new Date(m.createdAt).toLocaleString(),
+      m.direction,
+      m.movementType,
+      m.counterpartyName ?? "",
+      m.note ?? "",
+      m.createdByName ?? "",
+      m.direction === "out" ? -m.amount : m.amount,
+    ]),
+  );
 }
 
 function addSalesSheets(wb: ExcelJS.Workbook, data: SalesSideReportData) {
@@ -213,6 +279,8 @@ function addSalesSheets(wb: ExcelJS.Workbook, data: SalesSideReportData) {
     ],
     data.staffActivity.map((s) => [s.name, s.count, s.voidedCount, s.averageSale, s.revenue]),
   );
+
+  addCashFlowSheets(wb, data);
 }
 
 export async function buildSingleShopWorkbook(
