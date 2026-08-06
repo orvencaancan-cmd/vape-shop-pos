@@ -3,6 +3,7 @@ import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { isSaleActive } from "@/lib/sale-status";
 import { variantLabel } from "@/lib/variant-label";
+import { fetchTodayCashSession } from "@/lib/cash-flow";
 import { SellScreen } from "./sell-screen";
 
 export default async function SellPage() {
@@ -90,39 +91,10 @@ export default async function SellPage() {
         .in("sale_id", saleIds)
     : { data: [] };
 
-  const { data: cashSessionRow } = await supabase
-    .from("cash_sessions")
-    .select("id, opening_cash, opened_at, closing_cash, expected_cash, variance, closed_at, status")
-    .eq("shop_id", profile.shopId)
-    .eq("business_date", todayStart.toISOString().slice(0, 10))
-    .maybeSingle();
-
-  const cashSessionOpen = cashSessionRow?.status === "open";
-
-  const { data: cashMovementsRaw } = cashSessionOpen
-    ? await supabase
-        .from("cash_movements")
-        .select(
-          "id, direction, movement_type, amount, note, created_at, profiles(display_name), counterparty:counterparty_shop_id(name)",
-        )
-        .eq("cash_session_id", cashSessionRow!.id)
-        .order("created_at", { ascending: false })
-    : { data: [] };
-
-  const cashMovements = (cashMovementsRaw ?? []).map((m) => {
-    const creator = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
-    const counterparty = Array.isArray(m.counterparty) ? m.counterparty[0] : m.counterparty;
-    return {
-      id: m.id as string,
-      direction: m.direction as "in" | "out",
-      movementType: m.movement_type as "general" | "branch_transfer" | "floating_pool",
-      amount: Number(m.amount),
-      note: m.note as string | null,
-      createdAt: m.created_at as string,
-      createdByName: (creator?.display_name as string | null) ?? null,
-      counterpartyName: (counterparty?.name as string | null) ?? null,
-    };
-  });
+  const { session: cashSession, movements: cashMovements } = await fetchTodayCashSession(
+    supabase,
+    profile.shopId,
+  );
 
   // Only owners can move cash between branches, so only owners need the
   // list of other branches to transfer to/from.
@@ -186,22 +158,7 @@ export default async function SellPage() {
         saleScope={(shop?.sale_scope as "branch" | "items") ?? "branch"}
         saleProductIds={saleProductIds}
         isOwner={profile.role === "owner"}
-        cashSession={
-          cashSessionRow
-            ? {
-                id: cashSessionRow.id as string,
-                openingCash: Number(cashSessionRow.opening_cash),
-                openedAt: cashSessionRow.opened_at as string,
-                closingCash:
-                  cashSessionRow.closing_cash != null ? Number(cashSessionRow.closing_cash) : null,
-                expectedCash:
-                  cashSessionRow.expected_cash != null ? Number(cashSessionRow.expected_cash) : null,
-                variance: cashSessionRow.variance != null ? Number(cashSessionRow.variance) : null,
-                closedAt: cashSessionRow.closed_at as string | null,
-                status: cashSessionRow.status as "open" | "closed",
-              }
-            : null
-        }
+        cashSession={cashSession}
         cashMovements={cashMovements}
         otherOwnedBranches={otherOwnedBranches}
       />

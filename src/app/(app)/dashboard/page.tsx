@@ -11,6 +11,7 @@ import {
 } from "@/lib/reports/compute";
 import { formatCurrency } from "@/lib/currency";
 import { hasBillingAccess, statusLabel } from "@/lib/billing-status";
+import { fetchTodayCashSession, computeCashInDrawer } from "@/lib/cash-flow";
 import { Card } from "@/components/ui/card";
 import { buttonClasses } from "@/components/ui/button";
 import { Stat } from "@/components/ui/stat";
@@ -40,36 +41,43 @@ export default async function DashboardPage({
   const supabase = await createClient();
   const chartWindowStart = new Date(new Date().getTime() - 30 * 86400000).toISOString();
 
-  const [{ data: variants }, { data: recentSales }, { data: chartSales }, { data: lastAudit }, { data: staff }] =
-    await Promise.all([
-      supabase
-        .from("variants")
-        .select(
-          "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
-        )
-        .eq("shop_id", profile.shopId),
-      supabase
-        .from("sales")
-        .select("id, total, created_at, voided_at, voided_reason")
-        .eq("shop_id", profile.shopId)
-        .order("created_at", { ascending: false })
-        .limit(10),
-      supabase
-        .from("sales")
-        .select("total, payment_method, created_at")
-        .eq("shop_id", profile.shopId)
-        .gte("created_at", chartWindowStart)
-        .is("voided_at", null),
-      supabase
-        .from("stock_audits")
-        .select("id, completed_at")
-        .eq("shop_id", profile.shopId)
-        .not("completed_at", "is", null)
-        .order("completed_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase.from("profiles").select("user_id, display_name").eq("shop_id", profile.shopId),
-    ]);
+  const [
+    { data: variants },
+    { data: recentSales },
+    { data: chartSales },
+    { data: lastAudit },
+    { data: staff },
+    cashToday,
+  ] = await Promise.all([
+    supabase
+      .from("variants")
+      .select(
+        "id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, low_stock_threshold, cost, product_id, products(name, category, archived)",
+      )
+      .eq("shop_id", profile.shopId),
+    supabase
+      .from("sales")
+      .select("id, total, created_at, voided_at, voided_reason")
+      .eq("shop_id", profile.shopId)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("sales")
+      .select("total, payment_method, created_at")
+      .eq("shop_id", profile.shopId)
+      .gte("created_at", chartWindowStart)
+      .is("voided_at", null),
+    supabase
+      .from("stock_audits")
+      .select("id, completed_at")
+      .eq("shop_id", profile.shopId)
+      .not("completed_at", "is", null)
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase.from("profiles").select("user_id, display_name").eq("shop_id", profile.shopId),
+    fetchTodayCashSession(supabase, profile.shopId),
+  ]);
 
   const admin = createAdminClient();
   const allUsers = await listAllUsers(admin);
@@ -109,6 +117,14 @@ export default async function DashboardPage({
   );
   const todayCount = todaySales.length;
   const todayBreakdown = computePaymentBreakdown(todaySales);
+
+  const cashInDrawer = computeCashInDrawer(cashToday.session, todayBreakdown.cash, cashToday.movements);
+  const cashInSum = cashToday.movements
+    .filter((m) => m.direction === "in")
+    .reduce((sum, m) => sum + m.amount, 0);
+  const cashOutSum = cashToday.movements
+    .filter((m) => m.direction === "out")
+    .reduce((sum, m) => sum + m.amount, 0);
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-2xl px-4 py-8">
@@ -163,6 +179,59 @@ export default async function DashboardPage({
           Manage inventory
         </Link>
       </div>
+
+      <Card padding="sm" className="mt-6">
+        <h2 className="text-sm font-medium text-muted">Cash register</h2>
+        {!cashToday.session ? (
+          <p className="mt-2 text-sm text-muted">Register not opened today.</p>
+        ) : cashToday.session.status === "open" ? (
+          <>
+            <p className="mt-1 text-xs text-muted">
+              Open since{" "}
+              {new Date(cashToday.session.openedAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-4">
+              <Stat label="Starting cash" value={formatCurrency(cashToday.session.openingCash)} />
+              <Stat label="Cash sales" value={formatCurrency(todayBreakdown.cash)} />
+              <Stat label="Cash in" value={formatCurrency(cashInSum)} />
+              <Stat label="Cash out" value={formatCurrency(cashOutSum)} />
+              <Stat label="Cash in drawer" value={formatCurrency(cashInDrawer)} />
+            </div>
+          </>
+        ) : (
+          <div className="mt-2 flex flex-col gap-1.5 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted">Starting cash</span>
+              <span className="text-ink">{formatCurrency(cashToday.session.openingCash)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted">Expected cash</span>
+              <span className="text-ink">{formatCurrency(cashToday.session.expectedCash ?? 0)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted">Counted cash</span>
+              <span className="text-ink">{formatCurrency(cashToday.session.closingCash ?? 0)}</span>
+            </div>
+            <div className="flex items-center justify-between border-t border-hairline pt-1.5 font-medium">
+              <span className="text-body">Variance</span>
+              <span
+                className={
+                  (cashToday.session.variance ?? 0) === 0
+                    ? "text-ink"
+                    : (cashToday.session.variance ?? 0) > 0
+                      ? "text-success"
+                      : "text-error"
+                }
+              >
+                {formatCurrency(cashToday.session.variance ?? 0)}
+              </span>
+            </div>
+          </div>
+        )}
+      </Card>
 
       {profile.ownedShopCount === 1 &&
         profile.shop.subscriptionStatus === "trialing" &&

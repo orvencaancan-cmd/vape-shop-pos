@@ -40,6 +40,7 @@ export default async function AppLayout({
           { href: "/dashboard", label: "Dashboard", show: true },
           { href: "/settings/staff", label: "Staff", show: true },
           { href: "/branches", label: "Branches", show: true },
+          { href: "/cash-flow", label: "Cash Flow", show: true },
           { href: "/settings/billing", label: "Billing", show: true },
           { href: "/settings/promos", label: "Promos", show: true },
           { href: "/reports", label: "Reports", show: true },

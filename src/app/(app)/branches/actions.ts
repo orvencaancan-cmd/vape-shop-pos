@@ -87,28 +87,3 @@ export async function reactivateShopAction(shopId: string): Promise<ActionState>
   revalidatePath("/dashboard");
   return { success: "Branch reactivated" };
 }
-
-export type CashActionResult = { error?: string };
-
-export async function recordFloatingCashMovementAction(
-  direction: "in" | "out",
-  amount: number,
-  counterpartyShopId: string | null,
-  note: string | null,
-): Promise<CashActionResult> {
-  const profile = await getCurrentProfile();
-  if (!profile) redirect("/login");
-  if (profile.role !== "owner") return { error: "Only owners can manage the floating cash pool" };
-
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("record_floating_cash_movement", {
-    p_direction: direction,
-    p_amount: amount,
-    p_counterparty_shop_id: counterpartyShopId,
-    p_note: note,
-  });
-  if (error) return { error: error.message };
-
-  revalidatePath("/branches");
-  return {};
-}

@@ -8,6 +8,7 @@ import {
   type VariantRow,
 } from "@/lib/reports/compute";
 import { formatCurrency } from "@/lib/currency";
+import { fetchTodayCashSession, computeCashInDrawer } from "@/lib/cash-flow";
 import { Card } from "@/components/ui/card";
 import { SalesChart } from "@/components/sales-chart";
 import { switchShopAction } from "@/lib/auth/actions";
@@ -23,7 +24,7 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
 
   const cards = await Promise.all(
     ownedShops.map(async (s) => {
-      const [{ data: variants }, { data: weekSales }, { data: staff }, { data: lastAudit }] =
+      const [{ data: variants }, { data: weekSales }, { data: staff }, { data: lastAudit }, cashToday] =
         await Promise.all([
           supabase
             .from("variants")
@@ -46,6 +47,7 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
             .order("completed_at", { ascending: false })
             .limit(1)
             .maybeSingle(),
+          fetchTodayCashSession(supabase, s.shopId),
         ]);
 
       const lowStock = computeLowStock(
@@ -82,6 +84,12 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
         }
       }
 
+      const cashInDrawer = computeCashInDrawer(
+        cashToday.session,
+        todayBreakdown.cash,
+        cashToday.movements,
+      );
+
       return {
         shopId: s.shopId,
         shopName: s.shopName,
@@ -94,6 +102,8 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
         lastAuditCompletedAt: (lastAudit?.completed_at as string | undefined) ?? null,
         auditDiscrepancyCount,
         auditValueImpact,
+        registerOpen: cashToday.session?.status === "open",
+        cashInDrawer,
       };
     }),
   );
@@ -195,6 +205,15 @@ export async function AdminDashboardGrid({ ownedShops }: { ownedShops: ShopMembe
                   </button>
                 </form>
               </div>
+            </div>
+
+            <div className="mt-3 border-t border-hairline pt-3">
+              <p className="text-xs font-medium uppercase text-muted">Cash register</p>
+              <p className={`mt-1 text-sm ${c.registerOpen ? "text-ink" : "text-muted"}`}>
+                {c.registerOpen
+                  ? `Open · ${formatCurrency(c.cashInDrawer)} in drawer`
+                  : "Not opened today"}
+              </p>
             </div>
           </Card>
         ))}
