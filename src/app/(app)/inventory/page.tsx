@@ -2,7 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
+import { fetchPendingInventoryTransfers } from "@/lib/inventory-transfer";
+import { IncomingInventoryChecklist, OutgoingInventoryList } from "@/components/inventory-transfer-checklist";
 import { InventoryList, type InventoryVariant } from "./inventory-list";
+import { SendToFloatingForm } from "./send-to-floating-form";
 
 export default async function InventoryPage() {
   const profile = await getCurrentProfile();
@@ -14,7 +17,7 @@ export default async function InventoryPage() {
 
   const supabase = await createClient();
 
-  const [{ data: variants }, { data: supplierRows }, { data: restockRows }] = await Promise.all([
+  const [{ data: variants }, { data: supplierRows }, { data: restockRows }, pendingTransfers] = await Promise.all([
     supabase
       .from("variants")
       .select(
@@ -23,7 +26,14 @@ export default async function InventoryPage() {
       .eq("shop_id", profile.shopId),
     supabase.from("suppliers").select("name").eq("shop_id", profile.shopId).order("name"),
     supabase.rpc("get_last_restock_dates", { p_shop_id: profile.shopId }),
+    fetchPendingInventoryTransfers(supabase),
   ]);
+  const incomingTransfers = pendingTransfers.filter(
+    (t) => t.destinationType === "branch" && t.destinationShopId === profile.shopId,
+  );
+  const outgoingTransfers = pendingTransfers.filter(
+    (t) => t.sourceType === "branch" && t.sourceShopId === profile.shopId,
+  );
   const supplierNames = [...new Set((supplierRows ?? []).map((s) => s.name))];
   const lastRestockedByVariant = new Map(
     ((restockRows ?? []) as { variant_id: string; last_restocked_at: string }[]).map((r) => [
@@ -70,6 +80,19 @@ export default async function InventoryPage() {
           Add product
         </Link>
       </div>
+
+      {profile.role === "owner" && (
+        <div className="mt-4">
+          <SendToFloatingForm shopId={profile.shopId} variants={items} />
+        </div>
+      )}
+
+      {(incomingTransfers.length > 0 || outgoingTransfers.length > 0) && (
+        <div className="mt-4 flex flex-col gap-3">
+          <IncomingInventoryChecklist transfers={incomingTransfers} />
+          <OutgoingInventoryList transfers={outgoingTransfers} canCancel={profile.role === "owner"} />
+        </div>
+      )}
 
       {items.length === 0 ? (
         <p className="mt-6 text-sm text-muted">
