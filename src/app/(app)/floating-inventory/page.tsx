@@ -5,6 +5,7 @@ import { fetchFloatingCatalog, fetchPendingInventoryTransfers } from "@/lib/inve
 import { IncomingInventoryChecklist, OutgoingInventoryList } from "@/components/inventory-transfer-checklist";
 import { FloatingInventoryPanel } from "./floating-inventory-panel";
 import { BranchInventoryCard } from "./branch-inventory-card";
+import { BranchTransferPanel } from "./branch-transfer-panel";
 
 export default async function FloatingInventoryPage() {
   const profile = await getCurrentProfile();
@@ -38,6 +39,9 @@ export default async function FloatingInventoryPage() {
         />
         <IncomingInventoryChecklist transfers={floatingIncoming} />
         <OutgoingInventoryList transfers={floatingOutgoing} canCancel />
+        {activeShops.length >= 2 && (
+          <BranchTransferPanel branches={activeShops.map((s) => ({ shopId: s.shopId, shopName: s.shopName }))} />
+        )}
       </div>
 
       <h2 className="mt-8 text-sm font-medium text-muted">Branches</h2>

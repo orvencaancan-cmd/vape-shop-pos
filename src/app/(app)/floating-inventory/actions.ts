@@ -4,8 +4,48 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
+import { variantLabel } from "@/lib/variant-label";
 
 export type ActionResult = { error?: string };
+
+export type BranchCatalogItem = { id: string; label: string; stockQty: number };
+
+// Lets the owner browse a specific branch's catalog from the Admin
+// Overview page (for the branch-to-branch transfer picker below) without
+// switching into that branch first -- lazy-fetched per selection rather
+// than preloading every branch's full catalog up front.
+export async function fetchBranchInventoryAction(shopId: string): Promise<BranchCatalogItem[]> {
+  const profile = await getCurrentProfile();
+  if (!profile) return [];
+  if (!profile.shops.some((s) => s.shopId === shopId && s.role === "owner")) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("variants")
+    .select("id, flavor, nicotine_mg, size, for_device, ohms, stock_qty, products(name, brand, archived)")
+    .eq("shop_id", shopId);
+
+  return (data ?? [])
+    .map((v) => {
+      const product = Array.isArray(v.products) ? v.products[0] : v.products;
+      if (!product || product.archived) return null;
+      const detail = variantLabel({
+        flavor: v.flavor as string | null,
+        nicotine_mg: v.nicotine_mg as number | null,
+        size: v.size as string | null,
+        for_device: v.for_device as string | null,
+        ohms: v.ohms as number | null,
+      });
+      const base = product.brand ? `${product.brand as string} — ${product.name as string}` : (product.name as string);
+      return {
+        id: v.id as string,
+        label: detail === "Default" ? base : `${base} — ${detail}`,
+        stockQty: v.stock_qty as number,
+      };
+    })
+    .filter((v): v is BranchCatalogItem => v !== null)
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
 
 export async function addFloatingStockAction(input: {
   category: "ejuice" | "accessory";
