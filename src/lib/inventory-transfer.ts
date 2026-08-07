@@ -133,3 +133,57 @@ export async function fetchPendingInventoryTransfers(
     };
   });
 }
+
+export type InventoryTransferShortfall = {
+  id: string;
+  qty: number;
+  productName: string;
+  brand: string | null;
+  flavor: string | null;
+  nicotineMg: number | null;
+  size: string | null;
+  forDevice: string | null;
+  ohms: number | null;
+  sourceType: "branch" | "floating";
+  sourceShopId: string | null;
+  sourceShopName: string | null;
+  createdAt: string;
+};
+
+// Descriptive fields come from the transfer line rather than being
+// duplicated on the shortfall row -- inventory_transfer_lines already
+// snapshots them at creation, same reasoning fetchPendingInventoryTransfers
+// above reads lines the same way.
+export async function fetchUnresolvedShortfalls(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<InventoryTransferShortfall[]> {
+  const { data } = await supabase
+    .from("inventory_transfer_shortfalls")
+    .select(
+      "id, qty, source_type, source_shop_id, created_at, source_shop:source_shop_id(name), inventory_transfer_lines(product_name, brand, flavor, nicotine_mg, size, for_device, ohms)",
+    )
+    .eq("status", "unresolved")
+    .order("created_at", { ascending: false });
+
+  return (data ?? []).map((s) => {
+    const sourceShop = Array.isArray(s.source_shop) ? s.source_shop[0] : s.source_shop;
+    const line = Array.isArray(s.inventory_transfer_lines)
+      ? s.inventory_transfer_lines[0]
+      : s.inventory_transfer_lines;
+    return {
+      id: s.id as string,
+      qty: s.qty as number,
+      productName: (line?.product_name as string | undefined) ?? "",
+      brand: (line?.brand as string | null) ?? null,
+      flavor: (line?.flavor as string | null) ?? null,
+      nicotineMg: line?.nicotine_mg != null ? Number(line.nicotine_mg) : null,
+      size: (line?.size as string | null) ?? null,
+      forDevice: (line?.for_device as string | null) ?? null,
+      ohms: line?.ohms != null ? Number(line.ohms) : null,
+      sourceType: s.source_type as "branch" | "floating",
+      sourceShopId: s.source_shop_id as string | null,
+      sourceShopName: (sourceShop?.name as string | null) ?? null,
+      createdAt: s.created_at as string,
+    };
+  });
+}

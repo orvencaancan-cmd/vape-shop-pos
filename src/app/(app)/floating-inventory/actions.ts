@@ -178,3 +178,26 @@ export async function cancelInventoryTransferAction(transferId: string): Promise
   revalidatePath("/inventory");
   return {};
 }
+
+// Owner-only decision on a shortfall flagged during receipt: send the
+// missing units back to wherever the transfer originated, or leave them
+// in the floating pool where receive_inventory_transfer already put them.
+export async function resolveShortfallAction(
+  shortfallId: string,
+  action: "return_to_source" | "keep_in_floating",
+): Promise<ActionResult> {
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "owner") return { error: "Only owners can resolve a flagged shortfall" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("resolve_inventory_transfer_shortfall", {
+    p_shortfall_id: shortfallId,
+    p_action: action,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/floating-inventory");
+  revalidatePath("/inventory");
+  return {};
+}

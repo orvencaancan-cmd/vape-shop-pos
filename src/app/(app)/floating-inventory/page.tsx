@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
-import { fetchFloatingCatalog, fetchPendingInventoryTransfers } from "@/lib/inventory-transfer";
+import { fetchFloatingCatalog, fetchPendingInventoryTransfers, fetchUnresolvedShortfalls } from "@/lib/inventory-transfer";
 import { IncomingInventoryChecklist, OutgoingInventoryList } from "@/components/inventory-transfer-checklist";
 import { FloatingInventoryPanel } from "./floating-inventory-panel";
 import { BranchInventoryCard } from "./branch-inventory-card";
 import { BranchTransferPanel } from "./branch-transfer-panel";
+import { ShortfallList } from "./shortfall-list";
 
 export default async function FloatingInventoryPage() {
   const profile = await getCurrentProfile();
@@ -14,9 +15,10 @@ export default async function FloatingInventoryPage() {
   if (!profile.inAdminOverview) redirect("/dashboard");
 
   const supabase = await createClient();
-  const [catalog, pendingTransfers] = await Promise.all([
+  const [catalog, pendingTransfers, shortfalls] = await Promise.all([
     fetchFloatingCatalog(supabase),
     fetchPendingInventoryTransfers(supabase),
+    fetchUnresolvedShortfalls(supabase),
   ]);
 
   const ownedShops = profile.shops.filter((s) => s.role === "owner");
@@ -33,6 +35,7 @@ export default async function FloatingInventoryPage() {
       </p>
 
       <div className="mt-6 flex flex-col gap-4">
+        <ShortfallList shortfalls={shortfalls} />
         <FloatingInventoryPanel
           catalog={catalog}
           branches={activeShops.map((s) => ({ shopId: s.shopId, shopName: s.shopName }))}
