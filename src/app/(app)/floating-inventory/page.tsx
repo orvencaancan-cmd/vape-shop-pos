@@ -7,6 +7,7 @@ import { FloatingInventoryPanel } from "./floating-inventory-panel";
 import { BranchInventoryCard } from "./branch-inventory-card";
 import { BranchTransferPanel } from "./branch-transfer-panel";
 import { ShortfallList } from "./shortfall-list";
+import { fetchCustomCategories } from "@/lib/inventory/custom-categories";
 
 export default async function FloatingInventoryPage() {
   const profile = await getCurrentProfile();
@@ -15,10 +16,11 @@ export default async function FloatingInventoryPage() {
   if (!profile.inAdminOverview) redirect("/dashboard");
 
   const supabase = await createClient();
-  const [catalog, pendingTransfers, shortfalls] = await Promise.all([
+  const [catalog, pendingTransfers, shortfalls, customCategories] = await Promise.all([
     fetchFloatingCatalog(supabase),
     fetchPendingInventoryTransfers(supabase),
     fetchUnresolvedShortfalls(supabase),
+    fetchCustomCategories(supabase),
   ]);
 
   const ownedShops = profile.shops.filter((s) => s.role === "owner");
@@ -39,6 +41,7 @@ export default async function FloatingInventoryPage() {
         <FloatingInventoryPanel
           catalog={catalog}
           branches={activeShops.map((s) => ({ shopId: s.shopId, shopName: s.shopName }))}
+          customCategories={customCategories.map((c) => ({ key: c.key, label: c.label }))}
         />
         <IncomingInventoryChecklist transfers={floatingIncoming} />
         <OutgoingInventoryList transfers={floatingOutgoing} canCancel />

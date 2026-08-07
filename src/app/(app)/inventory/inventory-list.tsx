@@ -18,7 +18,7 @@ import { formatCurrency } from "@/lib/currency";
 import { variantLabel } from "@/lib/variant-label";
 import { ActionButton } from "@/components/action-button";
 import { matchesSearch } from "@/lib/search-match";
-import { ALL_CATEGORIES, categoryLabel } from "@/lib/inventory/product-categories";
+import { categoryLabel } from "@/lib/inventory/product-categories";
 
 export type InventoryVariant = {
   id: string;
@@ -175,10 +175,12 @@ export function InventoryList({
   variants,
   supplierNames,
   canEdit,
+  categories,
 }: {
   variants: InventoryVariant[];
   supplierNames: string[];
   canEdit: boolean;
+  categories: string[];
 }) {
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -385,7 +387,7 @@ export function InventoryList({
             </button>
           )}
         </div>
-        {["all", ...ALL_CATEGORIES].map((c) => (
+        {["all", ...categories].map((c) => (
           <button
             key={c}
             onClick={() => setCategory(c)}

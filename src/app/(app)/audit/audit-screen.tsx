@@ -11,7 +11,7 @@ import {
 } from "./actions";
 import { formatCurrency } from "@/lib/currency";
 import { groupByBrand } from "@/lib/group-by-brand";
-import { ALL_CATEGORIES, categoryLabel } from "@/lib/inventory/product-categories";
+import { categoryLabel } from "@/lib/inventory/product-categories";
 
 export type AuditVariant = {
   id: string;
@@ -68,12 +68,14 @@ export function AuditScreen({
   existingCounts,
   history,
   isOwner,
+  categories,
 }: {
   variants: AuditVariant[];
   openAuditId: string | null;
   existingCounts: { variantId: string; countedQty: number }[];
   history: AuditHistoryEntry[];
   isOwner: boolean;
+  categories: string[];
 }) {
   const router = useRouter();
   const [auditId, setAuditId] = useState(openAuditId);
@@ -227,7 +229,7 @@ export function AuditScreen({
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1 rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
           />
-          {["all", ...ALL_CATEGORIES].map((c) => (
+          {["all", ...categories].map((c) => (
             <button
               key={c}
               onClick={() => setCategory(c)}

@@ -9,7 +9,6 @@ import {
 } from "../actions";
 import { Input, Label } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
-import { getProductCategoryByDbName } from "@/lib/inventory/product-categories";
 import { ActionButton } from "@/components/action-button";
 
 const initialState: ActionState = {};
@@ -26,14 +25,20 @@ type VariantValues = {
   lowStockThreshold?: number;
 };
 
+type VariantDimension =
+  | { label: string; field: "ohms" | "size" | "flavor"; inputType: "checklist"; options: { value: string; label: string }[] }
+  | { label: string; field: "ohms" | "size" | "flavor"; inputType: "freeText" };
+
 export function VariantForm({
   productId,
   productCategory,
+  dimension,
   variantId,
   values,
 }: {
   productId: string;
   productCategory: string;
+  dimension?: VariantDimension;
   variantId?: string;
   values?: VariantValues;
 }) {
@@ -42,8 +47,6 @@ export function VariantForm({
     : createVariantAction.bind(null, productId);
   const [state, formAction, pending] = useActionState(boundAction, initialState);
   const deleteAction = variantId ? deleteVariantAction.bind(null, variantId, productId) : undefined;
-  const dimension =
-    productCategory !== "ejuice" ? getProductCategoryByDbName(productCategory)?.variantDimension : undefined;
   const dimensionSuggestions =
     dimension?.inputType === "checklist" ? dimension.options.map((o) => o.value) : [];
 

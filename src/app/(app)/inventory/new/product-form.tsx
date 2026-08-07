@@ -8,7 +8,7 @@ import { PRODUCT_CATEGORIES } from "@/lib/inventory/product-categories";
 
 const initialState: ActionState = {};
 
-export function NewProductForm() {
+export function NewProductForm({ customCategories = [] }: { customCategories?: { key: string; label: string }[] }) {
   const [state, formAction, pending] = useActionState(createProductAction, initialState);
 
   return (
@@ -27,6 +27,11 @@ export function NewProductForm() {
           <option value="ejuice">E-juice</option>
           {PRODUCT_CATEGORIES.map((c) => (
             <option key={c.dbCategory} value={c.dbCategory}>
+              {c.label}
+            </option>
+          ))}
+          {customCategories.map((c) => (
+            <option key={c.key} value={c.label}>
               {c.label}
             </option>
           ))}

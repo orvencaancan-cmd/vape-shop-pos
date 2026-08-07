@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
-import { getProductCategory, ALL_CATEGORIES } from "@/lib/inventory/product-categories";
+import { getProductCategory } from "@/lib/inventory/product-categories";
+import { getCustomCategoryConfig } from "@/lib/inventory/custom-categories";
 import { variantLabel } from "@/lib/variant-label";
 
 export type ActionState = { error?: string };
@@ -137,7 +138,10 @@ export async function correctStockAction(
 const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   brand: z.string().optional(),
-  category: z.enum(ALL_CATEGORIES as [string, ...string[]]),
+  // Not an enum -- the built-in categories are a fixed list, but a custom
+  // category's name is arbitrary per owner, so this is trusted the same
+  // way brand/description already are.
+  category: z.string().min(1, "Category is required").max(100),
   description: z.string().optional(),
   supplier: z.string().optional(),
 });
@@ -888,16 +892,15 @@ export async function createCategoryBatchAction(
     price,
     lowStockThreshold,
   } = parsed.data;
-  if (items.length === 0) {
-    return { error: `Add at least one ${categoryKey === "cotton" || categoryKey === "other" ? "product" : "item"}` };
-  }
-
-  const category = getProductCategory(categoryKey);
+  const supabase = await createClient();
+  const category = getProductCategory(categoryKey) ?? (await getCustomCategoryConfig(supabase, categoryKey));
   if (!category) {
     return { error: "Invalid category" };
   }
+  if (items.length === 0) {
+    return { error: `Add at least one ${category.setForDevice ? "item" : "product"}` };
+  }
 
-  const supabase = await createClient();
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in" };
   const shopId = profile.shopId;
@@ -1009,6 +1012,73 @@ export async function createCategoryBatchAction(
 
   revalidatePath("/inventory");
   redirect("/inventory");
+}
+
+const customCategorySchema = z.object({
+  label: z.string().min(1, "Category name is required").max(100),
+  variantLabel: z.string().optional(),
+  variantInputType: z.enum(["none", "freeText", "checklist"]),
+  variantOptions: z.array(z.string()).optional().default([]),
+});
+
+// Business-wide, so the redirect target (/inventory/new?category=<id>) is
+// the same regardless of which of the owner's branches this was created
+// from -- the batch form on the other end resolves the id via
+// getCustomCategoryConfig the same way a built-in category resolves via
+// getProductCategory.
+export async function createCustomCategoryAction(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = customCategorySchema.safeParse({
+    label: formData.get("label"),
+    variantLabel: formData.get("variantLabel") ?? "",
+    variantInputType: formData.get("variantInputType") ?? "none",
+    variantOptions: formData.getAll("variantOptions").map((v) => String(v).trim()).filter(Boolean),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+  const { label, variantLabel, variantInputType, variantOptions } = parsed.data;
+
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+  if (profile.role !== "owner") return { error: "Only the shop admin can add a category" };
+
+  if (variantInputType !== "none" && !variantLabel?.trim()) {
+    return { error: "Give the tag a name" };
+  }
+  if (variantInputType === "checklist" && variantOptions.length === 0) {
+    return { error: "Add at least one option for the tag" };
+  }
+
+  const supabase = await createClient();
+  const { data: newId, error } = await supabase.rpc("create_custom_category", {
+    p_shop_id: profile.shopId,
+    p_label: label,
+    p_variant_label: variantInputType === "none" ? null : variantLabel,
+    p_variant_input_type: variantInputType === "none" ? null : variantInputType,
+    p_variant_options: variantInputType === "checklist" ? variantOptions : null,
+  });
+  if (error) return { error: error.message };
+
+  redirect(`/inventory/new?category=${newId}`);
+}
+
+export async function archiveCustomCategoryAction(categoryId: string): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+  if (profile.role !== "owner") return { error: "Only the shop admin can archive a category" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("archive_custom_category", {
+    p_shop_id: profile.shopId,
+    p_id: categoryId,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/inventory/new");
+  return {};
 }
 
 const variantSchema = z.object({

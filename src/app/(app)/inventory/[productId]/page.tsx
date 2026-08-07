@@ -7,6 +7,8 @@ import { BackLink } from "./back-link";
 import { archiveProductAction } from "../actions";
 import { ReceiveStockForm } from "../receive-stock-form";
 import { ActionButton } from "@/components/action-button";
+import { getProductCategoryByDbName } from "@/lib/inventory/product-categories";
+import { fetchCustomCategories } from "@/lib/inventory/custom-categories";
 
 export default async function ProductPage({
   params,
@@ -48,6 +50,23 @@ export default async function ProductPage({
     .eq("shop_id", profile.shopId)
     .order("created_at");
 
+  const customCategories = await fetchCustomCategories(supabase);
+  const rawDimension =
+    product.category !== "ejuice"
+      ? (getProductCategoryByDbName(product.category) ??
+          customCategories.find((c) => c.dbCategory.toLowerCase() === product.category.toLowerCase()))
+          ?.variantDimension
+      : undefined;
+  // Config objects carry functions (nameTemplate, formatValue) that can't
+  // cross the server/client boundary as props -- rebuild a plain literal
+  // with only what VariantForm actually reads.
+  const dimension = rawDimension
+    ? rawDimension.inputType === "checklist"
+      ? { label: rawDimension.label, field: rawDimension.field, inputType: "checklist" as const, options: rawDimension.options }
+      : { label: rawDimension.label, field: rawDimension.field, inputType: "freeText" as const }
+    : undefined;
+  const plainCustomCategories = customCategories.map((c) => ({ key: c.key, label: c.label }));
+
   const boundArchive = archiveProductAction.bind(null, productId);
 
   return (
@@ -66,6 +85,7 @@ export default async function ProductPage({
             description={product.description}
             supplier={supplierRow?.name ?? null}
             supplierNames={supplierNames}
+            customCategories={plainCustomCategories}
           />
         </div>
         <div className="mt-3">
@@ -83,6 +103,7 @@ export default async function ProductPage({
               <VariantForm
                 productId={product.id}
                 productCategory={product.category}
+                dimension={dimension}
                 variantId={v.id}
                 values={{
                   flavor: v.flavor,
@@ -115,6 +136,7 @@ export default async function ProductPage({
           <VariantForm
             productId={product.id}
             productCategory={product.category}
+            dimension={dimension}
           />
         </div>
       </section>

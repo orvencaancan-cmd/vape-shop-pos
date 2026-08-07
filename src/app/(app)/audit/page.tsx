@@ -3,6 +3,8 @@ import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { variantLabel } from "@/lib/variant-label";
 import { AuditScreen, type AuditVariant, type AuditHistoryEntry } from "./audit-screen";
+import { ALL_CATEGORIES } from "@/lib/inventory/product-categories";
+import { fetchCustomCategories } from "@/lib/inventory/custom-categories";
 
 export default async function AuditPage() {
   const profile = await getCurrentProfile();
@@ -66,6 +68,9 @@ export default async function AuditPage() {
     }));
   }
 
+  const customCategories = await fetchCustomCategories(supabase);
+  const categories = [...ALL_CATEGORIES, ...customCategories.map((c) => c.dbCategory)];
+
   const completedIds = (completedAudits ?? []).map((a) => a.id as string);
   const { data: historyLines } = completedIds.length
     ? await supabase
@@ -111,6 +116,7 @@ export default async function AuditPage() {
         existingCounts={existingCounts}
         history={history}
         isOwner={profile.role === "owner"}
+        categories={categories}
       />
     </main>
   );

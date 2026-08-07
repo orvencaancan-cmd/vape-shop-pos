@@ -8,17 +8,20 @@ import { groupByBrand } from "@/lib/group-by-brand";
 import { matchesSearch } from "@/lib/search-match";
 import { addFloatingStockAction, createInventoryTransferAction } from "./actions";
 import type { FloatingVariant } from "@/lib/inventory-transfer";
-import { ALL_CATEGORIES, PRODUCT_CATEGORIES, categoryLabel } from "@/lib/inventory/product-categories";
+import { PRODUCT_CATEGORIES, ALL_CATEGORIES, categoryLabel } from "@/lib/inventory/product-categories";
 
 type CartLine = { floatingVariantId: string; label: string; available: number; qty: string };
 
 export function FloatingInventoryPanel({
   catalog,
   branches,
+  customCategories = [],
 }: {
   catalog: FloatingVariant[];
   branches: { shopId: string; shopName: string }[];
+  customCategories?: { key: string; label: string }[];
 }) {
+  const categories = [...ALL_CATEGORIES, ...customCategories.map((c) => c.label)];
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
@@ -185,6 +188,11 @@ export function FloatingInventoryPanel({
                   {c.label}
                 </option>
               ))}
+              {customCategories.map((c) => (
+                <option key={c.key} value={c.label}>
+                  {c.label}
+                </option>
+              ))}
             </select>
             <input
               placeholder="Brand"
@@ -297,7 +305,7 @@ export function FloatingInventoryPanel({
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
         />
-        {["all", ...ALL_CATEGORIES].map((c) => (
+        {["all", ...categories].map((c) => (
           <button
             key={c}
             type="button"

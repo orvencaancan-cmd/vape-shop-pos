@@ -6,6 +6,8 @@ import { fetchPendingInventoryTransfers } from "@/lib/inventory-transfer";
 import { IncomingInventoryChecklist, OutgoingInventoryList } from "@/components/inventory-transfer-checklist";
 import { InventoryList, type InventoryVariant } from "./inventory-list";
 import { SendStockForm } from "./send-stock-form";
+import { ALL_CATEGORIES } from "@/lib/inventory/product-categories";
+import { fetchCustomCategories } from "@/lib/inventory/custom-categories";
 
 export default async function InventoryPage() {
   const profile = await getCurrentProfile();
@@ -17,17 +19,20 @@ export default async function InventoryPage() {
 
   const supabase = await createClient();
 
-  const [{ data: variants }, { data: supplierRows }, { data: restockRows }, pendingTransfers] = await Promise.all([
-    supabase
-      .from("variants")
-      .select(
-        "id, product_id, flavor, nicotine_mg, size, for_device, ohms, price, cost, stock_qty, low_stock_threshold, products(name, brand, category, archived, suppliers(name))",
-      )
-      .eq("shop_id", profile.shopId),
-    supabase.from("suppliers").select("name").eq("shop_id", profile.shopId).order("name"),
-    supabase.rpc("get_last_restock_dates", { p_shop_id: profile.shopId }),
-    fetchPendingInventoryTransfers(supabase),
-  ]);
+  const [{ data: variants }, { data: supplierRows }, { data: restockRows }, pendingTransfers, customCategories] =
+    await Promise.all([
+      supabase
+        .from("variants")
+        .select(
+          "id, product_id, flavor, nicotine_mg, size, for_device, ohms, price, cost, stock_qty, low_stock_threshold, products(name, brand, category, archived, suppliers(name))",
+        )
+        .eq("shop_id", profile.shopId),
+      supabase.from("suppliers").select("name").eq("shop_id", profile.shopId).order("name"),
+      supabase.rpc("get_last_restock_dates", { p_shop_id: profile.shopId }),
+      fetchPendingInventoryTransfers(supabase),
+      fetchCustomCategories(supabase),
+    ]);
+  const categories = [...ALL_CATEGORIES, ...customCategories.map((c) => c.dbCategory)];
   const incomingTransfers = pendingTransfers.filter(
     (t) => t.destinationType === "branch" && t.destinationShopId === profile.shopId,
   );
@@ -108,6 +113,7 @@ export default async function InventoryPage() {
           variants={items}
           supplierNames={supplierNames}
           canEdit={profile.role === "owner"}
+          categories={categories}
         />
       )}
     </main>

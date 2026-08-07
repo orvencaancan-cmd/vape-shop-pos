@@ -16,6 +16,7 @@ export function ProductEditForm({
   description,
   supplier,
   supplierNames,
+  customCategories = [],
 }: {
   productId: string;
   name: string;
@@ -24,9 +25,11 @@ export function ProductEditForm({
   description: string | null;
   supplier: string | null;
   supplierNames: string[];
+  customCategories?: { key: string; label: string }[];
 }) {
   const boundAction = updateProductAction.bind(null, productId);
   const [state, formAction, pending] = useActionState(boundAction, initialState);
+  const knownCategories = ["ejuice", ...PRODUCT_CATEGORIES.map((c) => c.dbCategory), ...customCategories.map((c) => c.label)];
 
   return (
     <form action={formAction} className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
@@ -47,6 +50,12 @@ export function ProductEditForm({
               {c.label}
             </option>
           ))}
+          {customCategories.map((c) => (
+            <option key={c.key} value={c.label}>
+              {c.label}
+            </option>
+          ))}
+          {!knownCategories.includes(category) && <option value={category}>{category}</option>}
         </Select>
       </label>
       <label className="flex flex-1 flex-col gap-1.5">

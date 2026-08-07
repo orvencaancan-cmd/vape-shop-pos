@@ -20,7 +20,7 @@ import { Stat } from "@/components/ui/stat";
 import { useRealtimeSalesRefresh } from "@/lib/supabase/use-realtime-sales-refresh";
 import { groupByBrand } from "@/lib/group-by-brand";
 import { matchesSearch } from "@/lib/search-match";
-import { ALL_CATEGORIES, categoryLabel } from "@/lib/inventory/product-categories";
+import { categoryLabel } from "@/lib/inventory/product-categories";
 
 type Variant = {
   id: string;
@@ -115,11 +115,13 @@ export function SellScreen({
   otherOwnedBranches,
   incomingTransfers,
   outgoingTransfers,
+  categories,
 }: {
   shopId: string;
   shopName: string;
   variants: Variant[];
   recentSales: RecentSale[];
+  categories: string[];
   currentUserName: string | null;
   loyaltyEarnEnabled: boolean;
   loyaltyRedeemEnabled: boolean;
@@ -1002,7 +1004,7 @@ export function SellScreen({
               </button>
             )}
           </div>
-          {["all", ...ALL_CATEGORIES].map((c) => (
+          {["all", ...categories].map((c) => (
             <button
               key={c}
               onClick={() => setCategory(c)}

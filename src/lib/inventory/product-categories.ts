@@ -32,7 +32,10 @@ type FreeTextDimension = {
 };
 
 export type ProductCategoryConfig = {
-  key: ProductCategoryKey;
+  // string, not ProductCategoryKey -- a custom category's key is its DB
+  // row id (see src/lib/inventory/custom-categories.ts), which isn't one
+  // of the fixed built-in keys.
+  key: string;
   label: string;
   dbCategory: string;
   listLabel: string;

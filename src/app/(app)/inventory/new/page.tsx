@@ -3,11 +3,15 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
+import { ActionButton } from "@/components/action-button";
 import { NewProductForm } from "./product-form";
 import { NewFlavorBatchForm } from "./flavor-batch-form";
 import { NewFlavorPodBatchForm } from "./flavor-pod-batch-form";
 import { NewAccessoryBatchForm } from "./accessory-batch-form";
+import { NewCustomCategoryForm } from "./custom-category-form";
 import { PRODUCT_CATEGORIES, getProductCategory } from "@/lib/inventory/product-categories";
+import { fetchCustomCategories } from "@/lib/inventory/custom-categories";
+import { archiveCustomCategoryAction } from "../actions";
 
 export default async function NewProductPage({
   searchParams,
@@ -25,17 +29,34 @@ export default async function NewProductPage({
 
   if (mode === "single") {
     if (profile.role !== "owner") redirect("/inventory/new");
+    const supabase = await createClient();
+    const customCategories = await fetchCustomCategories(supabase);
     return (
       <PageShell title="Add a single product" subtitle="For a one-off item.">
-        <NewProductForm />
+        <NewProductForm customCategories={customCategories.map((c) => ({ key: c.key, label: c.label }))} />
+      </PageShell>
+    );
+  }
+
+  if (mode === "new-category") {
+    if (profile.role !== "owner") redirect("/inventory/new");
+    return (
+      <PageShell
+        title="New category"
+        subtitle="Shared across all of your branches."
+        backHref="/inventory/new"
+        backLabel="Change category"
+      >
+        <NewCustomCategoryForm />
       </PageShell>
     );
   }
 
   const supabase = await createClient();
+  const customCategories = await fetchCustomCategories(supabase);
 
   if (categoryKey && categoryKey !== "ejuice") {
-    const category = getProductCategory(categoryKey);
+    const category = getProductCategory(categoryKey) ?? customCategories.find((c) => c.key === categoryKey);
     if (!category) redirect("/inventory/new");
 
     const { data: brandRows } = await supabase
@@ -134,6 +155,35 @@ export default async function NewProductPage({
             </Card>
           </Link>
         ))}
+        {customCategories.map((c) => (
+          <div key={c.key} className="relative">
+            <Link href={`/inventory/new?category=${c.key}`}>
+              <Card padding="lg" className="h-full text-center transition-shadow hover:shadow-sm">
+                <span className="heading text-lg">{c.label}</span>
+              </Card>
+            </Link>
+            {profile.role === "owner" && (
+              <ActionButton
+                action={archiveCustomCategoryAction.bind(null, c.key)}
+                confirmMessage={`Archive "${c.label}"? It won't show up when adding new products, but existing ones keep this category.`}
+                className="absolute right-2 top-2 text-xs text-muted hover:text-error"
+                errorClassName="absolute right-2 top-8 w-32 text-right text-xs text-error"
+              >
+                ✕
+              </ActionButton>
+            )}
+          </div>
+        ))}
+        {profile.role === "owner" && (
+          <Link href="/inventory/new?mode=new-category">
+            <Card
+              padding="lg"
+              className="h-full border-dashed text-center transition-shadow hover:shadow-sm"
+            >
+              <span className="heading text-lg text-muted">+ Add category</span>
+            </Card>
+          </Link>
+        )}
       </div>
       {profile.role === "owner" && (
         <Link
