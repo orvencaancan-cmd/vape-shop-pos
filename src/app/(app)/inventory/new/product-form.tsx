@@ -1,15 +1,15 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { createProductAction, type ActionState } from "../actions";
 import { Input, Select, Textarea, Label } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
+import { PRODUCT_CATEGORIES } from "@/lib/inventory/product-categories";
 
 const initialState: ActionState = {};
 
 export function NewProductForm() {
   const [state, formAction, pending] = useActionState(createProductAction, initialState);
-  const [category, setCategory] = useState<"ejuice" | "accessory">("ejuice");
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -23,26 +23,15 @@ export function NewProductForm() {
       </label>
       <label className="flex flex-col gap-1.5">
         <Label>Category</Label>
-        <Select
-          name="category"
-          value={category}
-          onChange={(e) => setCategory(e.target.value as "ejuice" | "accessory")}
-        >
+        <Select name="category" defaultValue="ejuice">
           <option value="ejuice">E-juice</option>
-          <option value="accessory">Accessory</option>
+          {PRODUCT_CATEGORIES.map((c) => (
+            <option key={c.dbCategory} value={c.dbCategory}>
+              {c.label}
+            </option>
+          ))}
         </Select>
       </label>
-      {category === "accessory" && (
-        <label className="flex flex-col gap-1.5">
-          <Label>Subcategory (optional)</Label>
-          <Input name="subcategory" list="subcategory-suggestions" placeholder="e.g. Cartridge" />
-          <datalist id="subcategory-suggestions">
-            <option value="Cartridge" />
-            <option value="Coil" />
-            <option value="Battery" />
-          </datalist>
-        </label>
-      )}
       <label className="flex flex-col gap-1.5">
         <Label>Description (optional)</Label>
         <Textarea name="description" />

@@ -46,7 +46,7 @@ export default async function AuditPage() {
         id: v.id as string,
         productName: product.name as string,
         brand: (product.brand as string | null) ?? null,
-        category: product.category as "ejuice" | "accessory",
+        category: product.category as string,
         label: variantLabel(v),
         stockQty: v.stock_qty as number,
         cost: Number(v.cost),

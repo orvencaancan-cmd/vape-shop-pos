@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { createAccessoryBatchAction, type ActionState } from "../actions";
+import { createCategoryBatchAction, type ActionState } from "../actions";
 import { Input, Label } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
-type ClientSubcategory = {
+type ClientCategory = {
   key: string;
   label: string;
   listLabel: string;
@@ -17,21 +17,21 @@ type ClientSubcategory = {
 const initialState: ActionState = {};
 
 export function NewAccessoryBatchForm({
-  subcategory,
+  category,
   brands,
   role,
 }: {
-  subcategory: ClientSubcategory;
+  category: ClientCategory;
   brands: string[];
   role: "owner" | "staff";
 }) {
-  const [state, formAction, pending] = useActionState(createAccessoryBatchAction, initialState);
+  const [state, formAction, pending] = useActionState(createCategoryBatchAction, initialState);
   const [rows, setRows] = useState<number[]>([0, 1]);
   const [nextRowId, setNextRowId] = useState(2);
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
-      <input type="hidden" name="subcategoryKey" value={subcategory.key} />
+      <input type="hidden" name="categoryKey" value={category.key} />
 
       <label className="flex flex-col gap-1.5">
         <Label>Brand (optional)</Label>
@@ -44,12 +44,12 @@ export function NewAccessoryBatchForm({
       </label>
 
       <div>
-        <Label>{subcategory.listLabel}</Label>
-        <p className="mt-1 text-xs text-muted">{subcategory.listHelp}</p>
+        <Label>{category.listLabel}</Label>
+        <p className="mt-1 text-xs text-muted">{category.listHelp}</p>
         <div className="mt-2 flex flex-col gap-2">
           {rows.map((rowId, i) => (
             <div key={rowId} className="flex items-center gap-2">
-              <Input name="items" placeholder={`${subcategory.listLabel} ${i + 1}`} />
+              <Input name="items" placeholder={`${category.listLabel} ${i + 1}`} />
               {rows.length > 1 && (
                 <button
                   type="button"
@@ -75,14 +75,14 @@ export function NewAccessoryBatchForm({
         </button>
       </div>
 
-      {subcategory.variantDimension?.inputType === "checklist" && (
+      {category.variantDimension?.inputType === "checklist" && (
         <div>
-          <Label>{subcategory.variantDimension.label}</Label>
+          <Label>{category.variantDimension.label}</Label>
           <p className="mt-1 text-xs text-muted">
             Each item listed above gets one variant per option checked here.
           </p>
           <div className="mt-2 flex flex-wrap gap-4">
-            {subcategory.variantDimension.options.map((opt) => (
+            {category.variantDimension.options.map((opt) => (
               <label key={opt.value} className="flex items-center gap-1.5 text-sm text-ink">
                 <input type="checkbox" name="variantOptions" value={opt.value} defaultChecked />
                 {opt.label}
@@ -92,14 +92,14 @@ export function NewAccessoryBatchForm({
         </div>
       )}
 
-      {subcategory.variantDimension?.inputType === "freeText" && (
+      {category.variantDimension?.inputType === "freeText" && (
         <label className="flex flex-col gap-1.5">
-          <Label>{subcategory.variantDimension.label}</Label>
+          <Label>{category.variantDimension.label}</Label>
           <p className="mt-1 text-xs text-muted">
-            Each item listed above gets one variant per {subcategory.variantDimension.label.toLowerCase()}
+            Each item listed above gets one variant per {category.variantDimension.label.toLowerCase()}
             , separated by commas.
           </p>
-          <Input name="variantOptionsText" placeholder={subcategory.variantDimension.placeholder} />
+          <Input name="variantOptionsText" placeholder={category.variantDimension.placeholder} />
         </label>
       )}
 
@@ -128,7 +128,7 @@ export function NewAccessoryBatchForm({
       {state.error && <p className="text-sm text-error">{state.error}</p>}
 
       <Button type="submit" disabled={pending}>
-        {pending ? "Creating…" : `Create ${subcategory.label.toLowerCase()}`}
+        {pending ? "Creating…" : `Create ${category.label.toLowerCase()}`}
       </Button>
     </form>
   );

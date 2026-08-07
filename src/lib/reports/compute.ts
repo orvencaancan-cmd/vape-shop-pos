@@ -13,7 +13,7 @@ export type SaleItemRow = {
     for_device: string | null;
     ohms: number | null;
     product_id: string;
-    products: { name: string; brand: string | null; category: "ejuice" | "accessory" } | null;
+    products: { name: string; brand: string | null; category: string } | null;
   } | null;
 };
 
@@ -40,7 +40,7 @@ export type VariantRow = {
   cost: number;
   price: number;
   product_id: string;
-  products: { name: string; category: "ejuice" | "accessory"; archived: boolean } | null;
+  products: { name: string; category: string; archived: boolean } | null;
 };
 
 export type ReceiptRow = {

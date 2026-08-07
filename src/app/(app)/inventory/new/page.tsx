@@ -7,12 +7,12 @@ import { NewProductForm } from "./product-form";
 import { NewFlavorBatchForm } from "./flavor-batch-form";
 import { NewFlavorPodBatchForm } from "./flavor-pod-batch-form";
 import { NewAccessoryBatchForm } from "./accessory-batch-form";
-import { ACCESSORY_SUBCATEGORIES, getAccessorySubcategory } from "@/lib/inventory/accessory-subcategories";
+import { PRODUCT_CATEGORIES, getProductCategory } from "@/lib/inventory/product-categories";
 
 export default async function NewProductPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mode?: string; category?: string; subcategory?: string }>;
+  searchParams: Promise<{ mode?: string; category?: string }>;
 }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
@@ -21,7 +21,7 @@ export default async function NewProductPage({
     redirect("/dashboard");
   }
 
-  const { mode, category, subcategory: subcategoryKey } = await searchParams;
+  const { mode, category: categoryKey } = await searchParams;
 
   if (mode === "single") {
     if (profile.role !== "owner") redirect("/inventory/new");
@@ -34,9 +34,9 @@ export default async function NewProductPage({
 
   const supabase = await createClient();
 
-  if (category === "accessory" && subcategoryKey) {
-    const subcategory = getAccessorySubcategory(subcategoryKey);
-    if (!subcategory) redirect("/inventory/new?category=accessory");
+  if (categoryKey && categoryKey !== "ejuice") {
+    const category = getProductCategory(categoryKey);
+    if (!category) redirect("/inventory/new");
 
     const { data: brandRows } = await supabase
       .from("products")
@@ -45,13 +45,13 @@ export default async function NewProductPage({
       .not("brand", "is", null);
     const brands = [...new Set((brandRows ?? []).map((r) => r.brand as string))].sort();
 
-    if (subcategoryKey === "flavor-pod") {
+    if (categoryKey === "flavor-pod") {
       return (
         <PageShell
           title="Flavor Pods"
           subtitle="Pick a brand, then list the flavors — each becomes its own product."
-          backHref="/inventory/new?category=accessory"
-          backLabel="Change accessory type"
+          backHref="/inventory/new"
+          backLabel="Change category"
         >
           <NewFlavorPodBatchForm brands={brands} role={profile.role} />
         </PageShell>
@@ -60,29 +60,29 @@ export default async function NewProductPage({
 
     return (
       <PageShell
-        title={`Add ${subcategory.label.toLowerCase()}`}
+        title={`Add ${category.label.toLowerCase()}`}
         subtitle="Pick a brand, list the items, and check off any options that apply — every combination is created at once."
-        backHref="/inventory/new?category=accessory"
-        backLabel="Change accessory type"
+        backHref="/inventory/new"
+        backLabel="Change category"
       >
         <NewAccessoryBatchForm
-          subcategory={{
-            key: subcategory.key,
-            label: subcategory.label,
-            listLabel: subcategory.listLabel,
-            listHelp: subcategory.listHelp,
+          category={{
+            key: category.key,
+            label: category.label,
+            listLabel: category.listLabel,
+            listHelp: category.listHelp,
             variantDimension:
-              subcategory.variantDimension?.inputType === "checklist"
+              category.variantDimension?.inputType === "checklist"
                 ? {
-                    label: subcategory.variantDimension.label,
+                    label: category.variantDimension.label,
                     inputType: "checklist",
-                    options: subcategory.variantDimension.options,
+                    options: category.variantDimension.options,
                   }
-                : subcategory.variantDimension?.inputType === "freeText"
+                : category.variantDimension?.inputType === "freeText"
                   ? {
-                      label: subcategory.variantDimension.label,
+                      label: category.variantDimension.label,
                       inputType: "freeText",
-                      placeholder: subcategory.variantDimension.placeholder,
+                      placeholder: category.variantDimension.placeholder,
                     }
                   : undefined,
           }}
@@ -93,26 +93,7 @@ export default async function NewProductPage({
     );
   }
 
-  if (category === "accessory") {
-    return (
-      <PageShell title="What kind of accessory?" backHref="/inventory/new" backLabel="Change category">
-        <div className="grid grid-cols-2 gap-3">
-          {ACCESSORY_SUBCATEGORIES.map((s) => (
-            <Link key={s.key} href={`/inventory/new?category=accessory&subcategory=${s.key}`}>
-              <Card
-                padding="md"
-                className="h-full text-center transition-shadow hover:shadow-sm"
-              >
-                <span className="font-medium text-ink">{s.label}</span>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </PageShell>
-    );
-  }
-
-  if (category === "ejuice") {
+  if (categoryKey === "ejuice") {
     const { data: brandRows } = await supabase
       .from("products")
       .select("brand")
@@ -146,11 +127,13 @@ export default async function NewProductPage({
             <span className="heading text-lg">E-juice</span>
           </Card>
         </Link>
-        <Link href="/inventory/new?category=accessory">
-          <Card padding="lg" className="h-full text-center transition-shadow hover:shadow-sm">
-            <span className="heading text-lg">Accessory</span>
-          </Card>
-        </Link>
+        {PRODUCT_CATEGORIES.map((c) => (
+          <Link key={c.key} href={`/inventory/new?category=${c.key}`}>
+            <Card padding="lg" className="h-full text-center transition-shadow hover:shadow-sm">
+              <span className="heading text-lg">{c.label}</span>
+            </Card>
+          </Link>
+        ))}
       </div>
       {profile.role === "owner" && (
         <Link

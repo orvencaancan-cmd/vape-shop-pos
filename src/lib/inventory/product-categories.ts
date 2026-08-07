@@ -1,10 +1,19 @@
-export type AccessorySubcategoryKey =
+// Replaces the old two-level "Accessory > subcategory" scheme -- every
+// former accessory subcategory is now a first-class product category in
+// its own right, stored directly in products.category (see migration
+// 0047_product_categories.sql). "ejuice" isn't listed here since it has
+// its own dedicated flow (Add E-juice) and no variant-dimension config;
+// this list covers everything else, including "Other" as the catch-all
+// for anything that doesn't fit one of the specific types.
+
+export type ProductCategoryKey =
   | "cartridge"
   | "flavor-pod"
   | "device"
   | "pod-device"
   | "wire"
-  | "cotton";
+  | "cotton"
+  | "other";
 
 type ChecklistDimension = {
   label: string;
@@ -22,10 +31,10 @@ type FreeTextDimension = {
   formatValue?: (raw: string) => string;
 };
 
-export type AccessorySubcategoryConfig = {
-  key: AccessorySubcategoryKey;
+export type ProductCategoryConfig = {
+  key: ProductCategoryKey;
   label: string;
-  dbSubcategory: string;
+  dbCategory: string;
   listLabel: string;
   listHelp: string;
   nameTemplate: (listValue: string) => string;
@@ -33,11 +42,11 @@ export type AccessorySubcategoryConfig = {
   variantDimension?: ChecklistDimension | FreeTextDimension;
 };
 
-export const ACCESSORY_SUBCATEGORIES: AccessorySubcategoryConfig[] = [
+export const PRODUCT_CATEGORIES: ProductCategoryConfig[] = [
   {
     key: "cartridge",
     label: "Cartridge",
-    dbSubcategory: "Cartridge",
+    dbCategory: "Cartridge",
     listLabel: "For what device",
     listHelp: "One device per line — each becomes its own product.",
     nameTemplate: (device) => `${device} Cartridge`,
@@ -52,7 +61,7 @@ export const ACCESSORY_SUBCATEGORIES: AccessorySubcategoryConfig[] = [
   {
     key: "flavor-pod",
     label: "Flavor Pods",
-    dbSubcategory: "Flavor Pod",
+    dbCategory: "Flavor Pod",
     listLabel: "For what device",
     listHelp: "One device per line — each becomes its own product.",
     nameTemplate: (device) => `${device} Flavor Pod`,
@@ -67,7 +76,7 @@ export const ACCESSORY_SUBCATEGORIES: AccessorySubcategoryConfig[] = [
   {
     key: "device",
     label: "Device",
-    dbSubcategory: "Device",
+    dbCategory: "Device",
     listLabel: "Model",
     listHelp: "One model per line — each becomes its own product.",
     nameTemplate: (model) => model,
@@ -82,7 +91,7 @@ export const ACCESSORY_SUBCATEGORIES: AccessorySubcategoryConfig[] = [
   {
     key: "pod-device",
     label: "Pod Device",
-    dbSubcategory: "Pod Device",
+    dbCategory: "Pod Device",
     listLabel: "Model",
     listHelp: "One model per line — each becomes its own product.",
     nameTemplate: (model) => model,
@@ -91,7 +100,7 @@ export const ACCESSORY_SUBCATEGORIES: AccessorySubcategoryConfig[] = [
   {
     key: "wire",
     label: "Wire",
-    dbSubcategory: "Wire",
+    dbCategory: "Wire",
     listLabel: "Type",
     listHelp: "One wire type per line — each becomes its own product.",
     nameTemplate: (type) => type,
@@ -107,7 +116,16 @@ export const ACCESSORY_SUBCATEGORIES: AccessorySubcategoryConfig[] = [
   {
     key: "cotton",
     label: "Cotton",
-    dbSubcategory: "Cotton",
+    dbCategory: "Cotton",
+    listLabel: "Name",
+    listHelp: "One product per line.",
+    nameTemplate: (name) => name,
+    setForDevice: false,
+  },
+  {
+    key: "other",
+    label: "Other",
+    dbCategory: "Other",
     listLabel: "Name",
     listHelp: "One product per line.",
     nameTemplate: (name) => name,
@@ -115,13 +133,21 @@ export const ACCESSORY_SUBCATEGORIES: AccessorySubcategoryConfig[] = [
   },
 ];
 
-export function getAccessorySubcategory(key: string): AccessorySubcategoryConfig | undefined {
-  return ACCESSORY_SUBCATEGORIES.find((s) => s.key === key);
+// The full set of valid products.category values, ejuice included --
+// shared by Zod schemas and anywhere a flat "which categories exist" list
+// is needed (filter tabs, category pickers).
+export const ALL_CATEGORIES = ["ejuice", ...PRODUCT_CATEGORIES.map((c) => c.dbCategory)];
+
+export function getProductCategory(key: string): ProductCategoryConfig | undefined {
+  return PRODUCT_CATEGORIES.find((c) => c.key === key);
 }
 
-export function getAccessorySubcategoryByDbName(
-  dbSubcategory: string,
-): AccessorySubcategoryConfig | undefined {
-  const normalized = dbSubcategory.trim().toLowerCase();
-  return ACCESSORY_SUBCATEGORIES.find((s) => s.dbSubcategory.toLowerCase() === normalized);
+export function getProductCategoryByDbName(dbCategory: string): ProductCategoryConfig | undefined {
+  const normalized = dbCategory.trim().toLowerCase();
+  return PRODUCT_CATEGORIES.find((c) => c.dbCategory.toLowerCase() === normalized);
+}
+
+export function categoryLabel(dbCategory: string): string {
+  if (dbCategory === "ejuice") return "E-juice";
+  return getProductCategoryByDbName(dbCategory)?.label ?? dbCategory;
 }

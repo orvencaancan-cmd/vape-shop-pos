@@ -8,6 +8,7 @@ import { groupByBrand } from "@/lib/group-by-brand";
 import { matchesSearch } from "@/lib/search-match";
 import { addFloatingStockAction, createInventoryTransferAction } from "./actions";
 import type { FloatingVariant } from "@/lib/inventory-transfer";
+import { ALL_CATEGORIES, PRODUCT_CATEGORIES, categoryLabel } from "@/lib/inventory/product-categories";
 
 type CartLine = { floatingVariantId: string; label: string; available: number; qty: string };
 
@@ -21,14 +22,14 @@ export function FloatingInventoryPanel({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<"all" | "ejuice" | "accessory">("all");
+  const [category, setCategory] = useState<string>("all");
   const [showAddForm, setShowAddForm] = useState(false);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [destinationShopId, setDestinationShopId] = useState("");
   const [note, setNote] = useState("");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
-  const [addCategory, setAddCategory] = useState<"ejuice" | "accessory">("ejuice");
+  const [addCategory, setAddCategory] = useState<string>("ejuice");
   const [addBrand, setAddBrand] = useState("");
   const [addName, setAddName] = useState("");
   const [addFlavor, setAddFlavor] = useState("");
@@ -44,7 +45,7 @@ export function FloatingInventoryPanel({
   const filtered = catalog.filter((v) => {
     if (category !== "all" && v.category !== category) return false;
     if (search.trim()) {
-      const haystack = `${v.productName} ${v.brand ?? ""} ${v.flavor ?? ""} ${v.subcategory ?? ""}`;
+      const haystack = `${v.productName} ${v.brand ?? ""} ${v.flavor ?? ""} ${v.category}`;
       if (!matchesSearch(haystack, search)) return false;
     }
     return true;
@@ -104,7 +105,6 @@ export function FloatingInventoryPanel({
         category: addCategory,
         brand: addBrand.trim() || null,
         productName: addName.trim(),
-        subcategory: null,
         flavor: addFlavor.trim() || null,
         nicotineMg: addNicotine.trim() ? Number(addNicotine) : null,
         size: addSize.trim() || null,
@@ -176,11 +176,15 @@ export function FloatingInventoryPanel({
           <div className="flex flex-wrap gap-2">
             <select
               value={addCategory}
-              onChange={(e) => setAddCategory(e.target.value as "ejuice" | "accessory")}
+              onChange={(e) => setAddCategory(e.target.value)}
               className="rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
             >
               <option value="ejuice">E-juice</option>
-              <option value="accessory">Accessory</option>
+              {PRODUCT_CATEGORIES.map((c) => (
+                <option key={c.dbCategory} value={c.dbCategory}>
+                  {c.label}
+                </option>
+              ))}
             </select>
             <input
               placeholder="Brand"
@@ -293,7 +297,7 @@ export function FloatingInventoryPanel({
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
         />
-        {(["all", "ejuice", "accessory"] as const).map((c) => (
+        {["all", ...ALL_CATEGORIES].map((c) => (
           <button
             key={c}
             type="button"
@@ -302,7 +306,7 @@ export function FloatingInventoryPanel({
               category === c ? "bg-primary text-on-primary" : "bg-canvas-strong text-body hover:text-ink"
             }`}
           >
-            {c === "all" ? "All" : c === "ejuice" ? "E-juice" : "Accessories"}
+            {c === "all" ? "All" : categoryLabel(c)}
           </button>
         ))}
       </div>

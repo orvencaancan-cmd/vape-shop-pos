@@ -48,10 +48,9 @@ export async function fetchBranchInventoryAction(shopId: string): Promise<Branch
 }
 
 export async function addFloatingStockAction(input: {
-  category: "ejuice" | "accessory";
+  category: string;
   brand: string | null;
   productName: string;
-  subcategory: string | null;
   flavor: string | null;
   nicotineMg: number | null;
   size: string | null;
@@ -71,7 +70,6 @@ export async function addFloatingStockAction(input: {
     p_category: input.category,
     p_brand: input.brand,
     p_product_name: input.productName,
-    p_subcategory: input.subcategory,
     p_flavor: input.flavor,
     p_nicotine_mg: input.nicotineMg,
     p_size: input.size,

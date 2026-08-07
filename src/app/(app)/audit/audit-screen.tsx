@@ -11,12 +11,13 @@ import {
 } from "./actions";
 import { formatCurrency } from "@/lib/currency";
 import { groupByBrand } from "@/lib/group-by-brand";
+import { ALL_CATEGORIES, categoryLabel } from "@/lib/inventory/product-categories";
 
 export type AuditVariant = {
   id: string;
   productName: string;
   brand: string | null;
-  category: "ejuice" | "accessory";
+  category: string;
   label: string;
   stockQty: number;
   cost: number;
@@ -80,7 +81,7 @@ export function AuditScreen({
     () => new Map(existingCounts.map((c) => [c.variantId, c.countedQty])),
   );
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<"all" | "ejuice" | "accessory">("all");
+  const [category, setCategory] = useState<string>("all");
   const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(
@@ -226,7 +227,7 @@ export function AuditScreen({
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1 rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
           />
-          {(["all", "ejuice", "accessory"] as const).map((c) => (
+          {["all", ...ALL_CATEGORIES].map((c) => (
             <button
               key={c}
               onClick={() => setCategory(c)}
@@ -236,7 +237,7 @@ export function AuditScreen({
                   : "bg-canvas-strong text-body hover:text-ink"
               }`}
             >
-              {c === "all" ? "All" : c === "ejuice" ? "E-juice" : "Accessories"}
+              {c === "all" ? "All" : categoryLabel(c)}
             </button>
           ))}
         </div>

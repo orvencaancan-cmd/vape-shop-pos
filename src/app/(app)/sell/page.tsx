@@ -40,7 +40,7 @@ export default async function SellPage() {
         productId: v.product_id as string,
         productName: product.name as string,
         brand: (product.brand as string | null) ?? null,
-        category: product.category as "ejuice" | "accessory",
+        category: product.category as string,
         label: variantLabel(v),
         price: Number(v.price),
         stockQty: v.stock_qty as number,

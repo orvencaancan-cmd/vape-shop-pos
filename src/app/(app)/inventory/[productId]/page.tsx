@@ -25,7 +25,7 @@ export default async function ProductPage({
   const supabase = await createClient();
   const { data: product } = await supabase
     .from("products")
-    .select("id, name, brand, category, subcategory, description, supplier_id, suppliers(name)")
+    .select("id, name, brand, category, description, supplier_id, suppliers(name)")
     .eq("id", productId)
     .eq("shop_id", profile.shopId)
     .maybeSingle();
@@ -63,7 +63,6 @@ export default async function ProductPage({
             name={product.name}
             brand={product.brand}
             category={product.category}
-            subcategory={product.subcategory}
             description={product.description}
             supplier={supplierRow?.name ?? null}
             supplierNames={supplierNames}
@@ -84,7 +83,6 @@ export default async function ProductPage({
               <VariantForm
                 productId={product.id}
                 productCategory={product.category}
-                productSubcategory={product.subcategory}
                 variantId={v.id}
                 values={{
                   flavor: v.flavor,
@@ -117,7 +115,6 @@ export default async function ProductPage({
           <VariantForm
             productId={product.id}
             productCategory={product.category}
-            productSubcategory={product.subcategory}
           />
         </div>
       </section>

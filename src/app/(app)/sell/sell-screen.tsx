@@ -20,13 +20,14 @@ import { Stat } from "@/components/ui/stat";
 import { useRealtimeSalesRefresh } from "@/lib/supabase/use-realtime-sales-refresh";
 import { groupByBrand } from "@/lib/group-by-brand";
 import { matchesSearch } from "@/lib/search-match";
+import { ALL_CATEGORIES, categoryLabel } from "@/lib/inventory/product-categories";
 
 type Variant = {
   id: string;
   productId: string;
   productName: string;
   brand: string | null;
-  category: "ejuice" | "accessory";
+  category: string;
   label: string;
   price: number;
   stockQty: number;
@@ -141,7 +142,7 @@ export function SellScreen({
   useEffect(() => {
     searchInputRef.current?.focus();
   }, []);
-  const [category, setCategory] = useState<"all" | "ejuice" | "accessory">("all");
+  const [category, setCategory] = useState<string>("all");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "gcash">("cash");
   const [discountMode, setDiscountMode] = useState<"amount" | "percent">("amount");
@@ -1001,7 +1002,7 @@ export function SellScreen({
               </button>
             )}
           </div>
-          {(["all", "ejuice", "accessory"] as const).map((c) => (
+          {["all", ...ALL_CATEGORIES].map((c) => (
             <button
               key={c}
               onClick={() => setCategory(c)}
@@ -1011,7 +1012,7 @@ export function SellScreen({
                   : "bg-canvas-strong text-body hover:text-ink"
               }`}
             >
-              {c === "all" ? "All" : c === "ejuice" ? "E-juice" : "Accessories"}
+              {c === "all" ? "All" : categoryLabel(c)}
             </button>
           ))}
         </div>

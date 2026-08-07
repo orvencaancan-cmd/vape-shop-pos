@@ -21,7 +21,7 @@ export default async function InventoryPage() {
     supabase
       .from("variants")
       .select(
-        "id, product_id, flavor, nicotine_mg, size, for_device, ohms, price, cost, stock_qty, low_stock_threshold, products(name, brand, category, subcategory, archived, suppliers(name))",
+        "id, product_id, flavor, nicotine_mg, size, for_device, ohms, price, cost, stock_qty, low_stock_threshold, products(name, brand, category, archived, suppliers(name))",
       )
       .eq("shop_id", profile.shopId),
     supabase.from("suppliers").select("name").eq("shop_id", profile.shopId).order("name"),
@@ -55,8 +55,7 @@ export default async function InventoryPage() {
         productId: v.product_id as string,
         productName: product.name as string,
         brand: (product.brand as string | null) ?? null,
-        category: product.category as "ejuice" | "accessory",
-        subcategory: (product.subcategory as string | null) ?? null,
+        category: product.category as string,
         flavor: v.flavor as string | null,
         nicotineMg: v.nicotine_mg as number | null,
         size: v.size as string | null,

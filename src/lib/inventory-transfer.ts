@@ -5,8 +5,7 @@ export type FloatingVariant = {
   productId: string;
   productName: string;
   brand: string | null;
-  category: "ejuice" | "accessory";
-  subcategory: string | null;
+  category: string;
   flavor: string | null;
   nicotineMg: number | null;
   size: string | null;
@@ -29,7 +28,7 @@ export async function fetchFloatingCatalog(
   const { data } = await supabase
     .from("floating_variants")
     .select(
-      "id, product_id, flavor, nicotine_mg, size, for_device, ohms, sku, cost, price, stock_qty, low_stock_threshold, floating_products(name, brand, category, subcategory, archived)",
+      "id, product_id, flavor, nicotine_mg, size, for_device, ohms, sku, cost, price, stock_qty, low_stock_threshold, floating_products(name, brand, category, archived)",
     )
     .order("created_at");
 
@@ -42,8 +41,7 @@ export async function fetchFloatingCatalog(
         productId: v.product_id as string,
         productName: product.name as string,
         brand: (product.brand as string | null) ?? null,
-        category: product.category as "ejuice" | "accessory",
-        subcategory: (product.subcategory as string | null) ?? null,
+        category: product.category as string,
         flavor: v.flavor as string | null,
         nicotineMg: v.nicotine_mg != null ? Number(v.nicotine_mg) : null,
         size: v.size as string | null,

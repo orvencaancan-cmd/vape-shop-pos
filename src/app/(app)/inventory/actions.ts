@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
-import { getAccessorySubcategory } from "@/lib/inventory/accessory-subcategories";
+import { getProductCategory, ALL_CATEGORIES } from "@/lib/inventory/product-categories";
 import { variantLabel } from "@/lib/variant-label";
 
 export type ActionState = { error?: string };
@@ -137,8 +137,7 @@ export async function correctStockAction(
 const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   brand: z.string().optional(),
-  category: z.enum(["ejuice", "accessory"]),
-  subcategory: z.string().optional(),
+  category: z.enum(ALL_CATEGORIES as [string, ...string[]]),
   description: z.string().optional(),
   supplier: z.string().optional(),
 });
@@ -151,7 +150,6 @@ export async function createProductAction(
     name: formData.get("name"),
     brand: formData.get("brand") ?? "",
     category: formData.get("category"),
-    subcategory: formData.get("subcategory") ?? "",
     description: formData.get("description") ?? "",
   });
   if (!parsed.success) {
@@ -184,7 +182,6 @@ export async function createProductAction(
       name: parsed.data.name,
       brand: parsed.data.brand || null,
       category: parsed.data.category,
-      subcategory: parsed.data.category === "accessory" ? parsed.data.subcategory || null : null,
       description: parsed.data.description,
     })
     .select("id")
@@ -203,7 +200,6 @@ export async function updateProductAction(
     name: formData.get("name"),
     brand: formData.get("brand") ?? "",
     category: formData.get("category"),
-    subcategory: formData.get("subcategory") ?? "",
     description: formData.get("description") ?? "",
     supplier: formData.get("supplier") ?? "",
   });
@@ -224,7 +220,6 @@ export async function updateProductAction(
       name: parsed.data.name,
       brand: parsed.data.brand || null,
       category: parsed.data.category,
-      subcategory: parsed.data.category === "accessory" ? parsed.data.subcategory || null : null,
       description: parsed.data.description,
       supplier_id: resolvedSupplier.id,
     })
@@ -314,17 +309,18 @@ export async function updateBrandCostAction(
   return {};
 }
 
-// Accessory counterpart to updateBrandCostAction above -- accessories have no
-// nicotine dimension, but a brand can span several distinct accessory types
-// (e.g. OXVA sells both a Device and a Cartridge), and those types don't
-// share a cost just because they share a brand. Scoped by subcategory
-// instead, so "Cartridge cost" and "Device cost" are edited separately
-// rather than one flat field silently overwriting every accessory under the
-// brand (which was the bug -- an Oneo Cartridge and an XLIM Cartridge got
-// the same cost purely because both happened to have no nicotine level).
-export async function updateAccessoryCostAction(
+// Accessory-category counterpart to updateBrandCostAction above -- these
+// categories have no nicotine dimension, but a brand can span several
+// distinct categories (e.g. OXVA sells both a Device and a Cartridge), and
+// those don't share a cost just because they share a brand. Scoped by
+// category instead of just brand, so "Cartridge cost" and "Device cost"
+// are edited separately rather than one flat field silently overwriting
+// everything under the brand (which was the bug -- an Oneo Cartridge and
+// an XLIM Cartridge got the same cost purely because both happened to have
+// no nicotine level).
+export async function updateCategoryCostAction(
   brand: string | null,
-  subcategory: string | null,
+  category: string,
   formData: FormData,
 ): Promise<ActionState> {
   const profile = await getCurrentProfile();
@@ -340,10 +336,9 @@ export async function updateAccessoryCostAction(
     .from("products")
     .select("id")
     .eq("shop_id", profile.shopId)
-    .eq("category", "accessory")
+    .eq("category", category)
     .eq("archived", false);
   productQuery = brand ? productQuery.eq("brand", brand) : productQuery.is("brand", null);
-  productQuery = subcategory ? productQuery.eq("subcategory", subcategory) : productQuery.is("subcategory", null);
   const { data: products } = await productQuery;
   const productIds = (products ?? []).map((p) => p.id);
   if (productIds.length === 0) return {};
@@ -790,8 +785,7 @@ export async function createFlavorPodBatchAction(
     .from("products")
     .select("id, name")
     .eq("shop_id", shopId)
-    .eq("category", "accessory")
-    .eq("subcategory", "Flavor Pod")
+    .eq("category", "Flavor Pod")
     .eq("archived", false)
     .eq("brand", brand);
   const productIdByName = new Map(
@@ -808,8 +802,7 @@ export async function createFlavorPodBatchAction(
           shop_id: shopId,
           name,
           brand,
-          category: "accessory" as const,
-          subcategory: "Flavor Pod",
+          category: "Flavor Pod" as const,
         })),
       )
       .select("id");
@@ -857,8 +850,8 @@ export async function createFlavorPodBatchAction(
   redirect("/inventory");
 }
 
-const accessoryBatchSchema = z.object({
-  subcategoryKey: z.string().min(1),
+const categoryBatchSchema = z.object({
+  categoryKey: z.string().min(1),
   brand: z.string().optional(),
   items: z.array(z.string()).transform((arr) => arr.map((f) => f.trim()).filter(Boolean)),
   variantOptions: z.array(z.string()).optional().default([]),
@@ -868,12 +861,12 @@ const accessoryBatchSchema = z.object({
   lowStockThreshold: z.coerce.number().int().nonnegative(),
 });
 
-export async function createAccessoryBatchAction(
+export async function createCategoryBatchAction(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const parsed = accessoryBatchSchema.safeParse({
-    subcategoryKey: formData.get("subcategoryKey"),
+  const parsed = categoryBatchSchema.safeParse({
+    categoryKey: formData.get("categoryKey"),
     brand: formData.get("brand") ?? "",
     items: formData.getAll("items"),
     variantOptions: formData.getAll("variantOptions"),
@@ -886,7 +879,7 @@ export async function createAccessoryBatchAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
   const {
-    subcategoryKey,
+    categoryKey,
     brand,
     items,
     variantOptions,
@@ -896,12 +889,12 @@ export async function createAccessoryBatchAction(
     lowStockThreshold,
   } = parsed.data;
   if (items.length === 0) {
-    return { error: `Add at least one ${subcategoryKey === "cotton" ? "product" : "item"}` };
+    return { error: `Add at least one ${categoryKey === "cotton" || categoryKey === "other" ? "product" : "item"}` };
   }
 
-  const subcategory = getAccessorySubcategory(subcategoryKey);
-  if (!subcategory) {
-    return { error: "Invalid accessory type" };
+  const category = getProductCategory(categoryKey);
+  if (!category) {
+    return { error: "Invalid category" };
   }
 
   const supabase = await createClient();
@@ -910,16 +903,15 @@ export async function createAccessoryBatchAction(
   const shopId = profile.shopId;
   const effectiveCost = profile.role === "owner" ? cost : 0;
 
-  const productNames = items.map((item) => subcategory.nameTemplate(item));
+  const productNames = items.map((item) => category.nameTemplate(item));
 
   // Reuse an existing product for any item name that already exists under this
-  // brand/subcategory, instead of creating a second, visually-duplicate card.
+  // brand/category, instead of creating a second, visually-duplicate card.
   let existingQuery = supabase
     .from("products")
     .select("id, name")
     .eq("shop_id", shopId)
-    .eq("category", "accessory")
-    .eq("subcategory", subcategory.dbSubcategory)
+    .eq("category", category.dbCategory)
     .eq("archived", false);
   existingQuery = brand ? existingQuery.eq("brand", brand) : existingQuery.is("brand", null);
   const { data: existingProducts } = await existingQuery;
@@ -938,8 +930,7 @@ export async function createAccessoryBatchAction(
           shop_id: shopId,
           name,
           brand: brand || null,
-          category: "accessory" as const,
-          subcategory: subcategory.dbSubcategory,
+          category: category.dbCategory,
         })),
       )
       .select("id");
@@ -948,16 +939,16 @@ export async function createAccessoryBatchAction(
   }
 
   let levels: (string | null)[];
-  if (subcategory.variantDimension?.inputType === "freeText") {
+  if (category.variantDimension?.inputType === "freeText") {
     levels = [...new Set((variantOptionsText ?? "").split(",").map((v) => v.trim()).filter(Boolean))];
-  } else if (subcategory.variantDimension) {
+  } else if (category.variantDimension) {
     levels = variantOptions;
   } else {
     levels = [null];
   }
-  if (subcategory.variantDimension && levels.length === 0) {
-    const verb = subcategory.variantDimension.inputType === "freeText" ? "Add" : "Select";
-    return { error: `${verb} at least one ${subcategory.variantDimension.label.toLowerCase()}` };
+  if (category.variantDimension && levels.length === 0) {
+    const verb = category.variantDimension.inputType === "freeText" ? "Add" : "Select";
+    return { error: `${verb} at least one ${category.variantDimension.label.toLowerCase()}` };
   }
 
   const productIds = [...new Set(productNames.map((name) => productIdByName.get(name.trim().toLowerCase())!))];
@@ -983,16 +974,16 @@ export async function createAccessoryBatchAction(
   }[] = [];
   items.forEach((item, i) => {
     const productId = productIdByName.get(productNames[i].trim().toLowerCase())!;
-    const forDevice = subcategory.setForDevice ? item : null;
+    const forDevice = category.setForDevice ? item : null;
     for (const level of levels) {
-      const ohms = subcategory.variantDimension?.field === "ohms" && level ? Number(level) : null;
+      const ohms = category.variantDimension?.field === "ohms" && level ? Number(level) : null;
       const size =
-        subcategory.variantDimension?.field === "size" && level
-          ? (subcategory.variantDimension.formatValue?.(level) ?? level)
+        category.variantDimension?.field === "size" && level
+          ? (category.variantDimension.formatValue?.(level) ?? level)
           : null;
       const flavor =
-        subcategory.variantDimension?.field === "flavor" && level
-          ? (subcategory.variantDimension.formatValue?.(level) ?? level)
+        category.variantDimension?.field === "flavor" && level
+          ? (category.variantDimension.formatValue?.(level) ?? level)
           : null;
       const key = `${productId}|${ohms ?? ""}|${size ?? ""}|${flavor ?? ""}`;
       if (seenVariantKeys.has(key)) continue;

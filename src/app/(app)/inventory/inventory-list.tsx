@@ -8,7 +8,7 @@ import {
   archiveProductAction,
   updateBrandSupplierAction,
   updateBrandCostAction,
-  updateAccessoryCostAction,
+  updateCategoryCostAction,
   addBrandFlavorsAction,
   getBrandRestockHistoryAction,
   getProductRestockHistoryAction,
@@ -18,14 +18,14 @@ import { formatCurrency } from "@/lib/currency";
 import { variantLabel } from "@/lib/variant-label";
 import { ActionButton } from "@/components/action-button";
 import { matchesSearch } from "@/lib/search-match";
+import { ALL_CATEGORIES, categoryLabel } from "@/lib/inventory/product-categories";
 
 export type InventoryVariant = {
   id: string;
   productId: string;
   productName: string;
   brand: string | null;
-  category: "ejuice" | "accessory";
-  subcategory: string | null;
+  category: string;
   flavor: string | null;
   nicotineMg: number | null;
   size: string | null;
@@ -42,8 +42,7 @@ export type InventoryVariant = {
 type ProductGroup = {
   productId: string;
   productName: string;
-  category: "ejuice" | "accessory";
-  subcategory: string | null;
+  category: string;
   variants: InventoryVariant[];
 };
 
@@ -80,8 +79,8 @@ function getBrandSupplier(products: ProductGroup[]): string | null {
 // Every distinct nicotine level found among a brand's e-juice variants, so
 // Unit cost can be edited per level (cost commonly differs by strength even
 // though every flavor at one strength shares a cost). Scoped to e-juice
-// products only -- accessories have no nicotine dimension and are scoped by
-// subcategory instead, below.
+// products only -- other categories have no nicotine dimension and are
+// scoped by category instead, below.
 function getBrandNicotineLevels(products: ProductGroup[]): number[] {
   const levels = new Set(
     products
@@ -103,21 +102,21 @@ function getBrandCostForLevel(products: ProductGroup[], nicotineMg: number): num
   return costs.size === 1 ? [...costs][0] : null;
 }
 
-// Every distinct accessory subcategory found among a brand's products (e.g.
-// a brand like OXVA can sell both a Device and a Cartridge line). Unit cost
-// is scoped per subcategory rather than flat per brand, since different
-// accessory types under one brand don't share a cost just because they
-// share a brand name.
-function getAccessorySubcategories(products: ProductGroup[]): (string | null)[] {
-  const subs = new Set(products.filter((p) => p.category === "accessory").map((p) => p.subcategory));
-  return [...subs].sort((a, b) => (a ?? "").localeCompare(b ?? ""));
+// Every distinct non-ejuice category found among a brand's products (e.g. a
+// brand like OXVA can sell both a Device and a Cartridge line). Unit cost is
+// scoped per category rather than flat per brand, since different product
+// types under one brand don't share a cost just because they share a brand
+// name.
+function getBrandCategories(products: ProductGroup[]): string[] {
+  const cats = new Set(products.filter((p) => p.category !== "ejuice").map((p) => p.category));
+  return [...cats].sort((a, b) => a.localeCompare(b));
 }
 
-// Same idea as getBrandCostForLevel, scoped to one accessory subcategory.
-function getAccessoryCostForSubcategory(products: ProductGroup[], subcategory: string | null): number | null {
+// Same idea as getBrandCostForLevel, scoped to one category.
+function getCategoryCostForBrand(products: ProductGroup[], category: string): number | null {
   const costs = new Set(
     products
-      .filter((p) => p.category === "accessory" && p.subcategory === subcategory)
+      .filter((p) => p.category === category)
       .flatMap((p) => p.variants.map((v) => v.cost)),
   );
   return costs.size === 1 ? [...costs][0] : null;
@@ -186,7 +185,7 @@ export function InventoryList({
   useEffect(() => {
     searchInputRef.current?.focus();
   }, []);
-  const [category, setCategory] = useState<"all" | "ejuice" | "accessory">("all");
+  const [category, setCategory] = useState<string>("all");
   const [brand, setBrand] = useState(ALL);
   const [flavor, setFlavor] = useState(ALL);
   const [nicotine, setNicotine] = useState(ALL);
@@ -317,7 +316,7 @@ export function InventoryList({
     if (device !== ALL && v.forDevice !== device) return false;
     if (ohms !== ALL && String(v.ohms) !== ohms) return false;
     if (search.trim()) {
-      const haystack = `${v.productName} ${v.brand ?? ""} ${v.flavor ?? ""} ${v.subcategory ?? ""} ${v.forDevice ?? ""} ${v.supplierName ?? ""}`;
+      const haystack = `${v.productName} ${v.brand ?? ""} ${v.flavor ?? ""} ${v.category} ${v.forDevice ?? ""} ${v.supplierName ?? ""}`;
       if (!matchesSearch(haystack, search)) return false;
     }
     return true;
@@ -339,7 +338,6 @@ export function InventoryList({
         productId: v.productId,
         productName: v.productName,
         category: v.category,
-        subcategory: v.subcategory,
         variants: [],
       };
       productMap.set(v.productId, group);
@@ -387,7 +385,7 @@ export function InventoryList({
             </button>
           )}
         </div>
-        {(["all", "ejuice", "accessory"] as const).map((c) => (
+        {["all", ...ALL_CATEGORIES].map((c) => (
           <button
             key={c}
             onClick={() => setCategory(c)}
@@ -397,7 +395,7 @@ export function InventoryList({
                 : "bg-canvas-strong text-body hover:text-ink"
             }`}
           >
-            {c === "all" ? "All" : c === "ejuice" ? "E-juice" : "Accessories"}
+            {c === "all" ? "All" : categoryLabel(c)}
           </button>
         ))}
       </div>
@@ -565,29 +563,29 @@ export function InventoryList({
                         </div>
                       );
                     })}
-                    {getAccessorySubcategories(brandGroup.products).map((sub) => {
-                      const errorKey = `accessory-cost-${brandGroup.brandKey}-${sub ?? "none"}`;
+                    {getBrandCategories(brandGroup.products).map((cat) => {
+                      const errorKey = `category-cost-${brandGroup.brandKey}-${cat}`;
                       return (
-                        <div key={`accessory-${sub ?? "none"}`} className="flex flex-col gap-1">
+                        <div key={`category-${cat}`} className="flex flex-col gap-1">
                           <form
                             onSubmit={handleFormSubmit(
                               errorKey,
-                              updateAccessoryCostAction.bind(
+                              updateCategoryCostAction.bind(
                                 null,
                                 brandGroup.brandKey === NO_BRAND ? null : brandGroup.brandLabel,
-                                sub,
+                                cat,
                               ),
                             )}
                             className="flex items-center gap-2"
                           >
-                            <label className="text-xs text-muted">{sub ? `${sub} cost` : "Unit cost"}</label>
+                            <label className="text-xs text-muted">{categoryLabel(cat)} cost</label>
                             <input
                               name="cost"
                               type="number"
                               step="0.01"
                               min={0}
-                              defaultValue={getAccessoryCostForSubcategory(brandGroup.products, sub) ?? ""}
-                              placeholder={sub ? `Applies to every ${sub.toLowerCase()}` : "Applies to every item"}
+                              defaultValue={getCategoryCostForBrand(brandGroup.products, cat) ?? ""}
+                              placeholder={`Applies to every ${categoryLabel(cat).toLowerCase()}`}
                               className="w-36 rounded border border-hairline bg-canvas px-2 py-0.5 text-xs text-ink placeholder:text-muted"
                             />
                             <button type="submit" className="text-xs text-primary underline underline-offset-2">
@@ -673,11 +671,9 @@ export function InventoryList({
                     <h3 className="text-sm font-medium text-ink">
                       {product.productName}{" "}
                       <span className="text-xs font-normal uppercase text-muted">
-                        {product.subcategory
-                          ? `${product.subcategory} · ${product.category}`
-                          : product.category}
+                        {categoryLabel(product.category)}
                       </span>
-                      {product.category === "accessory" &&
+                      {product.category !== "ejuice" &&
                         (() => {
                           const lastRestocked = getProductLastRestocked(product.variants);
                           return lastRestocked ? (

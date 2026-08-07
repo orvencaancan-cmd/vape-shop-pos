@@ -9,7 +9,7 @@ import {
 } from "../actions";
 import { Input, Label } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
-import { getAccessorySubcategoryByDbName } from "@/lib/inventory/accessory-subcategories";
+import { getProductCategoryByDbName } from "@/lib/inventory/product-categories";
 import { ActionButton } from "@/components/action-button";
 
 const initialState: ActionState = {};
@@ -29,13 +29,11 @@ type VariantValues = {
 export function VariantForm({
   productId,
   productCategory,
-  productSubcategory,
   variantId,
   values,
 }: {
   productId: string;
-  productCategory: "ejuice" | "accessory";
-  productSubcategory?: string | null;
+  productCategory: string;
   variantId?: string;
   values?: VariantValues;
 }) {
@@ -45,9 +43,7 @@ export function VariantForm({
   const [state, formAction, pending] = useActionState(boundAction, initialState);
   const deleteAction = variantId ? deleteVariantAction.bind(null, variantId, productId) : undefined;
   const dimension =
-    productCategory === "accessory" && productSubcategory
-      ? getAccessorySubcategoryByDbName(productSubcategory)?.variantDimension
-      : undefined;
+    productCategory !== "ejuice" ? getProductCategoryByDbName(productCategory)?.variantDimension : undefined;
   const dimensionSuggestions =
     dimension?.inputType === "checklist" ? dimension.options.map((o) => o.value) : [];
 
@@ -129,7 +125,7 @@ export function VariantForm({
           </Button>
         </div>
       </form>
-      {productCategory === "accessory" && (
+      {productCategory !== "ejuice" && (
         <datalist id="device-suggestions">
           <option value="Oneo" />
           <option value="Xlim" />
