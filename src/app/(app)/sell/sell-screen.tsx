@@ -16,7 +16,6 @@ import {
 } from "./actions";
 import { formatCurrency } from "@/lib/currency";
 import { computePaymentBreakdown } from "@/lib/reports/compute";
-import { Stat } from "@/components/ui/stat";
 import { useRealtimeSalesRefresh } from "@/lib/supabase/use-realtime-sales-refresh";
 import { groupByBrand } from "@/lib/group-by-brand";
 import { matchesSearch } from "@/lib/search-match";
@@ -981,11 +980,21 @@ export function SellScreen({
 
         <h1 className="heading mt-6 text-2xl">Sales</h1>
         {nonVoidedSales.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-4">
-            <Stat label="Sales" value={nonVoidedSales.length.toString()} />
-            <Stat label="Cash" value={formatCurrency(paymentBreakdown.cash)} />
-            <Stat label="GCash" value={formatCurrency(paymentBreakdown.gcash)} />
-            <Stat label="Total" value={formatCurrency(paymentBreakdown.total)} />
+          <div className="scrollbar-thin mt-3 flex gap-2 overflow-x-auto pb-1">
+            {[
+              { label: "Sales", value: nonVoidedSales.length.toString() },
+              { label: "Cash", value: formatCurrency(paymentBreakdown.cash) },
+              { label: "GCash", value: formatCurrency(paymentBreakdown.gcash) },
+              { label: "Total", value: formatCurrency(paymentBreakdown.total) },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="shrink-0 rounded-lg border border-hairline bg-canvas-soft px-3 py-1.5"
+              >
+                <p className="text-[10px] text-muted">{s.label}</p>
+                <p className="text-sm font-normal text-ink">{s.value}</p>
+              </div>
+            ))}
           </div>
         )}
       </div>
