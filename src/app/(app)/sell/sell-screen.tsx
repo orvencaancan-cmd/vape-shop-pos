@@ -736,7 +736,7 @@ export function SellScreen({
   return (
     <>
       <div className="mx-auto max-w-5xl px-4 pt-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-hairline bg-canvas-soft px-4 py-3">
+        <div className="rounded-xl border border-hairline bg-canvas-soft px-4 py-3">
           <p className="text-lg font-medium text-ink">
             Register open since{" "}
             {new Date(cashSession.openedAt).toLocaleTimeString([], {
@@ -745,7 +745,26 @@ export function SellScreen({
             })}{" "}
             · started with {formatCurrency(cashSession.openingCash)}
           </p>
-          <div className="flex flex-wrap items-center gap-2">
+
+          <div className="scrollbar-thin mt-2 flex gap-2 overflow-x-auto border-t border-hairline pb-1 pt-3">
+            {[
+              { label: "Starting cash", value: formatCurrency(cashSession.openingCash) },
+              { label: "Cash sales", value: formatCurrency(paymentBreakdown.cash) },
+              { label: "Cash in", value: formatCurrency(cashInSum) },
+              { label: "Cash out", value: formatCurrency(cashOutSum) },
+              { label: "Cash in drawer", value: formatCurrency(cashInDrawer) },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="shrink-0 rounded-lg border border-hairline bg-canvas px-3 py-1.5"
+              >
+                <p className="text-[10px] text-muted">{s.label}</p>
+                <p className="text-sm font-normal text-ink">{s.value}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-hairline pt-3">
             <button
               type="button"
               onClick={() => {
@@ -778,14 +797,6 @@ export function SellScreen({
             >
               Close register
             </button>
-          </div>
-
-          <div className="mt-1 flex w-full flex-wrap gap-4 border-t border-hairline pt-3">
-            <Stat label="Starting cash" value={formatCurrency(cashSession.openingCash)} />
-            <Stat label="Cash sales" value={formatCurrency(paymentBreakdown.cash)} />
-            <Stat label="Cash in" value={formatCurrency(cashInSum)} />
-            <Stat label="Cash out" value={formatCurrency(cashOutSum)} />
-            <Stat label="Cash in drawer" value={formatCurrency(cashInDrawer)} />
           </div>
         </div>
 
