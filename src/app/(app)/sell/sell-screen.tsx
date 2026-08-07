@@ -736,13 +736,12 @@ export function SellScreen({
     <>
       <div className="mx-auto max-w-5xl px-4 pt-6">
         <div className="rounded-xl border border-hairline bg-canvas-soft px-4 py-3">
-          <p className="text-lg font-medium text-ink">
-            Register open since{" "}
+          <p className="whitespace-nowrap text-base font-medium text-ink sm:text-lg">
+            Register opened at{" "}
             {new Date(cashSession.openedAt).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
-            })}{" "}
-            · started with {formatCurrency(cashSession.openingCash)}
+            })}
           </p>
 
           <div className="scrollbar-thin mt-2 flex gap-2 overflow-x-auto border-t border-hairline pb-1 pt-3">
