@@ -1078,7 +1078,7 @@ export async function archiveCustomCategoryAction(categoryId: string): Promise<A
   if (error) return { error: error.message };
 
   revalidatePath("/inventory/new");
-  return {};
+  redirect("/inventory/new");
 }
 
 const variantSchema = z.object({

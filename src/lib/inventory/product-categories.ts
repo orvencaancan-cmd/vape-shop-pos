@@ -2,9 +2,10 @@
 // former accessory subcategory is now a first-class product category in
 // its own right, stored directly in products.category (see migration
 // 0047_product_categories.sql). "ejuice" isn't listed here since it has
-// its own dedicated flow (Add E-juice) and no variant-dimension config;
-// this list covers everything else, including "Other" as the catch-all
-// for anything that doesn't fit one of the specific types.
+// its own dedicated flow (Add E-juice) and no variant-dimension config.
+// There's no built-in catch-all category anymore -- owners cover that
+// case themselves with a self-service custom category (see
+// src/lib/inventory/custom-categories.ts) instead of a generic "Other".
 
 export type ProductCategoryKey =
   | "cartridge"
@@ -12,8 +13,7 @@ export type ProductCategoryKey =
   | "device"
   | "pod-device"
   | "wire"
-  | "cotton"
-  | "other";
+  | "cotton";
 
 type ChecklistDimension = {
   label: string;
@@ -120,15 +120,6 @@ export const PRODUCT_CATEGORIES: ProductCategoryConfig[] = [
     key: "cotton",
     label: "Cotton",
     dbCategory: "Cotton",
-    listLabel: "Name",
-    listHelp: "One product per line.",
-    nameTemplate: (name) => name,
-    setForDevice: false,
-  },
-  {
-    key: "other",
-    label: "Other",
-    dbCategory: "Other",
     listLabel: "Name",
     listHelp: "One product per line.",
     nameTemplate: (name) => name,

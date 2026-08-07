@@ -56,8 +56,10 @@ export default async function NewProductPage({
   const customCategories = await fetchCustomCategories(supabase);
 
   if (categoryKey && categoryKey !== "ejuice") {
-    const category = getProductCategory(categoryKey) ?? customCategories.find((c) => c.key === categoryKey);
+    const builtInCategory = getProductCategory(categoryKey);
+    const category = builtInCategory ?? customCategories.find((c) => c.key === categoryKey);
     if (!category) redirect("/inventory/new");
+    const isCustomCategory = !builtInCategory;
 
     const { data: brandRows } = await supabase
       .from("products")
@@ -66,6 +68,17 @@ export default async function NewProductPage({
       .not("brand", "is", null);
     const brands = [...new Set((brandRows ?? []).map((r) => r.brand as string))].sort();
 
+    const archiveControl =
+      isCustomCategory && profile.role === "owner" ? (
+        <ActionButton
+          action={archiveCustomCategoryAction.bind(null, category.key)}
+          confirmMessage={`Archive "${category.label}"? It won't show up when adding new products, but existing ones keep this category.`}
+          className="mt-2 block text-xs text-muted underline underline-offset-2 hover:text-error"
+        >
+          Archive this category
+        </ActionButton>
+      ) : null;
+
     if (categoryKey === "flavor-pod") {
       return (
         <PageShell
@@ -73,6 +86,7 @@ export default async function NewProductPage({
           subtitle="Pick a brand, then list the flavors — each becomes its own product."
           backHref="/inventory/new"
           backLabel="Change category"
+          afterHeader={archiveControl}
         >
           <NewFlavorPodBatchForm brands={brands} role={profile.role} />
         </PageShell>
@@ -85,6 +99,7 @@ export default async function NewProductPage({
         subtitle="Pick a brand, list the items, and check off any options that apply — every combination is created at once."
         backHref="/inventory/new"
         backLabel="Change category"
+        afterHeader={archiveControl}
       >
         <NewAccessoryBatchForm
           category={{
@@ -156,23 +171,11 @@ export default async function NewProductPage({
           </Link>
         ))}
         {customCategories.map((c) => (
-          <div key={c.key} className="relative">
-            <Link href={`/inventory/new?category=${c.key}`}>
-              <Card padding="lg" className="h-full text-center transition-shadow hover:shadow-sm">
-                <span className="heading text-lg">{c.label}</span>
-              </Card>
-            </Link>
-            {profile.role === "owner" && (
-              <ActionButton
-                action={archiveCustomCategoryAction.bind(null, c.key)}
-                confirmMessage={`Archive "${c.label}"? It won't show up when adding new products, but existing ones keep this category.`}
-                className="absolute right-2 top-2 text-xs text-muted hover:text-error"
-                errorClassName="absolute right-2 top-8 w-32 text-right text-xs text-error"
-              >
-                ✕
-              </ActionButton>
-            )}
-          </div>
+          <Link key={c.key} href={`/inventory/new?category=${c.key}`}>
+            <Card padding="lg" className="h-full text-center transition-shadow hover:shadow-sm">
+              <span className="heading text-lg">{c.label}</span>
+            </Card>
+          </Link>
         ))}
         {profile.role === "owner" && (
           <Link href="/inventory/new?mode=new-category">
@@ -202,12 +205,14 @@ function PageShell({
   subtitle,
   backHref,
   backLabel,
+  afterHeader,
   children,
 }: {
   title: string;
   subtitle?: string;
   backHref?: string;
   backLabel?: string;
+  afterHeader?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -219,6 +224,7 @@ function PageShell({
       )}
       <h1 className="heading mt-2 text-2xl">{title}</h1>
       {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
+      {afterHeader}
       <div className="mt-6">{children}</div>
     </main>
   );
