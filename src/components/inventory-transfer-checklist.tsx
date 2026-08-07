@@ -61,6 +61,18 @@ function IncomingTransferCard({ transfer }: { transfer: PendingInventoryTransfer
   function receive() {
     setMessage(null);
     startTransition(async () => {
+      // The last count is often still mid-flight from onBlur's save when
+      // this fires (clicking straight from the last input to this button
+      // blurs it and clicks in the same gesture, racing the save) --
+      // flush every count first so the server-side check never sees a
+      // stale null and forces a second click.
+      await Promise.all(
+        transfer.lines.map((l) => {
+          const raw = counts.get(l.id) ?? "";
+          const value = raw.trim() === "" ? null : Number(raw);
+          return saveTransferLineCountAction(l.id, value);
+        }),
+      );
       const result = await receiveInventoryTransferAction(transfer.id);
       if (result.error) {
         setMessage({ type: "error", text: result.error });

@@ -29,7 +29,7 @@ export default async function FloatingInventoryPage() {
 
   return (
     <main className="animate-fade-in-up mx-auto max-w-4xl px-4 py-8">
-      <h1 className="heading text-2xl">Floating Inventory</h1>
+      <h1 className="heading text-2xl">Inventory Flow</h1>
       <p className="mt-1 text-sm text-muted">
         Stock you hold outside any branch, ready to send wherever it&apos;s needed.
       </p>
