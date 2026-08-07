@@ -980,43 +980,56 @@ export function SellScreen({
       </div>
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-3">
       <div className="md:col-span-2">
-        <div className="relative">
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search products…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-hairline bg-canvas-soft px-3 py-2.5 pr-8 text-sm text-ink shadow-sm placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearch("");
-                searchInputRef.current?.focus();
-              }}
-              aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
+        <div className="rounded-xl border border-primary/40 bg-primary/5 p-3">
+          <div className="relative">
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary"
+              aria-hidden="true"
             >
-              ×
-            </button>
-          )}
-        </div>
-        <div className="scrollbar-thin -mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1">
-          {["all", ...categories].map((c) => (
-            <button
-              key={c}
-              onClick={() => setCategory(c)}
-              className={`shrink-0 rounded-lg px-3 py-2 text-sm transition-colors ${
-                category === c
-                  ? "bg-primary text-on-primary"
-                  : "bg-canvas-strong text-body hover:text-ink"
-              }`}
-            >
-              {c === "all" ? "All" : categoryLabel(c)}
-            </button>
-          ))}
+              <circle cx="9" cy="9" r="6" />
+              <path d="M14 14L18 18" strokeLinecap="round" />
+            </svg>
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search to start a sale…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-lg border border-hairline bg-canvas-soft py-2.5 pl-9 pr-8 text-sm text-ink shadow-sm placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  searchInputRef.current?.focus();
+                }}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <div className="scrollbar-thin mt-2 flex gap-2 overflow-x-auto pb-1">
+            {["all", ...categories].map((c) => (
+              <button
+                key={c}
+                onClick={() => setCategory(c)}
+                className={`shrink-0 rounded-lg px-3 py-2 text-sm transition-colors ${
+                  category === c
+                    ? "bg-primary text-on-primary"
+                    : "bg-canvas-strong text-body hover:text-ink"
+                }`}
+              >
+                {c === "all" ? "All" : categoryLabel(c)}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="stagger mt-4 flex flex-col gap-4">
