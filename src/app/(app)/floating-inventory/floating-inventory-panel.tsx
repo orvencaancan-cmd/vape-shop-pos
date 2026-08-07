@@ -297,26 +297,28 @@ export function FloatingInventoryPanel({
         </div>
       )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div className="mt-3">
         <input
           type="text"
           placeholder="Search…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+          className="w-full rounded-lg border border-hairline bg-canvas-soft px-3 py-2.5 text-sm text-ink shadow-sm placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
-        {["all", ...categories].map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => setCategory(c)}
-            className={`rounded-lg px-3 py-2 text-sm transition-colors ${
-              category === c ? "bg-primary text-on-primary" : "bg-canvas-strong text-body hover:text-ink"
-            }`}
-          >
-            {c === "all" ? "All" : categoryLabel(c)}
-          </button>
-        ))}
+        <div className="scrollbar-thin -mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1">
+          {["all", ...categories].map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCategory(c)}
+              className={`shrink-0 rounded-lg px-3 py-2 text-sm transition-colors ${
+                category === c ? "bg-primary text-on-primary" : "bg-canvas-strong text-body hover:text-ink"
+              }`}
+            >
+              {c === "all" ? "All" : categoryLabel(c)}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="mt-3 flex flex-col gap-4">

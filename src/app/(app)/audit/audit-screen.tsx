@@ -221,19 +221,19 @@ export function AuditScreen({
   return (
     <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
       <div className="md:col-span-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="text"
-            placeholder="Search products…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 rounded-lg border border-hairline bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
-          />
+        <input
+          type="text"
+          placeholder="Search products…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full rounded-lg border border-hairline bg-canvas-soft px-3 py-2.5 text-sm text-ink shadow-sm placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+        <div className="scrollbar-thin -mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1">
           {["all", ...categories].map((c) => (
             <button
               key={c}
               onClick={() => setCategory(c)}
-              className={`rounded-lg px-3 py-2 text-sm transition-colors ${
+              className={`shrink-0 rounded-lg px-3 py-2 text-sm transition-colors ${
                 category === c
                   ? "bg-primary text-on-primary"
                   : "bg-canvas-strong text-body hover:text-ink"

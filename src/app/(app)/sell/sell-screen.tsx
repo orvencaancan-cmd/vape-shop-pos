@@ -987,7 +987,7 @@ export function SellScreen({
             placeholder="Search products…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-hairline bg-canvas px-3 py-2 pr-8 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-hairline bg-canvas-soft px-3 py-2.5 pr-8 text-sm text-ink shadow-sm placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           {search && (
             <button
@@ -1003,7 +1003,7 @@ export function SellScreen({
             </button>
           )}
         </div>
-        <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1">
+        <div className="scrollbar-thin -mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1">
           {["all", ...categories].map((c) => (
             <button
               key={c}
