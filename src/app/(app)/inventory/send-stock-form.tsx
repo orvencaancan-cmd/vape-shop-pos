@@ -9,15 +9,23 @@ import type { InventoryVariant } from "./inventory-list";
 
 type CartLine = { variantId: string; label: string; available: number; qty: string };
 
-// Owner-only pull-back: sends items from this branch's own catalog into
-// the floating pool. Same cart-building shape as FloatingInventoryPanel's
-// "Send to a branch" flow, just sourced from this branch instead of the
-// floating catalog -- createInventoryTransferAction covers both
-// directions since source/destination are just parameters.
-export function SendToFloatingForm({ shopId, variants }: { shopId: string; variants: InventoryVariant[] }) {
+// Owner-only: sends items from this branch's own catalog either into the
+// floating pool (pull-back) or directly to another owned branch, picked
+// from one destination dropdown -- createInventoryTransferAction covers
+// both since source/destination are just parameters.
+export function SendStockForm({
+  shopId,
+  variants,
+  branches,
+}: {
+  shopId: string;
+  variants: InventoryVariant[];
+  branches: { shopId: string; shopName: string }[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
+  const [destination, setDestination] = useState("floating");
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [note, setNote] = useState("");
@@ -66,8 +74,8 @@ export function SendToFloatingForm({ shopId, variants }: { shopId: string; varia
       const result = await createInventoryTransferAction(
         "branch",
         shopId,
-        "floating",
-        null,
+        destination === "floating" ? "floating" : "branch",
+        destination === "floating" ? null : destination,
         lines,
         note.trim() || null,
       );
@@ -78,6 +86,7 @@ export function SendToFloatingForm({ shopId, variants }: { shopId: string; varia
       setCart([]);
       setNote("");
       setSearch("");
+      setDestination("floating");
       setOpen(false);
       router.refresh();
     });
@@ -90,7 +99,7 @@ export function SendToFloatingForm({ shopId, variants }: { shopId: string; varia
         onClick={() => setOpen(true)}
         className="rounded-lg bg-canvas-strong px-3 py-1.5 text-xs text-body transition-colors hover:text-ink"
       >
-        Send to floating inventory
+        Send stock
       </button>
     );
   }
@@ -98,7 +107,7 @@ export function SendToFloatingForm({ shopId, variants }: { shopId: string; varia
   return (
     <div className="rounded-xl border border-hairline bg-canvas-soft p-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-ink">Send to floating inventory</h3>
+        <h3 className="text-sm font-medium text-ink">Send stock</h3>
         <button
           type="button"
           onClick={() => setOpen(false)}
@@ -107,6 +116,24 @@ export function SendToFloatingForm({ shopId, variants }: { shopId: string; varia
           Close
         </button>
       </div>
+
+      {branches.length > 0 ? (
+        <select
+          value={destination}
+          onChange={(e) => setDestination(e.target.value)}
+          className="mt-2 w-full rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
+        >
+          <option value="floating">Floating inventory</option>
+          {branches.map((b) => (
+            <option key={b.shopId} value={b.shopId}>
+              {b.shopName}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <p className="mt-2 text-xs text-muted">Sending to floating inventory</p>
+      )}
+
       <input
         type="text"
         placeholder="Search…"

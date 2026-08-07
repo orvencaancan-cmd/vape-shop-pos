@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchPendingInventoryTransfers } from "@/lib/inventory-transfer";
 import { IncomingInventoryChecklist, OutgoingInventoryList } from "@/components/inventory-transfer-checklist";
 import { InventoryList, type InventoryVariant } from "./inventory-list";
-import { SendToFloatingForm } from "./send-to-floating-form";
+import { SendStockForm } from "./send-stock-form";
 
 export default async function InventoryPage() {
   const profile = await getCurrentProfile();
@@ -34,6 +34,9 @@ export default async function InventoryPage() {
   const outgoingTransfers = pendingTransfers.filter(
     (t) => t.sourceType === "branch" && t.sourceShopId === profile.shopId,
   );
+  const otherBranches = profile.shops
+    .filter((s) => s.role === "owner" && !s.archivedAt && s.shopId !== profile.shopId)
+    .map((s) => ({ shopId: s.shopId, shopName: s.shopName }));
   const supplierNames = [...new Set((supplierRows ?? []).map((s) => s.name))];
   const lastRestockedByVariant = new Map(
     ((restockRows ?? []) as { variant_id: string; last_restocked_at: string }[]).map((r) => [
@@ -83,7 +86,7 @@ export default async function InventoryPage() {
 
       {profile.role === "owner" && (
         <div className="mt-4">
-          <SendToFloatingForm shopId={profile.shopId} variants={items} />
+          <SendStockForm shopId={profile.shopId} variants={items} branches={otherBranches} />
         </div>
       )}
 
