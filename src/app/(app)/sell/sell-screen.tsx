@@ -980,35 +980,35 @@ export function SellScreen({
       </div>
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-3">
       <div className="md:col-span-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1">
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Search products…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-lg border border-hairline bg-canvas px-3 py-2 pr-8 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearch("");
-                  searchInputRef.current?.focus();
-                }}
-                aria-label="Clear search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
-              >
-                ×
-              </button>
-            )}
-          </div>
+        <div className="relative">
+          <input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search products…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-lg border border-hairline bg-canvas px-3 py-2 pr-8 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                searchInputRef.current?.focus();
+              }}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
+            >
+              ×
+            </button>
+          )}
+        </div>
+        <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1">
           {["all", ...categories].map((c) => (
             <button
               key={c}
               onClick={() => setCategory(c)}
-              className={`rounded-lg px-3 py-2 text-sm transition-colors ${
+              className={`shrink-0 rounded-lg px-3 py-2 text-sm transition-colors ${
                 category === c
                   ? "bg-primary text-on-primary"
                   : "bg-canvas-strong text-body hover:text-ink"
