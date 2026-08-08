@@ -6,16 +6,33 @@ import { fetchPendingInventoryTransfers } from "@/lib/inventory-transfer";
 import { IncomingInventoryChecklist, OutgoingInventoryList } from "@/components/inventory-transfer-checklist";
 import { InventoryList, type InventoryVariant } from "./inventory-list";
 import { SendStockForm } from "./send-stock-form";
+import { AdminInventoryPage } from "./admin-inventory";
 import { ALL_CATEGORIES } from "@/lib/inventory/product-categories";
 import { fetchCustomCategories } from "@/lib/inventory/custom-categories";
+import { fetchAdminInventory } from "@/lib/inventory/fetch-admin-inventory";
 
 export default async function InventoryPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
   if (profile.shop.isPlatformShop) redirect("/admin");
-  if (profile.inAdminOverview || (profile.shop.archived && profile.role === "owner")) {
-    redirect("/dashboard");
+
+  if (profile.inAdminOverview) {
+    const supabase = await createClient();
+    const activeOwnedShops = profile.shops.filter((s) => s.role === "owner" && !s.archivedAt);
+    const [items, customCategories] = await Promise.all([
+      fetchAdminInventory(supabase, activeOwnedShops),
+      fetchCustomCategories(supabase),
+    ]);
+    const categories = [...ALL_CATEGORIES, ...customCategories.map((c) => c.dbCategory)];
+    return (
+      <AdminInventoryPage
+        items={items}
+        branches={activeOwnedShops.map((s) => ({ shopId: s.shopId, shopName: s.shopName }))}
+        categories={categories}
+      />
+    );
   }
+  if (profile.shop.archived && profile.role === "owner") redirect("/dashboard");
 
   const supabase = await createClient();
 
