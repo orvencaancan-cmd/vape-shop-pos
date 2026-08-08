@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { formatCurrency } from "@/lib/currency";
 import { variantLabel } from "@/lib/variant-label";
 import { groupByBrand } from "@/lib/group-by-brand";
@@ -163,15 +164,23 @@ export function FloatingInventoryPanel({
 
   return (
     <div className="rounded-xl border border-hairline bg-canvas-soft p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-medium text-muted">Floating inventory</h2>
-        <button
-          type="button"
-          onClick={() => setShowAddForm((v) => !v)}
-          className="rounded-lg bg-canvas-strong px-3 py-1.5 text-xs text-body transition-colors hover:text-ink"
-        >
-          {showAddForm ? "Cancel" : "Add stock"}
-        </button>
+        <div className="flex shrink-0 gap-2">
+          <Link
+            href="/floating-inventory/new"
+            className="rounded-lg bg-canvas-strong px-3 py-1.5 text-xs text-body transition-colors hover:text-ink"
+          >
+            Add products
+          </Link>
+          <button
+            type="button"
+            onClick={() => setShowAddForm((v) => !v)}
+            className="rounded-lg bg-canvas-strong px-3 py-1.5 text-xs text-body transition-colors hover:text-ink"
+          >
+            {showAddForm ? "Cancel" : "Add stock"}
+          </button>
+        </div>
       </div>
 
       {showAddForm && (
