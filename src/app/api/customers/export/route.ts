@@ -17,10 +17,12 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createClient();
+  // RLS (loyalty_customers_select -> is_member_of_owner_business) already
+  // scopes this to the current login's own business -- no explicit
+  // owner_user_id filter needed.
   const { data: customers } = await supabase
     .from("loyalty_customers")
     .select("name, phone, credit_balance")
-    .eq("owner_user_id", profile.ownerUserId)
     .order("name", { ascending: true, nullsFirst: false });
 
   const wb = new ExcelJS.Workbook();
