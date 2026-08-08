@@ -9,20 +9,22 @@ import { groupByBrand } from "@/lib/group-by-brand";
 import { matchesSearch } from "@/lib/search-match";
 import { addFloatingStockAction, createInventoryTransferAction } from "./actions";
 import type { FloatingVariant } from "@/lib/inventory-transfer";
-import { PRODUCT_CATEGORIES, ALL_CATEGORIES, categoryLabel } from "@/lib/inventory/product-categories";
+import { categoryLabel } from "@/lib/inventory/product-categories";
 
 type CartLine = { floatingVariantId: string; label: string; available: number; qty: string };
 
 export function FloatingInventoryPanel({
   catalog,
   branches,
+  builtinCategories = [],
   customCategories = [],
 }: {
   catalog: FloatingVariant[];
   branches: { shopId: string; shopName: string }[];
+  builtinCategories?: { dbCategory: string; label: string }[];
   customCategories?: { key: string; label: string }[];
 }) {
-  const categories = [...ALL_CATEGORIES, ...customCategories.map((c) => c.label)];
+  const categories = ["ejuice", ...builtinCategories.map((c) => c.dbCategory), ...customCategories.map((c) => c.label)];
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
@@ -192,7 +194,7 @@ export function FloatingInventoryPanel({
               className="rounded-lg border border-hairline bg-canvas px-2 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
             >
               <option value="ejuice">E-juice</option>
-              {PRODUCT_CATEGORIES.map((c) => (
+              {builtinCategories.map((c) => (
                 <option key={c.dbCategory} value={c.dbCategory}>
                   {c.label}
                 </option>

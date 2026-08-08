@@ -7,9 +7,9 @@ import { IncomingInventoryChecklist, OutgoingInventoryList } from "@/components/
 import { InventoryList, type InventoryVariant } from "./inventory-list";
 import { SendStockForm } from "./send-stock-form";
 import { AdminInventoryPage } from "./admin-inventory";
-import { ALL_CATEGORIES } from "@/lib/inventory/product-categories";
 import { fetchCustomCategories } from "@/lib/inventory/custom-categories";
 import { fetchAdminInventory } from "@/lib/inventory/fetch-admin-inventory";
+import { fetchVisibleBuiltinCategories } from "@/lib/inventory/archived-builtin-categories";
 
 export default async function InventoryPage() {
   const profile = await getCurrentProfile();
@@ -19,11 +19,12 @@ export default async function InventoryPage() {
   if (profile.inAdminOverview) {
     const supabase = await createClient();
     const activeOwnedShops = profile.shops.filter((s) => s.role === "owner" && !s.archivedAt);
-    const [items, customCategories] = await Promise.all([
+    const [items, customCategories, builtins] = await Promise.all([
       fetchAdminInventory(supabase, activeOwnedShops),
       fetchCustomCategories(supabase),
+      fetchVisibleBuiltinCategories(supabase),
     ]);
-    const categories = [...ALL_CATEGORIES, ...customCategories.map((c) => c.dbCategory)];
+    const categories = ["ejuice", ...builtins.map((c) => c.dbCategory), ...customCategories.map((c) => c.dbCategory)];
     return (
       <AdminInventoryPage
         items={items}
@@ -36,7 +37,7 @@ export default async function InventoryPage() {
 
   const supabase = await createClient();
 
-  const [{ data: variants }, { data: supplierRows }, { data: restockRows }, pendingTransfers, customCategories] =
+  const [{ data: variants }, { data: supplierRows }, { data: restockRows }, pendingTransfers, customCategories, builtins] =
     await Promise.all([
       supabase
         .from("variants")
@@ -48,8 +49,9 @@ export default async function InventoryPage() {
       supabase.rpc("get_last_restock_dates", { p_shop_id: profile.shopId }),
       fetchPendingInventoryTransfers(supabase),
       fetchCustomCategories(supabase),
+      fetchVisibleBuiltinCategories(supabase),
     ]);
-  const categories = [...ALL_CATEGORIES, ...customCategories.map((c) => c.dbCategory)];
+  const categories = ["ejuice", ...builtins.map((c) => c.dbCategory), ...customCategories.map((c) => c.dbCategory)];
   const incomingTransfers = pendingTransfers.filter(
     (t) => t.destinationType === "branch" && t.destinationShopId === profile.shopId,
   );

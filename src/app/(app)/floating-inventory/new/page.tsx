@@ -5,12 +5,12 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { ActionButton } from "@/components/action-button";
 import { NewCustomCategoryForm } from "../../inventory/new/custom-category-form";
-import { archiveCustomCategoryAction } from "../../inventory/actions";
+import { archiveCustomCategoryAction, archiveBuiltinCategoryAction } from "../../inventory/actions";
 import { NewFloatingFlavorBatchForm } from "./flavor-batch-form";
 import { NewFloatingFlavorPodBatchForm } from "./flavor-pod-batch-form";
 import { NewFloatingAccessoryBatchForm } from "./accessory-batch-form";
-import { PRODUCT_CATEGORIES, getProductCategory } from "@/lib/inventory/product-categories";
 import { fetchCustomCategories } from "@/lib/inventory/custom-categories";
+import { fetchVisibleBuiltinCategories } from "@/lib/inventory/archived-builtin-categories";
 
 export default async function NewFloatingProductPage({
   searchParams,
@@ -38,7 +38,10 @@ export default async function NewFloatingProductPage({
   }
 
   const supabase = await createClient();
-  const customCategories = await fetchCustomCategories(supabase);
+  const [customCategories, builtins] = await Promise.all([
+    fetchCustomCategories(supabase),
+    fetchVisibleBuiltinCategories(supabase),
+  ]);
 
   // RLS (floating_products_select) already scopes this to the current
   // login's own floating pool -- no explicit owner_user_id filter needed.
@@ -46,20 +49,24 @@ export default async function NewFloatingProductPage({
   const brands = [...new Set((brandRows ?? []).map((r) => r.brand as string).filter(Boolean))].sort();
 
   if (categoryKey && categoryKey !== "ejuice") {
-    const builtInCategory = getProductCategory(categoryKey);
+    const builtInCategory = builtins.find((c) => c.key === categoryKey);
     const category = builtInCategory ?? customCategories.find((c) => c.key === categoryKey);
     if (!category) redirect("/floating-inventory/new");
     const isCustomCategory = !builtInCategory;
 
-    const archiveControl = isCustomCategory ? (
+    const archiveControl = (
       <ActionButton
-        action={archiveCustomCategoryAction.bind(null, category.key)}
-        confirmMessage={`Archive "${category.label}"? It won't show up when adding new products, but existing ones keep this category.`}
+        action={
+          isCustomCategory
+            ? archiveCustomCategoryAction.bind(null, category.key)
+            : archiveBuiltinCategoryAction.bind(null, category.key, category.dbCategory)
+        }
+        confirmMessage={`Archive "${category.label}"? It won't show up when adding new products. Only works if nothing is currently in stock under it.`}
         className="mt-2 block text-xs text-muted underline underline-offset-2 hover:text-error"
       >
         Archive this category
       </ActionButton>
-    ) : null;
+    );
 
     if (categoryKey === "flavor-pod") {
       return (
@@ -145,7 +152,7 @@ export default async function NewFloatingProductPage({
             <span className="heading text-lg">E-juice</span>
           </Card>
         </Link>
-        {PRODUCT_CATEGORIES.map((c) => (
+        {builtins.map((c) => (
           <Link key={c.key} href={`/floating-inventory/new?category=${c.key}`}>
             <Card padding="lg" className="h-full text-center transition-shadow hover:shadow-sm">
               <span className="heading text-lg">{c.label}</span>

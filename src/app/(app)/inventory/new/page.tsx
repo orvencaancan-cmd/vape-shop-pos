@@ -9,9 +9,9 @@ import { NewFlavorBatchForm } from "./flavor-batch-form";
 import { NewFlavorPodBatchForm } from "./flavor-pod-batch-form";
 import { NewAccessoryBatchForm } from "./accessory-batch-form";
 import { NewCustomCategoryForm } from "./custom-category-form";
-import { PRODUCT_CATEGORIES, getProductCategory } from "@/lib/inventory/product-categories";
 import { fetchCustomCategories } from "@/lib/inventory/custom-categories";
-import { archiveCustomCategoryAction } from "../actions";
+import { fetchVisibleBuiltinCategories } from "@/lib/inventory/archived-builtin-categories";
+import { archiveCustomCategoryAction, archiveBuiltinCategoryAction } from "../actions";
 
 export default async function NewProductPage({
   searchParams,
@@ -26,14 +26,18 @@ export default async function NewProductPage({
   }
 
   const { mode, category: categoryKey } = await searchParams;
+  const supabase = await createClient();
+  const builtins = await fetchVisibleBuiltinCategories(supabase);
 
   if (mode === "single") {
     if (profile.role !== "owner") redirect("/inventory/new");
-    const supabase = await createClient();
     const customCategories = await fetchCustomCategories(supabase);
     return (
       <PageShell title="Add a single product" subtitle="For a one-off item.">
-        <NewProductForm customCategories={customCategories.map((c) => ({ key: c.key, label: c.label }))} />
+        <NewProductForm
+          builtinCategories={builtins.map((c) => ({ dbCategory: c.dbCategory, label: c.label }))}
+          customCategories={customCategories.map((c) => ({ key: c.key, label: c.label }))}
+        />
       </PageShell>
     );
   }
@@ -52,11 +56,10 @@ export default async function NewProductPage({
     );
   }
 
-  const supabase = await createClient();
   const customCategories = await fetchCustomCategories(supabase);
 
   if (categoryKey && categoryKey !== "ejuice") {
-    const builtInCategory = getProductCategory(categoryKey);
+    const builtInCategory = builtins.find((c) => c.key === categoryKey);
     const category = builtInCategory ?? customCategories.find((c) => c.key === categoryKey);
     if (!category) redirect("/inventory/new");
     const isCustomCategory = !builtInCategory;
@@ -69,10 +72,14 @@ export default async function NewProductPage({
     const brands = [...new Set((brandRows ?? []).map((r) => r.brand as string))].sort();
 
     const archiveControl =
-      isCustomCategory && profile.role === "owner" ? (
+      profile.role === "owner" ? (
         <ActionButton
-          action={archiveCustomCategoryAction.bind(null, category.key)}
-          confirmMessage={`Archive "${category.label}"? It won't show up when adding new products, but existing ones keep this category.`}
+          action={
+            isCustomCategory
+              ? archiveCustomCategoryAction.bind(null, category.key)
+              : archiveBuiltinCategoryAction.bind(null, category.key, category.dbCategory)
+          }
+          confirmMessage={`Archive "${category.label}"? It won't show up when adding new products. Only works if nothing is currently in stock under it.`}
           className="mt-2 block text-xs text-muted underline underline-offset-2 hover:text-error"
         >
           Archive this category
@@ -177,7 +184,7 @@ export default async function NewProductPage({
             <span className="heading text-lg">E-juice</span>
           </Card>
         </Link>
-        {PRODUCT_CATEGORIES.map((c) => (
+        {builtins.map((c) => (
           <Link key={c.key} href={`/inventory/new?category=${c.key}`}>
             <Card padding="lg" className="h-full text-center transition-shadow hover:shadow-sm">
               <span className="heading text-lg">{c.label}</span>

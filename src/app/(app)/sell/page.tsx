@@ -4,8 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { isSaleActive } from "@/lib/sale-status";
 import { variantLabel } from "@/lib/variant-label";
 import { fetchTodayCashSession, fetchPendingTransfers } from "@/lib/cash-flow";
-import { ALL_CATEGORIES } from "@/lib/inventory/product-categories";
 import { fetchCustomCategories } from "@/lib/inventory/custom-categories";
+import { fetchVisibleBuiltinCategories } from "@/lib/inventory/archived-builtin-categories";
 import { SellScreen } from "./sell-screen";
 
 export default async function SellPage() {
@@ -107,8 +107,11 @@ export default async function SellPage() {
           .map((s) => ({ shopId: s.shopId, shopName: s.shopName }))
       : [];
 
-  const customCategories = await fetchCustomCategories(supabase);
-  const categories = [...ALL_CATEGORIES, ...customCategories.map((c) => c.dbCategory)];
+  const [customCategories, builtins] = await Promise.all([
+    fetchCustomCategories(supabase),
+    fetchVisibleBuiltinCategories(supabase),
+  ]);
+  const categories = ["ejuice", ...builtins.map((c) => c.dbCategory), ...customCategories.map((c) => c.dbCategory)];
 
   const pendingTransfers = await fetchPendingTransfers(supabase);
   const incomingTransfers = pendingTransfers.filter(

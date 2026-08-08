@@ -1134,8 +1134,33 @@ export async function archiveCustomCategoryAction(categoryId: string): Promise<A
   });
   if (error) return { error: error.message };
 
-  revalidatePath("/inventory/new");
-  redirect("/inventory/new");
+  // Callable from both the branch-level picker and the Admin Overview
+  // floating-inventory picker (they share this action) -- redirect back to
+  // whichever one the owner was actually on.
+  const target = profile.inAdminOverview ? "/floating-inventory/new" : "/inventory/new";
+  revalidatePath(target);
+  redirect(target);
+}
+
+export async function archiveBuiltinCategoryAction(
+  categoryKey: string,
+  categoryLabel: string,
+): Promise<ActionState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in" };
+  if (profile.role !== "owner") return { error: "Only the shop admin can archive a category" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("archive_builtin_category", {
+    p_shop_id: profile.shopId,
+    p_category_key: categoryKey,
+    p_category_label: categoryLabel,
+  });
+  if (error) return { error: error.message };
+
+  const target = profile.inAdminOverview ? "/floating-inventory/new" : "/inventory/new";
+  revalidatePath(target);
+  redirect(target);
 }
 
 const variantSchema = z.object({
