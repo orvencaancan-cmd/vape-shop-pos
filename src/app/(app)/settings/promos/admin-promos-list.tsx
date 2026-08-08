@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { LoyaltyForm } from "./loyalty-form";
 import { SaleForm } from "./sale-form";
@@ -46,6 +47,12 @@ export async function AdminPromosList({ ownedShops }: { ownedShops: ShopMembersh
         with no cashier action. Only one promo can apply to a sale at a time. Each branch sets its
         own participation.
       </p>
+      <Link
+        href="/settings/customers"
+        className="mt-2 inline-block text-xs text-muted underline underline-offset-2 hover:text-ink"
+      >
+        View customer list →
+      </Link>
 
       <div className="stagger mt-6 flex flex-col gap-3">
         {ownedShops.map((s) => {

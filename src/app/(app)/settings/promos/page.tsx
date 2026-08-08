@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/get-current-profile";
 import { createClient } from "@/lib/supabase/server";
@@ -48,6 +49,12 @@ export default async function PromosPage() {
         Customers earn store credit here based on what they spend, redeemable on a future
         purchase at any of your branches that accepts redemptions.
       </p>
+      <Link
+        href="/settings/customers"
+        className="mt-2 inline-block text-xs text-muted underline underline-offset-2 hover:text-ink"
+      >
+        View customer list →
+      </Link>
       <div className="mt-3 rounded-lg border border-hairline bg-canvas-soft p-4">
         <LoyaltyForm
           shopId={profile.shopId}
