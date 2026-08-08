@@ -121,6 +121,20 @@ export default async function NewProductPage({
                       placeholder: category.variantDimension.placeholder,
                     }
                   : undefined,
+            variantDimension2:
+              category.variantDimension2?.inputType === "checklist"
+                ? {
+                    label: category.variantDimension2.label,
+                    inputType: "checklist",
+                    options: category.variantDimension2.options,
+                  }
+                : category.variantDimension2?.inputType === "freeText"
+                  ? {
+                      label: category.variantDimension2.label,
+                      inputType: "freeText",
+                      placeholder: category.variantDimension2.placeholder,
+                    }
+                  : undefined,
           }}
           brands={brands}
           role={profile.role}

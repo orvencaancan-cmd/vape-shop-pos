@@ -4,14 +4,17 @@ import { useActionState, useState } from "react";
 import { createCategoryBatchAction, type ActionState } from "../actions";
 import { Input, Label } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
+type Dimension =
+  | { label: string; inputType: "checklist"; options: { value: string; label: string }[] }
+  | { label: string; inputType: "freeText"; placeholder: string };
+
 type ClientCategory = {
   key: string;
   label: string;
   listLabel: string;
   listHelp: string;
-  variantDimension?:
-    | { label: string; inputType: "checklist"; options: { value: string; label: string }[] }
-    | { label: string; inputType: "freeText"; placeholder: string };
+  variantDimension?: Dimension;
+  variantDimension2?: Dimension;
 };
 
 const initialState: ActionState = {};
@@ -100,6 +103,34 @@ export function NewAccessoryBatchForm({
             , separated by commas.
           </p>
           <Input name="variantOptionsText" placeholder={category.variantDimension.placeholder} />
+        </label>
+      )}
+
+      {category.variantDimension2?.inputType === "checklist" && (
+        <div>
+          <Label>{category.variantDimension2.label}</Label>
+          <p className="mt-1 text-xs text-muted">
+            Each combination above also gets one variant per option checked here.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-4">
+            {category.variantDimension2.options.map((opt) => (
+              <label key={opt.value} className="flex items-center gap-1.5 text-sm text-ink">
+                <input type="checkbox" name="variantOptions2" value={opt.value} defaultChecked />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {category.variantDimension2?.inputType === "freeText" && (
+        <label className="flex flex-col gap-1.5">
+          <Label>{category.variantDimension2.label}</Label>
+          <p className="mt-1 text-xs text-muted">
+            Each combination above also gets one variant per {category.variantDimension2.label.toLowerCase()}
+            , separated by commas.
+          </p>
+          <Input name="variantOptionsText2" placeholder={category.variantDimension2.placeholder} />
         </label>
       )}
 

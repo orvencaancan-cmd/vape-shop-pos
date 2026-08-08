@@ -7,7 +7,7 @@ import { BackLink } from "./back-link";
 import { archiveProductAction } from "../actions";
 import { ReceiveStockForm } from "../receive-stock-form";
 import { ActionButton } from "@/components/action-button";
-import { getProductCategoryByDbName } from "@/lib/inventory/product-categories";
+import { getProductCategoryByDbName, type ProductCategoryConfig } from "@/lib/inventory/product-categories";
 import { fetchCustomCategories } from "@/lib/inventory/custom-categories";
 
 export default async function ProductPage({
@@ -51,20 +51,24 @@ export default async function ProductPage({
     .order("created_at");
 
   const customCategories = await fetchCustomCategories(supabase);
-  const rawDimension =
+  const builtInCategory = getProductCategoryByDbName(product.category);
+  const matchedCategory =
     product.category !== "ejuice"
-      ? (getProductCategoryByDbName(product.category) ??
-          customCategories.find((c) => c.dbCategory.toLowerCase() === product.category.toLowerCase()))
-          ?.variantDimension
+      ? (builtInCategory ??
+        customCategories.find((c) => c.dbCategory.toLowerCase() === product.category.toLowerCase()))
       : undefined;
+  const isCustomCategory = product.category !== "ejuice" && !builtInCategory && !!matchedCategory;
   // Config objects carry functions (nameTemplate, formatValue) that can't
-  // cross the server/client boundary as props -- rebuild a plain literal
+  // cross the server/client boundary as props -- rebuild plain literals
   // with only what VariantForm actually reads.
-  const dimension = rawDimension
-    ? rawDimension.inputType === "checklist"
-      ? { label: rawDimension.label, field: rawDimension.field, inputType: "checklist" as const, options: rawDimension.options }
-      : { label: rawDimension.label, field: rawDimension.field, inputType: "freeText" as const }
-    : undefined;
+  const toPlainDimension = (raw: ProductCategoryConfig["variantDimension"]) =>
+    raw
+      ? raw.inputType === "checklist"
+        ? { label: raw.label, field: raw.field, inputType: "checklist" as const, options: raw.options }
+        : { label: raw.label, field: raw.field, inputType: "freeText" as const }
+      : undefined;
+  const dimension = toPlainDimension(matchedCategory?.variantDimension);
+  const dimension2 = toPlainDimension(matchedCategory?.variantDimension2);
   const plainCustomCategories = customCategories.map((c) => ({ key: c.key, label: c.label }));
 
   const boundArchive = archiveProductAction.bind(null, productId);
@@ -104,6 +108,8 @@ export default async function ProductPage({
                 productId={product.id}
                 productCategory={product.category}
                 dimension={dimension}
+                dimension2={dimension2}
+                isCustomCategory={isCustomCategory}
                 variantId={v.id}
                 values={{
                   flavor: v.flavor,
@@ -137,6 +143,8 @@ export default async function ProductPage({
             productId={product.id}
             productCategory={product.category}
             dimension={dimension}
+            dimension2={dimension2}
+            isCustomCategory={isCustomCategory}
           />
         </div>
       </section>

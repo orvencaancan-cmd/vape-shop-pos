@@ -43,6 +43,8 @@ export type ProductCategoryConfig = {
   nameTemplate: (listValue: string) => string;
   setForDevice: boolean;
   variantDimension?: ChecklistDimension | FreeTextDimension;
+  // Second tag, custom categories only -- no built-in category sets this.
+  variantDimension2?: ChecklistDimension | FreeTextDimension;
 };
 
 export const PRODUCT_CATEGORIES: ProductCategoryConfig[] = [

@@ -33,12 +33,16 @@ export function VariantForm({
   productId,
   productCategory,
   dimension,
+  dimension2,
+  isCustomCategory,
   variantId,
   values,
 }: {
   productId: string;
   productCategory: string;
   dimension?: VariantDimension;
+  dimension2?: VariantDimension;
+  isCustomCategory?: boolean;
   variantId?: string;
   values?: VariantValues;
 }) {
@@ -49,6 +53,8 @@ export function VariantForm({
   const deleteAction = variantId ? deleteVariantAction.bind(null, variantId, productId) : undefined;
   const dimensionSuggestions =
     dimension?.inputType === "checklist" ? dimension.options.map((o) => o.value) : [];
+  const dimension2Suggestions =
+    dimension2?.inputType === "checklist" ? dimension2.options.map((o) => o.value) : [];
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-hairline bg-canvas-soft p-3">
@@ -64,6 +70,61 @@ export function VariantForm({
               defaultValue={values?.nicotineMg ?? ""}
             />
             <Field label="Size" name="size" defaultValue={values?.size ?? ""} />
+          </>
+        ) : isCustomCategory ? (
+          <>
+            {dimension?.field === "ohms" && (
+              <Field
+                label={dimension.label}
+                name="ohms"
+                type="number"
+                step="0.1"
+                defaultValue={values?.ohms ?? ""}
+                list={dimensionSuggestions.length > 0 ? "dimension-suggestions" : undefined}
+              />
+            )}
+            {dimension?.field === "size" && (
+              <Field
+                label={dimension.label}
+                name="size"
+                defaultValue={values?.size ?? ""}
+                list={dimensionSuggestions.length > 0 ? "dimension-suggestions" : undefined}
+              />
+            )}
+            {dimension?.field === "flavor" && (
+              <Field
+                label={dimension.label}
+                name="flavor"
+                defaultValue={values?.flavor ?? ""}
+                list={dimensionSuggestions.length > 0 ? "dimension-suggestions" : undefined}
+              />
+            )}
+            {dimension2?.field === "ohms" && (
+              <Field
+                label={dimension2.label}
+                name="ohms"
+                type="number"
+                step="0.1"
+                defaultValue={values?.ohms ?? ""}
+                list={dimension2Suggestions.length > 0 ? "dimension2-suggestions" : undefined}
+              />
+            )}
+            {dimension2?.field === "size" && (
+              <Field
+                label={dimension2.label}
+                name="size"
+                defaultValue={values?.size ?? ""}
+                list={dimension2Suggestions.length > 0 ? "dimension2-suggestions" : undefined}
+              />
+            )}
+            {dimension2?.field === "flavor" && (
+              <Field
+                label={dimension2.label}
+                name="flavor"
+                defaultValue={values?.flavor ?? ""}
+                list={dimension2Suggestions.length > 0 ? "dimension2-suggestions" : undefined}
+              />
+            )}
           </>
         ) : (
           <>
@@ -128,7 +189,7 @@ export function VariantForm({
           </Button>
         </div>
       </form>
-      {productCategory !== "ejuice" && (
+      {productCategory !== "ejuice" && !isCustomCategory && (
         <datalist id="device-suggestions">
           <option value="Oneo" />
           <option value="Xlim" />
@@ -138,6 +199,13 @@ export function VariantForm({
       {dimensionSuggestions.length > 0 && (
         <datalist id="dimension-suggestions">
           {dimensionSuggestions.map((v) => (
+            <option key={v} value={v} />
+          ))}
+        </datalist>
+      )}
+      {dimension2Suggestions.length > 0 && (
+        <datalist id="dimension2-suggestions">
+          {dimension2Suggestions.map((v) => (
             <option key={v} value={v} />
           ))}
         </datalist>

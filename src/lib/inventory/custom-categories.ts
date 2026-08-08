@@ -7,14 +7,21 @@ import type { ProductCategoryConfig } from "./product-categories";
 // identically to a built-in one. key is the row's own id -- the batch flow
 // already threads categoryKey through as an opaque string, so a uuid key
 // works exactly like "cartridge" or "wire" does today.
+const SELECT_COLUMNS =
+  "id, label, variant_label, variant_input_type, variant_options, variant2_label, variant2_input_type, variant2_options";
+
 function toConfig(row: {
   id: string;
   label: string;
   variant_label: string | null;
   variant_input_type: string | null;
   variant_options: unknown;
+  variant2_label: string | null;
+  variant2_input_type: string | null;
+  variant2_options: unknown;
 }): ProductCategoryConfig {
   const options = Array.isArray(row.variant_options) ? (row.variant_options as string[]) : [];
+  const options2 = Array.isArray(row.variant2_options) ? (row.variant2_options as string[]) : [];
   return {
     key: row.id,
     label: row.label,
@@ -39,6 +46,22 @@ function toConfig(row: {
               placeholder: `e.g. your own ${(row.variant_label ?? "tag").toLowerCase()} values`,
             }
           : undefined,
+    variantDimension2:
+      row.variant2_input_type === "checklist"
+        ? {
+            label: row.variant2_label ?? "Options",
+            field: "flavor",
+            inputType: "checklist",
+            options: options2.map((v) => ({ value: v, label: v })),
+          }
+        : row.variant2_input_type === "freeText"
+          ? {
+              label: row.variant2_label ?? "Tag",
+              field: "flavor",
+              inputType: "freeText",
+              placeholder: `e.g. your own ${(row.variant2_label ?? "tag").toLowerCase()} values`,
+            }
+          : undefined,
   };
 }
 
@@ -47,7 +70,7 @@ export async function fetchCustomCategories(
 ): Promise<ProductCategoryConfig[]> {
   const { data } = await supabase
     .from("custom_categories")
-    .select("id, label, variant_label, variant_input_type, variant_options")
+    .select(SELECT_COLUMNS)
     .eq("archived", false)
     .order("created_at");
   return (data ?? []).map(toConfig);
@@ -59,7 +82,7 @@ export async function getCustomCategoryConfig(
 ): Promise<ProductCategoryConfig | undefined> {
   const { data } = await supabase
     .from("custom_categories")
-    .select("id, label, variant_label, variant_input_type, variant_options")
+    .select(SELECT_COLUMNS)
     .eq("id", id)
     .eq("archived", false)
     .maybeSingle();

@@ -860,6 +860,8 @@ const categoryBatchSchema = z.object({
   items: z.array(z.string()).transform((arr) => arr.map((f) => f.trim()).filter(Boolean)),
   variantOptions: z.array(z.string()).optional().default([]),
   variantOptionsText: z.string().optional(),
+  variantOptions2: z.array(z.string()).optional().default([]),
+  variantOptionsText2: z.string().optional(),
   cost: z.coerce.number().nonnegative(),
   price: z.coerce.number().nonnegative(),
   lowStockThreshold: z.coerce.number().int().nonnegative(),
@@ -875,6 +877,8 @@ export async function createCategoryBatchAction(
     items: formData.getAll("items"),
     variantOptions: formData.getAll("variantOptions"),
     variantOptionsText: formData.get("variantOptionsText") ?? "",
+    variantOptions2: formData.getAll("variantOptions2"),
+    variantOptionsText2: formData.get("variantOptionsText2") ?? "",
     cost: formData.get("cost") || 0,
     price: formData.get("price") || 0,
     lowStockThreshold: formData.get("lowStockThreshold") || 5,
@@ -888,6 +892,8 @@ export async function createCategoryBatchAction(
     items,
     variantOptions,
     variantOptionsText,
+    variantOptions2,
+    variantOptionsText2,
     cost,
     price,
     lowStockThreshold,
@@ -954,6 +960,19 @@ export async function createCategoryBatchAction(
     return { error: `${verb} at least one ${category.variantDimension.label.toLowerCase()}` };
   }
 
+  let levels2: (string | null)[];
+  if (category.variantDimension2?.inputType === "freeText") {
+    levels2 = [...new Set((variantOptionsText2 ?? "").split(",").map((v) => v.trim()).filter(Boolean))];
+  } else if (category.variantDimension2) {
+    levels2 = variantOptions2;
+  } else {
+    levels2 = [null];
+  }
+  if (category.variantDimension2 && levels2.length === 0) {
+    const verb = category.variantDimension2.inputType === "freeText" ? "Add" : "Select";
+    return { error: `${verb} at least one ${category.variantDimension2.label.toLowerCase()}` };
+  }
+
   const productIds = [...new Set(productNames.map((name) => productIdByName.get(name.trim().toLowerCase())!))];
   const { data: existingVariants } = productIds.length
     ? await supabase.from("variants").select("product_id, ohms, size, flavor").in("product_id", productIds)
@@ -979,29 +998,39 @@ export async function createCategoryBatchAction(
     const productId = productIdByName.get(productNames[i].trim().toLowerCase())!;
     const forDevice = category.setForDevice ? item : null;
     for (const level of levels) {
-      const ohms = category.variantDimension?.field === "ohms" && level ? Number(level) : null;
-      const size =
-        category.variantDimension?.field === "size" && level
-          ? (category.variantDimension.formatValue?.(level) ?? level)
-          : null;
-      const flavor =
-        category.variantDimension?.field === "flavor" && level
-          ? (category.variantDimension.formatValue?.(level) ?? level)
-          : null;
-      const key = `${productId}|${ohms ?? ""}|${size ?? ""}|${flavor ?? ""}`;
-      if (seenVariantKeys.has(key)) continue;
-      seenVariantKeys.add(key);
-      variantRows.push({
-        shop_id: shopId,
-        product_id: productId,
-        for_device: forDevice,
-        ohms,
-        size,
-        flavor,
-        cost: effectiveCost,
-        price,
-        low_stock_threshold: lowStockThreshold,
-      });
+      for (const level2 of levels2) {
+        const ohms =
+          (category.variantDimension?.field === "ohms" && level) ||
+          (category.variantDimension2?.field === "ohms" && level2)
+            ? Number(category.variantDimension?.field === "ohms" ? level : level2)
+            : null;
+        const size =
+          category.variantDimension?.field === "size" && level
+            ? (category.variantDimension.formatValue?.(level) ?? level)
+            : category.variantDimension2?.field === "size" && level2
+              ? (category.variantDimension2.formatValue?.(level2) ?? level2)
+              : null;
+        const flavor =
+          category.variantDimension?.field === "flavor" && level
+            ? (category.variantDimension.formatValue?.(level) ?? level)
+            : category.variantDimension2?.field === "flavor" && level2
+              ? (category.variantDimension2.formatValue?.(level2) ?? level2)
+              : null;
+        const key = `${productId}|${ohms ?? ""}|${size ?? ""}|${flavor ?? ""}`;
+        if (seenVariantKeys.has(key)) continue;
+        seenVariantKeys.add(key);
+        variantRows.push({
+          shop_id: shopId,
+          product_id: productId,
+          for_device: forDevice,
+          ohms,
+          size,
+          flavor,
+          cost: effectiveCost,
+          price,
+          low_stock_threshold: lowStockThreshold,
+        });
+      }
     }
   });
 
@@ -1019,6 +1048,9 @@ const customCategorySchema = z.object({
   variantLabel: z.string().optional(),
   variantInputType: z.enum(["none", "freeText", "checklist"]),
   variantOptions: z.array(z.string()).optional().default([]),
+  variantLabel2: z.string().optional(),
+  variantInputType2: z.enum(["none", "freeText", "checklist"]),
+  variantOptions2: z.array(z.string()).optional().default([]),
 });
 
 // Business-wide, so the redirect target (/inventory/new?category=<id>) is
@@ -1035,11 +1067,22 @@ export async function createCustomCategoryAction(
     variantLabel: formData.get("variantLabel") ?? "",
     variantInputType: formData.get("variantInputType") ?? "none",
     variantOptions: formData.getAll("variantOptions").map((v) => String(v).trim()).filter(Boolean),
+    variantLabel2: formData.get("variantLabel2") ?? "",
+    variantInputType2: formData.get("variantInputType2") ?? "none",
+    variantOptions2: formData.getAll("variantOptions2").map((v) => String(v).trim()).filter(Boolean),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
-  const { label, variantLabel, variantInputType, variantOptions } = parsed.data;
+  const {
+    label,
+    variantLabel,
+    variantInputType,
+    variantOptions,
+    variantLabel2,
+    variantInputType2,
+    variantOptions2,
+  } = parsed.data;
 
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Not signed in" };
@@ -1051,6 +1094,17 @@ export async function createCustomCategoryAction(
   if (variantInputType === "checklist" && variantOptions.length === 0) {
     return { error: "Add at least one option for the tag" };
   }
+  if (variantInputType2 !== "none") {
+    if (variantInputType === "none") {
+      return { error: "Add the first tag before adding a second one" };
+    }
+    if (!variantLabel2?.trim()) {
+      return { error: "Give the second tag a name" };
+    }
+    if (variantInputType2 === "checklist" && variantOptions2.length === 0) {
+      return { error: "Add at least one option for the second tag" };
+    }
+  }
 
   const supabase = await createClient();
   const { data: newId, error } = await supabase.rpc("create_custom_category", {
@@ -1059,6 +1113,9 @@ export async function createCustomCategoryAction(
     p_variant_label: variantInputType === "none" ? null : variantLabel,
     p_variant_input_type: variantInputType === "none" ? null : variantInputType,
     p_variant_options: variantInputType === "checklist" ? variantOptions : null,
+    p_variant2_label: variantInputType2 === "none" ? null : variantLabel2,
+    p_variant2_input_type: variantInputType2 === "none" ? null : variantInputType2,
+    p_variant2_options: variantInputType2 === "checklist" ? variantOptions2 : null,
   });
   if (error) return { error: error.message };
 
